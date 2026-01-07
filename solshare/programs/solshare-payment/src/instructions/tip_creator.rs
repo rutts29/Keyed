@@ -32,9 +32,14 @@ pub struct TipCreator<'info> {
     #[account(mut)]
     pub tipper: Signer<'info>,
     
-    /// CHECK: Creator wallet to receive tip
-    #[account(mut)]
-    pub creator: AccountInfo<'info>,
+    /// Creator wallet to receive tip
+    /// SECURITY: This MUST be validated against creator_vault.creator to prevent
+    /// funds from being sent to an attacker's wallet while crediting a different vault
+    #[account(
+        mut,
+        address = creator_vault.creator @ PaymentError::InvalidCreatorAccount
+    )]
+    pub creator: SystemAccount<'info>,
     
     /// CHECK: Fee recipient
     #[account(mut, address = config.fee_recipient)]

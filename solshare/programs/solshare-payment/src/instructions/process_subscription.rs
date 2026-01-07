@@ -32,9 +32,14 @@ pub struct ProcessSubscription<'info> {
     #[account(mut)]
     pub subscriber: Signer<'info>,
     
-    /// CHECK: Creator wallet
-    #[account(mut, address = creator_vault.creator)]
-    pub creator: AccountInfo<'info>,
+    /// Creator wallet to receive subscription payment
+    /// SECURITY: This MUST be validated against creator_vault.creator to prevent
+    /// an attacker from redirecting subscription payments to their own wallet
+    #[account(
+        mut,
+        address = creator_vault.creator @ PaymentError::InvalidCreatorAccount
+    )]
+    pub creator: SystemAccount<'info>,
     
     /// CHECK: Fee recipient
     #[account(mut, address = config.fee_recipient)]

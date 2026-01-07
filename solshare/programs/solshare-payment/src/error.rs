@@ -24,4 +24,6 @@ pub enum PaymentError {
     WithdrawalExceedsBalance,
     #[msg("Arithmetic overflow")]
     ArithmeticOverflow,
+    #[msg("Invalid creator account - does not match vault owner")]
+    InvalidCreatorAccount,
 }
