@@ -1,0 +1,1247 @@
+{
+  "address": "G2USoTtbNw78NYvPJSeuYVZQS9oVQNLrLE5zJb7wsM3L",
+  "metadata": {
+    "name": "solshare_social",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "SolShare Social Program - profiles, posts, follows, likes, comments"
+  },
+  "instructions": [
+    {
+      "name": "comment_post",
+      "discriminator": [
+        79,
+        172,
+        90,
+        28,
+        131,
+        58,
+        167,
+        125
+      ],
+      "accounts": [
+        {
+          "name": "post",
+          "writable": true
+        },
+        {
+          "name": "comment",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  109,
+                  109,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "post"
+              },
+              {
+                "kind": "account",
+                "path": "post.comments",
+                "account": "Post"
+              }
+            ]
+          }
+        },
+        {
+          "name": "commenter",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "comment_text",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "create_post",
+      "discriminator": [
+        123,
+        92,
+        184,
+        29,
+        231,
+        24,
+        15,
+        202
+      ],
+      "accounts": [
+        {
+          "name": "post",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  115,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "authority"
+              },
+              {
+                "kind": "account",
+                "path": "profile.post_count",
+                "account": "UserProfile"
+              }
+            ]
+          }
+        },
+        {
+          "name": "profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "authority"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "profile"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "content_uri",
+          "type": "string"
+        },
+        {
+          "name": "content_type",
+          "type": {
+            "defined": {
+              "name": "ContentType"
+            }
+          }
+        },
+        {
+          "name": "caption",
+          "type": "string"
+        },
+        {
+          "name": "is_token_gated",
+          "type": "bool"
+        },
+        {
+          "name": "required_token",
+          "type": {
+            "option": "pubkey"
+          }
+        }
+      ]
+    },
+    {
+      "name": "create_profile",
+      "discriminator": [
+        225,
+        205,
+        234,
+        143,
+        17,
+        186,
+        50,
+        220
+      ],
+      "accounts": [
+        {
+          "name": "profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "authority"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "username",
+          "type": "string"
+        },
+        {
+          "name": "bio",
+          "type": "string"
+        },
+        {
+          "name": "profile_image_uri",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "follow_user",
+      "discriminator": [
+        126,
+        176,
+        97,
+        36,
+        63,
+        145,
+        4,
+        134
+      ],
+      "accounts": [
+        {
+          "name": "follow",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  111,
+                  108,
+                  108,
+                  111,
+                  119
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "follower"
+              },
+              {
+                "kind": "account",
+                "path": "following_profile.authority",
+                "account": "UserProfile"
+              }
+            ]
+          }
+        },
+        {
+          "name": "follower_profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "follower"
+              }
+            ]
+          }
+        },
+        {
+          "name": "following_profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "following_profile.authority",
+                "account": "UserProfile"
+              }
+            ]
+          }
+        },
+        {
+          "name": "follower",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "authority",
+          "relations": [
+            "follower_profile"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "like_post",
+      "discriminator": [
+        45,
+        242,
+        154,
+        71,
+        63,
+        133,
+        54,
+        186
+      ],
+      "accounts": [
+        {
+          "name": "post",
+          "writable": true
+        },
+        {
+          "name": "like",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  105,
+                  107,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "post"
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "unfollow_user",
+      "discriminator": [
+        204,
+        183,
+        196,
+        110,
+        97,
+        165,
+        226,
+        213
+      ],
+      "accounts": [
+        {
+          "name": "follow",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  111,
+                  108,
+                  108,
+                  111,
+                  119
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "follower"
+              },
+              {
+                "kind": "account",
+                "path": "following_profile.authority",
+                "account": "UserProfile"
+              }
+            ]
+          }
+        },
+        {
+          "name": "follower_profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "follower"
+              }
+            ]
+          }
+        },
+        {
+          "name": "following_profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "following_profile.authority",
+                "account": "UserProfile"
+              }
+            ]
+          }
+        },
+        {
+          "name": "follower",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "follow"
+          ]
+        },
+        {
+          "name": "authority",
+          "relations": [
+            "follower_profile"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "unlike_post",
+      "discriminator": [
+        236,
+        63,
+        6,
+        34,
+        128,
+        3,
+        114,
+        174
+      ],
+      "accounts": [
+        {
+          "name": "post",
+          "writable": true,
+          "relations": [
+            "like"
+          ]
+        },
+        {
+          "name": "like",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  105,
+                  107,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "post"
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "like"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "update_profile",
+      "discriminator": [
+        98,
+        67,
+        99,
+        206,
+        86,
+        115,
+        175,
+        1
+      ],
+      "accounts": [
+        {
+          "name": "profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "authority"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true,
+          "relations": [
+            "profile"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "bio",
+          "type": {
+            "option": "string"
+          }
+        },
+        {
+          "name": "profile_image_uri",
+          "type": {
+            "option": "string"
+          }
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Comment",
+      "discriminator": [
+        150,
+        135,
+        96,
+        244,
+        55,
+        199,
+        50,
+        65
+      ]
+    },
+    {
+      "name": "Follow",
+      "discriminator": [
+        222,
+        247,
+        253,
+        60,
+        70,
+        4,
+        164,
+        51
+      ]
+    },
+    {
+      "name": "Like",
+      "discriminator": [
+        10,
+        133,
+        129,
+        201,
+        87,
+        218,
+        203,
+        222
+      ]
+    },
+    {
+      "name": "Post",
+      "discriminator": [
+        8,
+        147,
+        90,
+        186,
+        185,
+        56,
+        192,
+        150
+      ]
+    },
+    {
+      "name": "UserProfile",
+      "discriminator": [
+        32,
+        37,
+        119,
+        205,
+        179,
+        180,
+        13,
+        194
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "PostCommented",
+      "discriminator": [
+        241,
+        200,
+        76,
+        2,
+        13,
+        8,
+        36,
+        219
+      ]
+    },
+    {
+      "name": "PostCreated",
+      "discriminator": [
+        209,
+        178,
+        232,
+        24,
+        158,
+        92,
+        77,
+        227
+      ]
+    },
+    {
+      "name": "PostLiked",
+      "discriminator": [
+        73,
+        27,
+        139,
+        100,
+        14,
+        89,
+        19,
+        81
+      ]
+    },
+    {
+      "name": "PostUnliked",
+      "discriminator": [
+        134,
+        105,
+        196,
+        139,
+        213,
+        120,
+        103,
+        204
+      ]
+    },
+    {
+      "name": "ProfileCreated",
+      "discriminator": [
+        134,
+        233,
+        199,
+        153,
+        77,
+        206,
+        128,
+        94
+      ]
+    },
+    {
+      "name": "ProfileUpdated",
+      "discriminator": [
+        186,
+        248,
+        62,
+        98,
+        112,
+        98,
+        161,
+        252
+      ]
+    },
+    {
+      "name": "UserFollowed",
+      "discriminator": [
+        202,
+        223,
+        169,
+        156,
+        158,
+        234,
+        167,
+        17
+      ]
+    },
+    {
+      "name": "UserUnfollowed",
+      "discriminator": [
+        32,
+        94,
+        90,
+        159,
+        86,
+        18,
+        124,
+        254
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "UsernameTooLong",
+      "msg": "Username must be 32 characters or less"
+    },
+    {
+      "code": 6001,
+      "name": "BioTooLong",
+      "msg": "Bio must be 256 characters or less"
+    },
+    {
+      "code": 6002,
+      "name": "CaptionTooLong",
+      "msg": "Caption must be 2000 characters or less"
+    },
+    {
+      "code": 6003,
+      "name": "CommentTooLong",
+      "msg": "Comment must be 500 characters or less"
+    },
+    {
+      "code": 6004,
+      "name": "ProfileImageUriTooLong",
+      "msg": "Profile image URI must be 200 characters or less"
+    },
+    {
+      "code": 6005,
+      "name": "ContentUriTooLong",
+      "msg": "Content URI must be 200 characters or less"
+    },
+    {
+      "code": 6006,
+      "name": "CannotFollowSelf",
+      "msg": "Cannot follow yourself"
+    },
+    {
+      "code": 6007,
+      "name": "CannotLikeOwnPost",
+      "msg": "Cannot like your own post"
+    },
+    {
+      "code": 6008,
+      "name": "AlreadyFollowing",
+      "msg": "Already following this user"
+    },
+    {
+      "code": 6009,
+      "name": "NotFollowing",
+      "msg": "Not following this user"
+    },
+    {
+      "code": 6010,
+      "name": "AlreadyLiked",
+      "msg": "Already liked this post"
+    },
+    {
+      "code": 6011,
+      "name": "NotLiked",
+      "msg": "Not liked this post"
+    },
+    {
+      "code": 6012,
+      "name": "Unauthorized",
+      "msg": "Unauthorized action"
+    },
+    {
+      "code": 6013,
+      "name": "UsernameEmpty",
+      "msg": "Username cannot be empty"
+    }
+  ],
+  "types": [
+    {
+      "name": "Comment",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "post",
+            "type": "pubkey"
+          },
+          {
+            "name": "commenter",
+            "type": "pubkey"
+          },
+          {
+            "name": "text",
+            "type": "string"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "comment_index",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ContentType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Image"
+          },
+          {
+            "name": "Video"
+          },
+          {
+            "name": "Text"
+          },
+          {
+            "name": "Multi"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Follow",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "follower",
+            "type": "pubkey"
+          },
+          {
+            "name": "following",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Like",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "post",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Post",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "content_uri",
+            "type": "string"
+          },
+          {
+            "name": "content_type",
+            "type": {
+              "defined": {
+                "name": "ContentType"
+              }
+            }
+          },
+          {
+            "name": "caption",
+            "type": "string"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "likes",
+            "type": "u64"
+          },
+          {
+            "name": "comments",
+            "type": "u64"
+          },
+          {
+            "name": "tips_received",
+            "type": "u64"
+          },
+          {
+            "name": "is_token_gated",
+            "type": "bool"
+          },
+          {
+            "name": "required_token",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "post_index",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PostCommented",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "post",
+            "type": "pubkey"
+          },
+          {
+            "name": "commenter",
+            "type": "pubkey"
+          },
+          {
+            "name": "comment",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PostCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "post",
+            "type": "pubkey"
+          },
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "content_uri",
+            "type": "string"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PostLiked",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "post",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PostUnliked",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "post",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProfileCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "username",
+            "type": "string"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProfileUpdated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UserFollowed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "follower",
+            "type": "pubkey"
+          },
+          {
+            "name": "following",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UserProfile",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "username",
+            "type": "string"
+          },
+          {
+            "name": "bio",
+            "type": "string"
+          },
+          {
+            "name": "profile_image_uri",
+            "type": "string"
+          },
+          {
+            "name": "follower_count",
+            "type": "u64"
+          },
+          {
+            "name": "following_count",
+            "type": "u64"
+          },
+          {
+            "name": "post_count",
+            "type": "u64"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          },
+          {
+            "name": "is_verified",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UserUnfollowed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "follower",
+            "type": "pubkey"
+          },
+          {
+            "name": "following",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    }
+  ]
+}
