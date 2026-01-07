@@ -9,7 +9,7 @@ interface NotificationData {
 }
 export declare function processNotification(job: Job<NotificationData>): Promise<{
     success: boolean;
-    type: "tip" | "follow" | "like" | "new_post" | "comment";
+    type: "tip" | "follow" | "like" | "comment" | "new_post";
 }>;
 export {};
 //# sourceMappingURL=notification.job.d.ts.map

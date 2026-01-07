@@ -1,11 +1,6 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.AppError = void 0;
-exports.errorHandler = errorHandler;
-exports.notFoundHandler = notFoundHandler;
-const zod_1 = require("zod");
-const logger_js_1 = require("../utils/logger.js");
-class AppError extends Error {
+import { ZodError } from 'zod';
+import { logger } from '../utils/logger.js';
+export class AppError extends Error {
     statusCode;
     code;
     constructor(statusCode, code, message) {
@@ -15,9 +10,8 @@ class AppError extends Error {
         this.name = 'AppError';
     }
 }
-exports.AppError = AppError;
-function errorHandler(err, _req, res, _next) {
-    logger_js_1.logger.error({ err }, 'Error occurred');
+export function errorHandler(err, _req, res, _next) {
+    logger.error({ err }, 'Error occurred');
     if (err instanceof AppError) {
         res.status(err.statusCode).json({
             success: false,
@@ -25,7 +19,7 @@ function errorHandler(err, _req, res, _next) {
         });
         return;
     }
-    if (err instanceof zod_1.ZodError) {
+    if (err instanceof ZodError) {
         res.status(400).json({
             success: false,
             error: {
@@ -41,7 +35,7 @@ function errorHandler(err, _req, res, _next) {
         error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred' },
     });
 }
-function notFoundHandler(_req, res) {
+export function notFoundHandler(_req, res) {
     res.status(404).json({
         success: false,
         error: { code: 'NOT_FOUND', message: 'Resource not found' },

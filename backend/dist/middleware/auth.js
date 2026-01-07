@@ -1,44 +1,33 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateChallenge = generateChallenge;
-exports.verifySignature = verifySignature;
-exports.verifyChallenge = verifyChallenge;
-exports.verifyToken = verifyToken;
-exports.authMiddleware = authMiddleware;
-exports.optionalAuthMiddleware = optionalAuthMiddleware;
-const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const tweetnacl_1 = __importDefault(require("tweetnacl"));
-const bs58_1 = __importDefault(require("bs58"));
-const env_js_1 = require("../config/env.js");
-const redis_js_1 = require("../config/redis.js");
-const supabase_js_1 = require("../config/supabase.js");
-const helpers_js_1 = require("../utils/helpers.js");
-const logger_js_1 = require("../utils/logger.js");
+import jwt from 'jsonwebtoken';
+import nacl from 'tweetnacl';
+import bs58 from 'bs58';
+import { env } from '../config/env.js';
+import { redis } from '../config/redis.js';
+import { supabase } from '../config/supabase.js';
+import { generateNonce, generateChallengeMessage } from '../utils/helpers.js';
+import { logger } from '../utils/logger.js';
 const CHALLENGE_TTL = 300; // 5 minutes
 const JWT_EXPIRY = '7d';
-async function generateChallenge(wallet) {
-    const nonce = (0, helpers_js_1.generateNonce)();
-    const message = (0, helpers_js_1.generateChallengeMessage)(wallet, nonce);
-    await redis_js_1.redis.setex(`auth:challenge:${wallet}`, CHALLENGE_TTL, JSON.stringify({ nonce, message }));
+export async function generateChallenge(wallet) {
+    const nonce = generateNonce();
+    const message = generateChallengeMessage(wallet, nonce);
+    await redis.setex(`auth:challenge:${wallet}`, CHALLENGE_TTL, JSON.stringify({ nonce, message }));
     return { message, nonce };
 }
-async function verifySignature(wallet, signature, message) {
+export async function verifySignature(wallet, signature, message) {
     try {
-        const publicKey = bs58_1.default.decode(wallet);
-        const signatureBytes = bs58_1.default.decode(signature);
+        const publicKey = bs58.decode(wallet);
+        const signatureBytes = bs58.decode(signature);
         const messageBytes = new TextEncoder().encode(message);
-        return tweetnacl_1.default.sign.detached.verify(messageBytes, signatureBytes, publicKey);
+        return nacl.sign.detached.verify(messageBytes, signatureBytes, publicKey);
     }
     catch (error) {
-        logger_js_1.logger.error({ error, wallet }, 'Signature verification failed');
+        logger.error({ error, wallet }, 'Signature verification failed');
         return false;
     }
 }
-async function verifyChallenge(wallet, signature) {
-    const stored = await redis_js_1.redis.get(`auth:challenge:${wallet}`);
+export async function verifyChallenge(wallet, signature) {
+    const stored = await redis.get(`auth:challenge:${wallet}`);
     if (!stored) {
         return { valid: false };
     }
@@ -47,8 +36,8 @@ async function verifyChallenge(wallet, signature) {
     if (!isValid) {
         return { valid: false };
     }
-    await redis_js_1.redis.del(`auth:challenge:${wallet}`);
-    const { data: restriction } = await supabase_js_1.supabase
+    await redis.del(`auth:challenge:${wallet}`);
+    const { data: restriction } = await supabase
         .from('wallet_restrictions')
         .select('restriction_level, restriction_until')
         .eq('wallet', wallet)
@@ -59,18 +48,18 @@ async function verifyChallenge(wallet, signature) {
             return { valid: false };
         }
     }
-    const token = jsonwebtoken_1.default.sign({ wallet }, env_js_1.env.JWT_SECRET, { expiresIn: JWT_EXPIRY });
+    const token = jwt.sign({ wallet }, env.JWT_SECRET, { expiresIn: JWT_EXPIRY });
     return { valid: true, token };
 }
-function verifyToken(token) {
+export function verifyToken(token) {
     try {
-        return jsonwebtoken_1.default.verify(token, env_js_1.env.JWT_SECRET);
+        return jwt.verify(token, env.JWT_SECRET);
     }
     catch {
         return null;
     }
 }
-function authMiddleware(req, res, next) {
+export function authMiddleware(req, res, next) {
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
         res.status(401).json({
@@ -91,7 +80,7 @@ function authMiddleware(req, res, next) {
     req.wallet = payload.wallet;
     next();
 }
-function optionalAuthMiddleware(req, _res, next) {
+export function optionalAuthMiddleware(req, _res, next) {
     const authHeader = req.headers.authorization;
     if (authHeader?.startsWith('Bearer ')) {
         const token = authHeader.slice(7);

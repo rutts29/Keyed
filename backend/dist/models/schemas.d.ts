@@ -52,6 +52,7 @@ export declare const PostSchema: z.ZodObject<{
     timestamp: string;
     caption: string | null;
     creator_wallet: string;
+    mood: string | null;
     id: string;
     likes: number;
     comments: number;
@@ -63,13 +64,13 @@ export declare const PostSchema: z.ZodObject<{
     tips_received: number;
     llm_description: string | null;
     scene_type: string | null;
-    mood: string | null;
     safety_score: number | null;
     alt_text: string | null;
 }, {
     timestamp: string;
     caption: string | null;
     creator_wallet: string;
+    mood: string | null;
     id: string;
     likes: number;
     comments: number;
@@ -81,7 +82,6 @@ export declare const PostSchema: z.ZodObject<{
     tips_received: number;
     llm_description: string | null;
     scene_type: string | null;
-    mood: string | null;
     safety_score: number | null;
     alt_text: string | null;
 }>;

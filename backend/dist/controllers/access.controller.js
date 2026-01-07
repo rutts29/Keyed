@@ -1,23 +1,25 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.accessController = void 0;
-const supabase_js_1 = require("../config/supabase.js");
-const errorHandler_js_1 = require("../middleware/errorHandler.js");
-exports.accessController = {
+import { PublicKey } from '@solana/web3.js';
+import { supabase } from '../config/supabase.js';
+import { programs, pdaDerivation, connection, fetchAccessControl, fetchAccessVerification, } from '../config/solana.js';
+import { solanaService } from '../services/solana.service.js';
+import { AppError } from '../middleware/errorHandler.js';
+import { logger } from '../utils/logger.js';
+export const accessController = {
     async verifyAccess(req, res) {
         const wallet = req.wallet;
         const postId = req.query.postId;
         if (!postId) {
-            throw new errorHandler_js_1.AppError(400, 'MISSING_PARAM', 'postId is required');
+            throw new AppError(400, 'MISSING_PARAM', 'postId is required');
         }
-        const { data: post } = await supabase_js_1.supabase
+        const { data: post } = await supabase
             .from('posts')
             .select('is_token_gated, required_token, creator_wallet')
             .eq('id', postId)
             .single();
         if (!post) {
-            throw new errorHandler_js_1.AppError(404, 'NOT_FOUND', 'Post not found');
+            throw new AppError(404, 'NOT_FOUND', 'Post not found');
         }
+        // Public post - everyone has access
         if (!post.is_token_gated) {
             res.json({
                 success: true,
@@ -25,6 +27,7 @@ exports.accessController = {
             });
             return;
         }
+        // Creator always has access to their own content
         if (post.creator_wallet === wallet) {
             res.json({
                 success: true,
@@ -32,8 +35,94 @@ exports.accessController = {
             });
             return;
         }
-        // TODO: Implement actual token verification when Solana programs are ready
-        // For now, stub as no access
+        // Check on-chain verification status
+        if (programs.tokenGate) {
+            try {
+                const userPubkey = new PublicKey(wallet);
+                const postPubkey = new PublicKey(postId);
+                // Try to fetch verification account
+                const verification = await fetchAccessVerification(userPubkey, postPubkey);
+                if (verification && verification.verified) {
+                    // Check if verification has expired
+                    if (verification.expiresAt) {
+                        const expiresAt = new Date(Number(verification.expiresAt) * 1000);
+                        if (expiresAt > new Date()) {
+                            res.json({
+                                success: true,
+                                data: {
+                                    hasAccess: true,
+                                    reason: 'verified',
+                                    verifiedAt: new Date(Number(verification.verifiedAt) * 1000),
+                                    expiresAt,
+                                },
+                            });
+                            return;
+                        }
+                    }
+                    else {
+                        // No expiration - access is permanent
+                        res.json({
+                            success: true,
+                            data: {
+                                hasAccess: true,
+                                reason: 'verified',
+                                verifiedAt: new Date(Number(verification.verifiedAt) * 1000),
+                            },
+                        });
+                        return;
+                    }
+                }
+                // Get access requirements
+                const accessControl = await fetchAccessControl(postPubkey);
+                if (accessControl) {
+                    res.json({
+                        success: true,
+                        data: {
+                            hasAccess: false,
+                            reason: 'token_required',
+                            requirements: {
+                                requiredToken: accessControl.requiredToken?.toBase58() || null,
+                                minimumBalance: Number(accessControl.minimumBalance),
+                                requiredNftCollection: accessControl.requiredNftCollection?.toBase58() || null,
+                                gateType: accessControl.gateType,
+                            },
+                        },
+                    });
+                    return;
+                }
+            }
+            catch (error) {
+                logger.error({ error, wallet, postId }, 'Error checking on-chain access');
+            }
+        }
+        // Fallback: Check if user holds the required token using RPC
+        if (post.required_token) {
+            try {
+                const userPubkey = new PublicKey(wallet);
+                const tokenMint = new PublicKey(post.required_token);
+                // Get token accounts for the user
+                const tokenAccounts = await connection.getTokenAccountsByOwner(userPubkey, {
+                    mint: tokenMint,
+                });
+                if (tokenAccounts.value.length > 0) {
+                    // User holds the token - they should verify on-chain to cache access
+                    res.json({
+                        success: true,
+                        data: {
+                            hasAccess: true,
+                            reason: 'token_holder',
+                            message: 'You hold the required token. Verify on-chain to cache access.',
+                            tokenAccounts: tokenAccounts.value.map(ta => ta.pubkey.toBase58()),
+                        },
+                    });
+                    return;
+                }
+            }
+            catch (error) {
+                logger.warn({ error, wallet, postId }, 'Error checking token balance');
+            }
+        }
+        // No access
         res.json({
             success: true,
             data: {
@@ -45,19 +134,22 @@ exports.accessController = {
     },
     async setRequirements(req, res) {
         const wallet = req.wallet;
-        const { postId, requiredToken, minimumBalance } = req.body;
-        const { data: post } = await supabase_js_1.supabase
+        const { postId, requiredToken, minimumBalance, requiredNftCollection } = req.body;
+        const { data: post } = await supabase
             .from('posts')
             .select('creator_wallet')
             .eq('id', postId)
             .single();
         if (!post) {
-            throw new errorHandler_js_1.AppError(404, 'NOT_FOUND', 'Post not found');
+            throw new AppError(404, 'NOT_FOUND', 'Post not found');
         }
         if (post.creator_wallet !== wallet) {
-            throw new errorHandler_js_1.AppError(403, 'FORBIDDEN', 'Not the post owner');
+            throw new AppError(403, 'FORBIDDEN', 'Not the post owner');
         }
-        await supabase_js_1.supabase
+        // Build the set access requirements transaction
+        const txResponse = await solanaService.buildSetAccessRequirementsTx(wallet, postId, requiredToken, minimumBalance || 0, requiredNftCollection);
+        // Update database record
+        await supabase
             .from('posts')
             .update({
             is_token_gated: true,
@@ -67,11 +159,81 @@ exports.accessController = {
         res.json({
             success: true,
             data: {
-                message: 'Access requirements updated',
-                requiredToken,
-                minimumBalance,
+                ...txResponse,
+                metadata: {
+                    postId,
+                    requiredToken,
+                    minimumBalance: minimumBalance || 0,
+                    requiredNftCollection,
+                },
             },
         });
+    },
+    async verifyTokenAccess(req, res) {
+        const wallet = req.wallet;
+        const { postId, tokenAccount } = req.body;
+        if (!postId) {
+            throw new AppError(400, 'MISSING_PARAM', 'postId is required');
+        }
+        if (!tokenAccount) {
+            throw new AppError(400, 'MISSING_PARAM', 'tokenAccount is required');
+        }
+        const txResponse = await solanaService.buildVerifyTokenAccessTx(wallet, postId, tokenAccount);
+        res.json({
+            success: true,
+            data: txResponse,
+        });
+    },
+    async verifyNftAccess(req, res) {
+        const wallet = req.wallet;
+        const { postId, nftTokenAccount, nftMint } = req.body;
+        if (!postId) {
+            throw new AppError(400, 'MISSING_PARAM', 'postId is required');
+        }
+        if (!nftTokenAccount || !nftMint) {
+            throw new AppError(400, 'MISSING_PARAM', 'nftTokenAccount and nftMint are required');
+        }
+        const txResponse = await solanaService.buildVerifyNftAccessTx(wallet, postId, nftTokenAccount, nftMint);
+        res.json({
+            success: true,
+            data: txResponse,
+        });
+    },
+    async checkAccess(req, res) {
+        const wallet = req.wallet;
+        const postId = req.query.postId;
+        if (!postId) {
+            throw new AppError(400, 'MISSING_PARAM', 'postId is required');
+        }
+        if (!programs.tokenGate) {
+            throw new AppError(503, 'SERVICE_UNAVAILABLE', 'Token gate program not available');
+        }
+        try {
+            const userPubkey = new PublicKey(wallet);
+            const postPubkey = new PublicKey(postId);
+            const [accessControlPda] = pdaDerivation.accessControl(postPubkey);
+            const [verificationPda] = pdaDerivation.accessVerification(userPubkey, postPubkey);
+            // Call the check_access instruction (view function)
+            const hasAccess = await programs.tokenGate.methods
+                .checkAccess()
+                .accounts({
+                accessControl: accessControlPda,
+                verification: verificationPda,
+                user: userPubkey,
+            })
+                .view();
+            res.json({
+                success: true,
+                data: { hasAccess },
+            });
+        }
+        catch (error) {
+            logger.error({ error, wallet, postId }, 'Error checking access on-chain');
+            res.json({
+                success: true,
+                data: { hasAccess: false },
+            });
+        }
     },
 };
 //# sourceMappingURL=access.controller.js.map
