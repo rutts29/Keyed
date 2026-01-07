@@ -1,0 +1,690 @@
+{
+  "address": "EXVqoivgZKebHm8VeQNBEFYZLRjJ61ZWNieXg3Npy4Hi",
+  "metadata": {
+    "name": "solshare_token_gate",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "check_access",
+      "discriminator": [
+        74,
+        62,
+        42,
+        188,
+        96,
+        229,
+        63,
+        50
+      ],
+      "accounts": [
+        {
+          "name": "access_control",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  99,
+                  99,
+                  101,
+                  115,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "access_control.post",
+                "account": "AccessControl"
+              }
+            ]
+          }
+        },
+        {
+          "name": "verification",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  101,
+                  114,
+                  105,
+                  102,
+                  105,
+                  99,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "account",
+                "path": "access_control.post",
+                "account": "AccessControl"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user",
+          "signer": true,
+          "relations": [
+            "verification"
+          ]
+        }
+      ],
+      "args": [],
+      "returns": "bool"
+    },
+    {
+      "name": "set_access_requirements",
+      "discriminator": [
+        194,
+        225,
+        4,
+        104,
+        230,
+        6,
+        0,
+        141
+      ],
+      "accounts": [
+        {
+          "name": "access_control",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  99,
+                  99,
+                  101,
+                  115,
+                  115
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "post"
+              }
+            ]
+          }
+        },
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "post",
+          "type": "pubkey"
+        },
+        {
+          "name": "required_token",
+          "type": {
+            "option": "pubkey"
+          }
+        },
+        {
+          "name": "minimum_balance",
+          "type": "u64"
+        },
+        {
+          "name": "required_nft_collection",
+          "type": {
+            "option": "pubkey"
+          }
+        }
+      ]
+    },
+    {
+      "name": "verify_nft_access",
+      "discriminator": [
+        71,
+        128,
+        225,
+        222,
+        187,
+        96,
+        175,
+        229
+      ],
+      "accounts": [
+        {
+          "name": "access_control",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  99,
+                  99,
+                  101,
+                  115,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "access_control.post",
+                "account": "AccessControl"
+              }
+            ]
+          }
+        },
+        {
+          "name": "verification",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  101,
+                  114,
+                  105,
+                  102,
+                  105,
+                  99,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "account",
+                "path": "access_control.post",
+                "account": "AccessControl"
+              }
+            ]
+          }
+        },
+        {
+          "name": "nft_token_account"
+        },
+        {
+          "name": "nft_mint"
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "verify_token_access",
+      "discriminator": [
+        105,
+        220,
+        113,
+        74,
+        32,
+        73,
+        24,
+        129
+      ],
+      "accounts": [
+        {
+          "name": "access_control",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  99,
+                  99,
+                  101,
+                  115,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "access_control.post",
+                "account": "AccessControl"
+              }
+            ]
+          }
+        },
+        {
+          "name": "verification",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  101,
+                  114,
+                  105,
+                  102,
+                  105,
+                  99,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "account",
+                "path": "access_control.post",
+                "account": "AccessControl"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_token_account"
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "AccessControl",
+      "discriminator": [
+        147,
+        81,
+        178,
+        92,
+        223,
+        66,
+        181,
+        132
+      ]
+    },
+    {
+      "name": "AccessVerification",
+      "discriminator": [
+        205,
+        197,
+        41,
+        166,
+        34,
+        88,
+        26,
+        202
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "AccessControlCreated",
+      "discriminator": [
+        242,
+        252,
+        208,
+        24,
+        175,
+        225,
+        30,
+        73
+      ]
+    },
+    {
+      "name": "AccessControlUpdated",
+      "discriminator": [
+        239,
+        105,
+        204,
+        173,
+        88,
+        104,
+        230,
+        218
+      ]
+    },
+    {
+      "name": "AccessRevoked",
+      "discriminator": [
+        200,
+        160,
+        73,
+        43,
+        201,
+        165,
+        43,
+        159
+      ]
+    },
+    {
+      "name": "AccessVerified",
+      "discriminator": [
+        39,
+        189,
+        54,
+        21,
+        173,
+        37,
+        247,
+        202
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InsufficientTokenBalance",
+      "msg": "Insufficient token balance for access"
+    },
+    {
+      "code": 6001,
+      "name": "NftNotOwned",
+      "msg": "User does not own required NFT"
+    },
+    {
+      "code": 6002,
+      "name": "InvalidNftCollection",
+      "msg": "Invalid NFT collection"
+    },
+    {
+      "code": 6003,
+      "name": "AlreadyVerified",
+      "msg": "Access already verified"
+    },
+    {
+      "code": 6004,
+      "name": "VerificationExpired",
+      "msg": "Access verification expired"
+    },
+    {
+      "code": 6005,
+      "name": "NotVerified",
+      "msg": "Access not verified"
+    },
+    {
+      "code": 6006,
+      "name": "Unauthorized",
+      "msg": "Unauthorized action"
+    },
+    {
+      "code": 6007,
+      "name": "InvalidGateConfig",
+      "msg": "Invalid gate configuration - must specify at least one requirement"
+    },
+    {
+      "code": 6008,
+      "name": "TokenMintRequired",
+      "msg": "Required token mint not specified"
+    },
+    {
+      "code": 6009,
+      "name": "NftCollectionRequired",
+      "msg": "Required NFT collection not specified"
+    },
+    {
+      "code": 6010,
+      "name": "TokenAccountOwnerMismatch",
+      "msg": "Token account owner mismatch"
+    },
+    {
+      "code": 6011,
+      "name": "TokenAccountMintMismatch",
+      "msg": "Token account mint mismatch"
+    }
+  ],
+  "types": [
+    {
+      "name": "AccessControl",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "post",
+            "type": "pubkey"
+          },
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "required_token",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "minimum_balance",
+            "type": "u64"
+          },
+          {
+            "name": "required_nft_collection",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "gate_type",
+            "type": {
+              "defined": {
+                "name": "GateType"
+              }
+            }
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccessControlCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "post",
+            "type": "pubkey"
+          },
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "required_token",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "minimum_balance",
+            "type": "u64"
+          },
+          {
+            "name": "required_nft_collection",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccessControlUpdated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "post",
+            "type": "pubkey"
+          },
+          {
+            "name": "required_token",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "minimum_balance",
+            "type": "u64"
+          },
+          {
+            "name": "required_nft_collection",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccessRevoked",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "post",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccessVerification",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "post",
+            "type": "pubkey"
+          },
+          {
+            "name": "verified",
+            "type": "bool"
+          },
+          {
+            "name": "verified_at",
+            "type": "i64"
+          },
+          {
+            "name": "expires_at",
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccessVerified",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "post",
+            "type": "pubkey"
+          },
+          {
+            "name": "verification_type",
+            "type": "string"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GateType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Token"
+          },
+          {
+            "name": "Nft"
+          },
+          {
+            "name": "Both"
+          }
+        ]
+      }
+    }
+  ]
+}

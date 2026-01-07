@@ -2,39 +2,28 @@ use anchor_lang::prelude::*;
 
 #[error_code]
 pub enum PaymentError {
-    #[msg("Tip amount must be greater than zero")]
-    InvalidTipAmount,
-
-    #[msg("Subscription amount must be greater than zero")]
-    InvalidSubscriptionAmount,
-
-    #[msg("Withdrawal amount exceeds available balance")]
-    InsufficientBalance,
-
-    #[msg("Withdrawal amount must be greater than zero")]
-    InvalidWithdrawalAmount,
-
+    #[msg("Insufficient funds for this operation")]
+    InsufficientFunds,
+    #[msg("Amount must be greater than zero")]
+    InvalidAmount,
     #[msg("Subscription is not active")]
     SubscriptionNotActive,
-
-    #[msg("Subscription is already active")]
-    SubscriptionAlreadyActive,
-
-    #[msg("Subscription payment is not yet due")]
-    SubscriptionNotDue,
-
+    #[msg("Subscription payment not yet due")]
+    PaymentNotDue,
     #[msg("Cannot tip yourself")]
     CannotTipSelf,
-
     #[msg("Cannot subscribe to yourself")]
     CannotSubscribeToSelf,
-
-    #[msg("Unauthorized - you are not the owner of this vault")]
+    #[msg("Already subscribed to this creator")]
+    AlreadySubscribed,
+    #[msg("Unauthorized action")]
     Unauthorized,
-
-    #[msg("Invalid creator account - does not match vault owner")]
-    InvalidCreatorAccount,
-
+    #[msg("Fee basis points cannot exceed 10000 (100%)")]
+    InvalidFeeBasisPoints,
+    #[msg("Withdrawal amount exceeds available balance")]
+    WithdrawalExceedsBalance,
     #[msg("Arithmetic overflow")]
     ArithmeticOverflow,
+    #[msg("Invalid creator account - does not match vault owner")]
+    InvalidCreatorAccount,
 }

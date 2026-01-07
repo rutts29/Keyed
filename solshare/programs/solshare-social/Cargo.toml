@@ -1,12 +1,12 @@
 [package]
-name = "solshare-payment"
+name = "solshare-social"
 version = "0.1.0"
-description = "Created with Anchor"
+description = "SolShare Social Program - profiles, posts, follows, likes, comments"
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "solshare_payment"
+name = "solshare_social"
 
 [features]
 default = []
