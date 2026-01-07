@@ -1,0 +1,106 @@
+import { Response } from 'express';
+import { AuthenticatedRequest } from '../types/index.js';
+import { supabase } from '../config/supabase.js';
+import { aiService } from '../services/ai.service.js';
+import { AppError } from '../middleware/errorHandler.js';
+
+interface SemanticSearchResult {
+  results: Array<{ post_id: string; score: number }>;
+  expandedQuery: string;
+}
+
+export const searchController = {
+  async semanticSearch(req: AuthenticatedRequest, res: Response) {
+    const { query, limit, rerank } = req.body;
+    
+    const aiResults = await aiService.semanticSearch(query, limit, rerank) as SemanticSearchResult;
+    
+    if (aiResults.results.length === 0) {
+      res.json({
+        success: true,
+        data: { posts: [], expandedQuery: aiResults.expandedQuery },
+      });
+      return;
+    }
+    
+    const postIds = aiResults.results.map(r => r.post_id);
+    
+    const { data: posts, error } = await supabase
+      .from('posts')
+      .select('*, users!posts_creator_wallet_fkey(*)')
+      .in('id', postIds);
+    
+    if (error) {
+      throw new AppError(500, 'DB_ERROR', 'Failed to fetch posts');
+    }
+    
+    const scoreMap = new Map(aiResults.results.map(r => [r.post_id, r.score]));
+    const sortedPosts = posts
+      .map(post => ({ ...post, relevanceScore: scoreMap.get(post.id) || 0 }))
+      .sort((a, b) => b.relevanceScore - a.relevanceScore);
+    
+    res.json({
+      success: true,
+      data: {
+        posts: sortedPosts,
+        expandedQuery: aiResults.expandedQuery,
+      },
+    });
+  },
+
+  async suggest(req: AuthenticatedRequest, res: Response) {
+    const q = (req.query.q as string) || '';
+    
+    if (q.length < 2) {
+      res.json({ success: true, data: { suggestions: [] } });
+      return;
+    }
+    
+    const { data: tagMatches } = await supabase
+      .from('posts')
+      .select('auto_tags')
+      .not('auto_tags', 'is', null)
+      .limit(100);
+    
+    const allTags = new Set<string>();
+    tagMatches?.forEach(p => {
+      p.auto_tags?.forEach((tag: string) => {
+        if (tag.toLowerCase().includes(q.toLowerCase())) {
+          allTags.add(tag);
+        }
+      });
+    });
+    
+    const suggestions = Array.from(allTags).slice(0, 10);
+    
+    res.json({
+      success: true,
+      data: { suggestions },
+    });
+  },
+
+  async searchUsers(req: AuthenticatedRequest, res: Response) {
+    const q = (req.query.q as string) || '';
+    const limit = parseInt(req.query.limit as string) || 20;
+    
+    if (q.length < 2) {
+      res.json({ success: true, data: { users: [] } });
+      return;
+    }
+    
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('*')
+      .ilike('username', `%${q}%`)
+      .limit(limit);
+    
+    if (error) {
+      throw new AppError(500, 'DB_ERROR', 'Failed to search users');
+    }
+    
+    res.json({
+      success: true,
+      data: { users: users || [] },
+    });
+  },
+};
