@@ -1,13 +1,13 @@
 import Redis from 'ioredis';
 import { env } from './env.js';
 
-export const redis = new Redis(env.UPSTASH_REDIS_URL, {
+export const redis = new Redis.default(env.UPSTASH_REDIS_URL, {
   maxRetriesPerRequest: null,
   enableReadyCheck: false,
-  retryStrategy: (times) => Math.min(times * 50, 2000),
+  retryStrategy: (times: number) => Math.min(times * 50, 2000),
 });
 
-redis.on('error', (err) => {
+redis.on('error', (err: Error) => {
   console.error('Redis connection error:', err.message);
 });
 

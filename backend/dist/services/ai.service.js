@@ -1,67 +1,64 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.aiService = void 0;
-const env_js_1 = require("../config/env.js");
-const logger_js_1 = require("../utils/logger.js");
-exports.aiService = {
+import { env } from '../config/env.js';
+import { logger } from '../utils/logger.js';
+export const aiService = {
     async moderateContent(imageBase64, caption) {
         const startTime = Date.now();
         try {
-            const response = await fetch(`${env_js_1.env.AI_SERVICE_URL}/api/moderate/check`, {
+            const response = await fetch(`${env.AI_SERVICE_URL}/api/moderate/check`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ image_base64: imageBase64, caption }),
             });
             if (!response.ok) {
-                logger_js_1.logger.warn('AI moderation service unavailable, defaulting to allow');
+                logger.warn('AI moderation service unavailable, defaulting to allow');
                 return createStubModerationResult(startTime);
             }
             return await response.json();
         }
         catch (error) {
-            logger_js_1.logger.warn({ error }, 'AI moderation failed, defaulting to allow (stub)');
+            logger.warn({ error }, 'AI moderation failed, defaulting to allow (stub)');
             return createStubModerationResult(startTime);
         }
     },
     async analyzeContent(contentUri, caption, postId) {
         try {
-            const response = await fetch(`${env_js_1.env.AI_SERVICE_URL}/api/analyze/content`, {
+            const response = await fetch(`${env.AI_SERVICE_URL}/api/analyze/content`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ content_uri: contentUri, caption, post_id: postId }),
             });
             if (!response.ok) {
-                logger_js_1.logger.warn('AI analysis service unavailable, returning stub');
+                logger.warn('AI analysis service unavailable, returning stub');
                 return createStubAnalysis(caption);
             }
             return await response.json();
         }
         catch (error) {
-            logger_js_1.logger.warn({ error }, 'AI analysis failed, returning stub');
+            logger.warn({ error }, 'AI analysis failed, returning stub');
             return createStubAnalysis(caption);
         }
     },
     async semanticSearch(query, limit = 20, rerank = true) {
         try {
-            const response = await fetch(`${env_js_1.env.AI_SERVICE_URL}/api/search/semantic`, {
+            const response = await fetch(`${env.AI_SERVICE_URL}/api/search/semantic`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ query, limit, rerank }),
             });
             if (!response.ok) {
-                logger_js_1.logger.warn('AI search service unavailable');
+                logger.warn('AI search service unavailable');
                 return { results: [], expandedQuery: query };
             }
             return await response.json();
         }
         catch (error) {
-            logger_js_1.logger.warn({ error }, 'AI search failed');
+            logger.warn({ error }, 'AI search failed');
             return { results: [], expandedQuery: query };
         }
     },
     async checkHash(imageHash) {
         try {
-            const response = await fetch(`${env_js_1.env.AI_SERVICE_URL}/api/moderate/check-hash`, {
+            const response = await fetch(`${env.AI_SERVICE_URL}/api/moderate/check-hash`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ image_hash: imageHash }),

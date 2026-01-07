@@ -1,12 +1,9 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.authController = void 0;
-const auth_js_1 = require("../middleware/auth.js");
-const supabase_js_1 = require("../config/supabase.js");
-exports.authController = {
+import { generateChallenge, verifyChallenge, verifyToken } from '../middleware/auth.js';
+import { supabase } from '../config/supabase.js';
+export const authController = {
     async getChallenge(req, res) {
         const { wallet } = req.body;
-        const { message, nonce } = await (0, auth_js_1.generateChallenge)(wallet);
+        const { message, nonce } = await generateChallenge(wallet);
         res.json({
             success: true,
             data: { message, nonce },
@@ -14,7 +11,7 @@ exports.authController = {
     },
     async verify(req, res) {
         const { wallet, signature } = req.body;
-        const result = await (0, auth_js_1.verifyChallenge)(wallet, signature);
+        const result = await verifyChallenge(wallet, signature);
         if (!result.valid) {
             res.status(401).json({
                 success: false,
@@ -22,13 +19,13 @@ exports.authController = {
             });
             return;
         }
-        const { data: existingUser } = await supabase_js_1.supabase
+        const { data: existingUser } = await supabase
             .from('users')
             .select('wallet')
             .eq('wallet', wallet)
             .single();
         if (!existingUser) {
-            await supabase_js_1.supabase.from('users').insert({
+            await supabase.from('users').insert({
                 wallet,
                 created_at: new Date().toISOString(),
             });
@@ -48,7 +45,7 @@ exports.authController = {
             return;
         }
         const token = authHeader.slice(7);
-        const payload = (0, auth_js_1.verifyToken)(token);
+        const payload = verifyToken(token);
         if (!payload) {
             res.status(401).json({
                 success: false,
@@ -56,7 +53,7 @@ exports.authController = {
             });
             return;
         }
-        const result = await (0, auth_js_1.verifyChallenge)(payload.wallet, '');
+        const result = await verifyChallenge(payload.wallet, '');
         res.json({
             success: true,
             data: { token: result.token, wallet: payload.wallet },

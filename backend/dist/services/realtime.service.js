@@ -1,12 +1,9 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.realtimeService = void 0;
-const supabase_js_1 = require("../config/supabase.js");
-const logger_js_1 = require("../utils/logger.js");
-exports.realtimeService = {
+import { supabase } from '../config/supabase.js';
+import { logger } from '../utils/logger.js';
+export const realtimeService = {
     async broadcast(channel, payload) {
         try {
-            const channelInstance = supabase_js_1.supabase.channel(channel);
+            const channelInstance = supabase.channel(channel);
             await channelInstance.send({
                 type: 'broadcast',
                 event: payload.type,
@@ -14,7 +11,7 @@ exports.realtimeService = {
             });
         }
         catch (error) {
-            logger_js_1.logger.error({ error, channel, payload }, 'Realtime broadcast failed');
+            logger.error({ error, channel, payload }, 'Realtime broadcast failed');
         }
     },
     async notifyNewPost(post, creatorWallet) {

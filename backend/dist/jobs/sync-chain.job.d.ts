@@ -7,7 +7,7 @@ interface SyncChainData {
 }
 export declare function processSyncChain(job: Job<SyncChainData>): Promise<{
     success: boolean;
-    type: "post" | "transaction" | "profile";
+    type: "post" | "profile" | "transaction";
 }>;
 export {};
 //# sourceMappingURL=sync-chain.job.d.ts.map

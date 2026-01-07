@@ -1,8 +1,4 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.rateLimitSearch = exports.rateLimitUpload = exports.rateLimitPost = exports.rateLimitGet = void 0;
-exports.createRateLimiter = createRateLimiter;
-const redis_js_1 = require("../config/redis.js");
+import { redis } from '../config/redis.js';
 const RATE_LIMITS = {
     GET: {
         auth: { windowMs: 3600000, max: 1000 },
@@ -24,7 +20,7 @@ const RATE_LIMITS = {
 function getClientIdentifier(req) {
     return req.wallet || req.ip || 'anonymous';
 }
-function createRateLimiter(category) {
+export function createRateLimiter(category) {
     return async (req, res, next) => {
         const isAuth = !!req.wallet;
         const config = RATE_LIMITS[category][isAuth ? 'auth' : 'unauth'];
@@ -37,11 +33,11 @@ function createRateLimiter(category) {
         }
         const identifier = getClientIdentifier(req);
         const key = `ratelimit:${category}:${identifier}`;
-        const current = await redis_js_1.redis.incr(key);
+        const current = await redis.incr(key);
         if (current === 1) {
-            await redis_js_1.redis.pexpire(key, config.windowMs);
+            await redis.pexpire(key, config.windowMs);
         }
-        const ttl = await redis_js_1.redis.pttl(key);
+        const ttl = await redis.pttl(key);
         res.setHeader('X-RateLimit-Limit', config.max);
         res.setHeader('X-RateLimit-Remaining', Math.max(0, config.max - current));
         res.setHeader('X-RateLimit-Reset', Date.now() + ttl);
@@ -55,8 +51,8 @@ function createRateLimiter(category) {
         next();
     };
 }
-exports.rateLimitGet = createRateLimiter('GET');
-exports.rateLimitPost = createRateLimiter('POST');
-exports.rateLimitUpload = createRateLimiter('UPLOAD');
-exports.rateLimitSearch = createRateLimiter('SEARCH');
+export const rateLimitGet = createRateLimiter('GET');
+export const rateLimitPost = createRateLimiter('POST');
+export const rateLimitUpload = createRateLimiter('UPLOAD');
+export const rateLimitSearch = createRateLimiter('SEARCH');
 //# sourceMappingURL=rateLimiter.js.map

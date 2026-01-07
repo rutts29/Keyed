@@ -1,13 +1,10 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.searchController = void 0;
-const supabase_js_1 = require("../config/supabase.js");
-const ai_service_js_1 = require("../services/ai.service.js");
-const errorHandler_js_1 = require("../middleware/errorHandler.js");
-exports.searchController = {
+import { supabase } from '../config/supabase.js';
+import { aiService } from '../services/ai.service.js';
+import { AppError } from '../middleware/errorHandler.js';
+export const searchController = {
     async semanticSearch(req, res) {
         const { query, limit, rerank } = req.body;
-        const aiResults = await ai_service_js_1.aiService.semanticSearch(query, limit, rerank);
+        const aiResults = await aiService.semanticSearch(query, limit, rerank);
         if (aiResults.results.length === 0) {
             res.json({
                 success: true,
@@ -16,12 +13,12 @@ exports.searchController = {
             return;
         }
         const postIds = aiResults.results.map(r => r.post_id);
-        const { data: posts, error } = await supabase_js_1.supabase
+        const { data: posts, error } = await supabase
             .from('posts')
             .select('*, users!posts_creator_wallet_fkey(*)')
             .in('id', postIds);
         if (error) {
-            throw new errorHandler_js_1.AppError(500, 'DB_ERROR', 'Failed to fetch posts');
+            throw new AppError(500, 'DB_ERROR', 'Failed to fetch posts');
         }
         const scoreMap = new Map(aiResults.results.map(r => [r.post_id, r.score]));
         const sortedPosts = posts
@@ -41,7 +38,7 @@ exports.searchController = {
             res.json({ success: true, data: { suggestions: [] } });
             return;
         }
-        const { data: tagMatches } = await supabase_js_1.supabase
+        const { data: tagMatches } = await supabase
             .from('posts')
             .select('auto_tags')
             .not('auto_tags', 'is', null)
@@ -67,13 +64,13 @@ exports.searchController = {
             res.json({ success: true, data: { users: [] } });
             return;
         }
-        const { data: users, error } = await supabase_js_1.supabase
+        const { data: users, error } = await supabase
             .from('users')
             .select('*')
             .ilike('username', `%${q}%`)
             .limit(limit);
         if (error) {
-            throw new errorHandler_js_1.AppError(500, 'DB_ERROR', 'Failed to search users');
+            throw new AppError(500, 'DB_ERROR', 'Failed to search users');
         }
         res.json({
             success: true,
