@@ -65,9 +65,8 @@ SolShare is an **AI-native decentralized social platform** built on Solana that 
 |-----------|-----------|---------------|---------|---------------------|
 | **Runtime** | Python | 3.12+ | ML service | - |
 | **Framework** | FastAPI | 0.115+ | ML API server | - |
-| **Vision LLM** | Claude claude-4-sonnet | Latest | Image analysis, content understanding | GPT-4o, Gemini 2.0 Flash |
-| **Text LLM** | Claude claude-4-sonnet | Latest | Query expansion, recommendations | GPT-4o-mini |
-| **Embedding Model** | text-embedding-3-large | OpenAI | Semantic embeddings (3072 dim) | Cohere embed-v4, Voyage-3 |
+| **Vision + Text LLM** | OpenAI GPT 5.2 | gpt-5.2-thinking / gpt-5.2-instant | Image analysis, moderation, query expansion | Claude claude-4-sonnet |
+| **Embedding Model** | Voyage AI | voyage-3.5 | Semantic embeddings (1024 dim) | OpenAI text-embedding-3-large |
 | **Vector Database** | Qdrant | 1.11+ | Semantic search | Pinecone, Weaviate, Milvus |
 
 ### 1.4 Frontend
@@ -111,8 +110,8 @@ SolShare is an **AI-native decentralized social platform** built on Solana that 
 
 | Service | Purpose | Required Keys |
 |---------|---------|---------------|
-| Anthropic | Vision LLM (Claude) | `ANTHROPIC_API_KEY` |
-| OpenAI | Embeddings | `OPENAI_API_KEY` |
+| OpenAI | GPT 5.2 Vision + Text LLM | `OPENAI_API_KEY` |
+| Voyage AI | Embeddings (voyage-3.5) | `VOYAGE_API_KEY` |
 | Dynamic.xyz | Wallet authentication | `DYNAMIC_ENVIRONMENT_ID` |
 | Pinata | IPFS storage (upload) | `PINATA_API_KEY`, `PINATA_SECRET_KEY` |
 | Cloudflare R2 | IPFS cache (read) | `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME` |
