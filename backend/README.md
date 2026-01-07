@@ -162,6 +162,31 @@ PDAs are derived using standard seeds:
 - Subscription: `["subscription", subscriber, creator]`
 - Access Control: `["access", post]`
 
+## AI Service Integration
+
+The backend integrates with the AI microservice for:
+- **Content Moderation** (`POST /api/moderate/check`) - Pre-upload safety check
+- **Hash Check** (`POST /api/moderate/check-hash`) - Instant block of known bad content
+- **Content Analysis** (`POST /api/analyze/content`) - Description, tags, embeddings
+- **Semantic Search** (`POST /api/search/semantic`) - Query expansion and vector search
+- **Recommendations** (`POST /api/recommend/feed`) - Personalized feed based on likes
+
+### AI Service Endpoints Used
+| Endpoint | Purpose | When Called |
+|----------|---------|-------------|
+| `/api/moderate/check` | Content safety check | Before IPFS upload |
+| `/api/moderate/check-hash` | Block known bad content | Before IPFS upload |
+| `/api/analyze/content` | Full content analysis | Async after post creation |
+| `/api/search/semantic` | Semantic search | User search requests |
+| `/api/recommend/feed` | Personalized feed | Personalized feed request |
+
+### Graceful Degradation
+When the AI service is unavailable:
+- Moderation: Content is allowed with stub response
+- Analysis: Returns basic stub with caption
+- Search: Returns empty results
+- Recommendations: Falls back to following-based feed
+
 ## Key Features
 
 ### Upload Guardrail Flow

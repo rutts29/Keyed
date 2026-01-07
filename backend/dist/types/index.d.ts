@@ -104,6 +104,25 @@ export interface ApiResponse<T = unknown> {
         message: string;
     };
 }
+export interface SearchResultItem {
+    postId: string;
+    score: number;
+    description?: string;
+    creatorWallet?: string;
+}
+export interface SemanticSearchResult {
+    results: SearchResultItem[];
+    expandedQuery: string;
+}
+export interface RecommendationItem {
+    postId: string;
+    score: number;
+    reason?: string;
+}
+export interface RecommendationResult {
+    recommendations: RecommendationItem[];
+    tasteProfile: string | null;
+}
 export interface PaginationParams {
     limit: number;
     cursor?: string;
