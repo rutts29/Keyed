@@ -130,6 +130,63 @@ npm run start:worker # Background worker
 | GET | `/api/access/verify` | Verify token-gated access |
 | POST | `/api/access/requirements` | Set access requirements |
 
+## Solana Program Integration
+
+The backend integrates with three Solana programs via Anchor:
+
+### Program IDs (Devnet)
+- **Social**: `G2USoTtbNw78NYvPJSeuYVZQS9oVQNLrLE5zJb7wsM3L`
+- **Payment**: `H5FgabhipaFijiP2HQxtsDd1papEtC9rvvQANsm1fc8t`
+- **Token Gate**: `EXVqoivgZKebHm8VeQNBEFYZLRjJ61ZWNieXg3Npy4Hi`
+
+### Transaction Building
+All write operations return **unsigned transactions** for frontend signing:
+- Profile creation/update → `create_profile` / `update_profile`
+- Post creation → `create_post`
+- Likes → `like_post` / `unlike_post`
+- Follows → `follow_user` / `unfollow_user`
+- Comments → `comment_post`
+- Tips → `tip_creator`
+- Subscriptions → `subscribe` / `cancel_subscription`
+- Withdrawals → `withdraw`
+- Token gating → `set_access_requirements` / `verify_token_access`
+
+### PDA Derivation
+PDAs are derived using standard seeds:
+- Profile: `["profile", authority]`
+- Post: `["post", creator, post_index]`
+- Follow: `["follow", follower, following]`
+- Like: `["like", post, user]`
+- Comment: `["comment", post, comment_index]`
+- Vault: `["vault", creator]`
+- Subscription: `["subscription", subscriber, creator]`
+- Access Control: `["access", post]`
+
+## AI Service Integration
+
+The backend integrates with the AI microservice for:
+- **Content Moderation** (`POST /api/moderate/check`) - Pre-upload safety check
+- **Hash Check** (`POST /api/moderate/check-hash`) - Instant block of known bad content
+- **Content Analysis** (`POST /api/analyze/content`) - Description, tags, embeddings
+- **Semantic Search** (`POST /api/search/semantic`) - Query expansion and vector search
+- **Recommendations** (`POST /api/recommend/feed`) - Personalized feed based on likes
+
+### AI Service Endpoints Used
+| Endpoint | Purpose | When Called |
+|----------|---------|-------------|
+| `/api/moderate/check` | Content safety check | Before IPFS upload |
+| `/api/moderate/check-hash` | Block known bad content | Before IPFS upload |
+| `/api/analyze/content` | Full content analysis | Async after post creation |
+| `/api/search/semantic` | Semantic search | User search requests |
+| `/api/recommend/feed` | Personalized feed | Personalized feed request |
+
+### Graceful Degradation
+When the AI service is unavailable:
+- Moderation: Content is allowed with stub response
+- Analysis: Returns basic stub with caption
+- Search: Returns empty results
+- Recommendations: Falls back to following-based feed
+
 ## Key Features
 
 ### Upload Guardrail Flow

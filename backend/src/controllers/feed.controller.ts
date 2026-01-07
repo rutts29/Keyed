@@ -2,49 +2,123 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../types/index.js';
 import { supabase } from '../config/supabase.js';
 import { cacheService } from '../services/cache.service.js';
+import { aiService } from '../services/ai.service.js';
 import { AppError } from '../middleware/errorHandler.js';
+import { logger } from '../utils/logger.js';
 
 export const feedController = {
+  /**
+   * Personalized feed using AI recommendations
+   * Falls back to following-based feed if AI service unavailable
+   */
   async getPersonalizedFeed(req: AuthenticatedRequest, res: Response) {
     const wallet = req.wallet!;
     const limit = parseInt(req.query.limit as string) || 20;
     const cursor = req.query.cursor as string;
     
+    // Check cache first (only for first page)
     const cached = !cursor ? await cacheService.getFeed(wallet) : null;
     if (cached) {
       res.json({ success: true, data: cached });
       return;
     }
     
-    let following = await cacheService.getFollowing(wallet);
-    if (!following) {
-      const { data: followsData } = await supabase
-        .from('follows')
-        .select('following_wallet')
-        .eq('follower_wallet', wallet);
-      following = followsData?.map(f => f.following_wallet) || [];
-      await cacheService.setFollowing(wallet, following);
-    }
-    
-    const feedWallets = [...following, wallet];
-    
-    let query = supabase
-      .from('posts')
-      .select('*, users!posts_creator_wallet_fkey(*)')
-      .in('creator_wallet', feedWallets)
+    // Get user's liked posts for AI recommendations
+    const { data: likedPosts } = await supabase
+      .from('likes')
+      .select('post_id')
+      .eq('user_wallet', wallet)
       .order('timestamp', { ascending: false })
-      .limit(limit);
+      .limit(50);
     
-    if (cursor) {
-      query = query.lt('timestamp', cursor);
+    const likedPostIds = likedPosts?.map(l => l.post_id) || [];
+    
+    // Get already seen posts to exclude
+    const { data: interactions } = await supabase
+      .from('interactions')
+      .select('post_id')
+      .eq('user_wallet', wallet)
+      .eq('interaction_type', 'view')
+      .order('timestamp', { ascending: false })
+      .limit(100);
+    
+    const seenPostIds = interactions?.map(i => i.post_id) || [];
+    
+    // Try AI recommendations first
+    let recommendedPostIds: string[] = [];
+    let tasteProfile: string | null = null;
+    
+    try {
+      const recommendations = await aiService.getRecommendations(
+        wallet,
+        likedPostIds,
+        limit * 2, // Request more to account for filtering
+        seenPostIds
+      );
+      
+      recommendedPostIds = recommendations.recommendations.map(r => r.postId);
+      tasteProfile = recommendations.tasteProfile;
+      
+      logger.debug({ wallet, recommendationCount: recommendedPostIds.length }, 'Got AI recommendations');
+    } catch (error) {
+      logger.warn({ error, wallet }, 'AI recommendations failed, falling back to following-based feed');
     }
     
-    const { data: posts, error } = await query;
+    let posts;
     
-    if (error) {
-      throw new AppError(500, 'DB_ERROR', 'Failed to fetch feed');
+    if (recommendedPostIds.length >= limit) {
+      // Use AI recommendations
+      const { data: aiPosts, error } = await supabase
+        .from('posts')
+        .select('*, users!posts_creator_wallet_fkey(*)')
+        .in('id', recommendedPostIds)
+        .limit(limit);
+      
+      if (error) {
+        throw new AppError(500, 'DB_ERROR', 'Failed to fetch recommended posts');
+      }
+      
+      // Sort by recommendation order
+      const postMap = new Map(aiPosts.map(p => [p.id, p]));
+      posts = recommendedPostIds
+        .filter(id => postMap.has(id))
+        .map(id => postMap.get(id)!)
+        .slice(0, limit);
+    } else {
+      // Fallback: Get posts from following + own posts
+      let following = await cacheService.getFollowing(wallet);
+      if (!following) {
+        const { data: followsData } = await supabase
+          .from('follows')
+          .select('following_wallet')
+          .eq('follower_wallet', wallet);
+        following = followsData?.map(f => f.following_wallet) || [];
+        await cacheService.setFollowing(wallet, following);
+      }
+      
+      const feedWallets = [...following, wallet];
+      
+      let query = supabase
+        .from('posts')
+        .select('*, users!posts_creator_wallet_fkey(*)')
+        .in('creator_wallet', feedWallets)
+        .order('timestamp', { ascending: false })
+        .limit(limit);
+      
+      if (cursor) {
+        query = query.lt('timestamp', cursor);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        throw new AppError(500, 'DB_ERROR', 'Failed to fetch feed');
+      }
+      
+      posts = data;
     }
     
+    // Get user's likes for these posts
     const postIds = posts.map(p => p.id);
     const { data: likes } = await supabase
       .from('likes')
@@ -52,17 +126,33 @@ export const feedController = {
       .eq('user_wallet', wallet)
       .in('post_id', postIds);
     
-    const likedPostIds = new Set(likes?.map(l => l.post_id) || []);
+    const likedSet = new Set(likes?.map(l => l.post_id) || []);
+    
+    // Get following status
+    let following = await cacheService.getFollowing(wallet);
+    if (!following) {
+      const { data: followsData } = await supabase
+        .from('follows')
+        .select('following_wallet')
+        .eq('follower_wallet', wallet);
+      following = followsData?.map(f => f.following_wallet) || [];
+    }
+    const followingSet = new Set(following);
     
     const feedItems = posts.map(post => ({
       ...post,
-      isLiked: likedPostIds.has(post.id),
-      isFollowing: following!.includes(post.creator_wallet),
+      isLiked: likedSet.has(post.id),
+      isFollowing: followingSet.has(post.creator_wallet),
     }));
     
     const nextCursor = posts.length === limit ? posts[posts.length - 1].timestamp : null;
-    const result = { posts: feedItems, nextCursor };
+    const result = { 
+      posts: feedItems, 
+      nextCursor,
+      tasteProfile, // Include taste profile for UI display
+    };
     
+    // Cache first page only
     if (!cursor) {
       await cacheService.setFeed(wallet, result);
     }
@@ -70,6 +160,9 @@ export const feedController = {
     res.json({ success: true, data: result });
   },
 
+  /**
+   * Explore/trending feed - uses AI if available, falls back to likes-based sorting
+   */
   async getExploreFeed(req: AuthenticatedRequest, res: Response) {
     const limit = parseInt(req.query.limit as string) || 20;
     const cursor = req.query.cursor as string;
@@ -115,6 +208,9 @@ export const feedController = {
     });
   },
 
+  /**
+   * Following feed - chronological posts from followed users
+   */
   async getFollowingFeed(req: AuthenticatedRequest, res: Response) {
     const wallet = req.wallet!;
     const limit = parseInt(req.query.limit as string) || 20;
@@ -178,6 +274,9 @@ export const feedController = {
     });
   },
 
+  /**
+   * Trending posts from the last 24 hours
+   */
   async getTrending(req: AuthenticatedRequest, res: Response) {
     const limit = parseInt(req.query.limit as string) || 20;
     
@@ -194,9 +293,25 @@ export const feedController = {
       throw new AppError(500, 'DB_ERROR', 'Failed to fetch trending');
     }
     
+    let feedItems = posts;
+    if (req.wallet) {
+      const postIds = posts.map(p => p.id);
+      const { data: likes } = await supabase
+        .from('likes')
+        .select('post_id')
+        .eq('user_wallet', req.wallet)
+        .in('post_id', postIds);
+      
+      const likedPostIds = new Set(likes?.map(l => l.post_id) || []);
+      feedItems = posts.map(post => ({
+        ...post,
+        isLiked: likedPostIds.has(post.id),
+      }));
+    }
+    
     res.json({
       success: true,
-      data: { posts },
+      data: { posts: feedItems },
     });
   },
 };

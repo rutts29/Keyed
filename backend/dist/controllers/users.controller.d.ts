@@ -8,5 +8,6 @@ export declare const usersController: {
     getFollowing(req: AuthenticatedRequest, res: Response): Promise<void>;
     follow(req: AuthenticatedRequest, res: Response): Promise<void>;
     unfollow(req: AuthenticatedRequest, res: Response): Promise<void>;
+    checkProfileExists(req: AuthenticatedRequest, res: Response): Promise<void>;
 };
 //# sourceMappingURL=users.controller.d.ts.map

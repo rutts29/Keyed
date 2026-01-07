@@ -1,11 +1,5 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.schemas = void 0;
-exports.validateBody = validateBody;
-exports.validateQuery = validateQuery;
-exports.validateParams = validateParams;
-const zod_1 = require("zod");
-function validateBody(schema) {
+import { z } from 'zod';
+export function validateBody(schema) {
     return (req, res, next) => {
         const result = schema.safeParse(req.body);
         if (!result.success) {
@@ -23,7 +17,7 @@ function validateBody(schema) {
         next();
     };
 }
-function validateQuery(schema) {
+export function validateQuery(schema) {
     return (req, res, next) => {
         const result = schema.safeParse(req.query);
         if (!result.success) {
@@ -41,7 +35,7 @@ function validateQuery(schema) {
         next();
     };
 }
-function validateParams(schema) {
+export function validateParams(schema) {
     return (req, res, next) => {
         const result = schema.safeParse(req.params);
         if (!result.success) {
@@ -59,58 +53,58 @@ function validateParams(schema) {
         next();
     };
 }
-exports.schemas = {
-    wallet: zod_1.z.string().min(32).max(44),
-    pagination: zod_1.z.object({
-        limit: zod_1.z.string().transform(Number).pipe(zod_1.z.number().min(1).max(50)).default('20'),
-        cursor: zod_1.z.string().optional(),
+export const schemas = {
+    wallet: z.string().min(32).max(44),
+    pagination: z.object({
+        limit: z.string().transform(Number).pipe(z.number().min(1).max(50)).default('20'),
+        cursor: z.string().optional(),
     }),
-    createProfile: zod_1.z.object({
-        username: zod_1.z.string().min(1).max(32),
-        bio: zod_1.z.string().max(256).optional(),
-        profileImageUri: zod_1.z.string().url().optional(),
+    createProfile: z.object({
+        username: z.string().min(1).max(32),
+        bio: z.string().max(256).optional(),
+        profileImageUri: z.string().url().optional(),
     }),
-    updateProfile: zod_1.z.object({
-        bio: zod_1.z.string().max(256).optional(),
-        profileImageUri: zod_1.z.string().url().optional(),
+    updateProfile: z.object({
+        bio: z.string().max(256).optional(),
+        profileImageUri: z.string().url().optional(),
     }),
-    createPost: zod_1.z.object({
-        contentUri: zod_1.z.string().min(1),
-        contentType: zod_1.z.enum(['image', 'video', 'text', 'multi']).default('image'),
-        caption: zod_1.z.string().max(2000).optional(),
-        isTokenGated: zod_1.z.boolean().default(false),
-        requiredToken: zod_1.z.string().optional(),
+    createPost: z.object({
+        contentUri: z.string().min(1),
+        contentType: z.enum(['image', 'video', 'text', 'multi']).default('image'),
+        caption: z.string().max(2000).optional(),
+        isTokenGated: z.boolean().default(false),
+        requiredToken: z.string().optional(),
     }),
-    comment: zod_1.z.object({
-        text: zod_1.z.string().min(1).max(500),
+    comment: z.object({
+        text: z.string().min(1).max(500),
     }),
-    tip: zod_1.z.object({
-        creatorWallet: zod_1.z.string().min(32).max(44),
-        amount: zod_1.z.number().positive(),
-        postId: zod_1.z.string().optional(),
+    tip: z.object({
+        creatorWallet: z.string().min(32).max(44),
+        amount: z.number().positive(),
+        postId: z.string().optional(),
     }),
-    subscribe: zod_1.z.object({
-        creatorWallet: zod_1.z.string().min(32).max(44),
-        amountPerMonth: zod_1.z.number().positive(),
+    subscribe: z.object({
+        creatorWallet: z.string().min(32).max(44),
+        amountPerMonth: z.number().positive(),
     }),
-    withdraw: zod_1.z.object({
-        amount: zod_1.z.number().positive(),
+    withdraw: z.object({
+        amount: z.number().positive(),
     }),
-    semanticSearch: zod_1.z.object({
-        query: zod_1.z.string().min(1).max(500),
-        limit: zod_1.z.number().min(1).max(50).default(20),
-        rerank: zod_1.z.boolean().default(true),
+    semanticSearch: z.object({
+        query: z.string().min(1).max(500),
+        limit: z.number().min(1).max(50).default(20),
+        rerank: z.boolean().default(true),
     }),
-    report: zod_1.z.object({
-        reason: zod_1.z.enum(['nsfw', 'spam', 'harassment', 'other']),
-        description: zod_1.z.string().max(500).optional(),
+    report: z.object({
+        reason: z.enum(['nsfw', 'spam', 'harassment', 'other']),
+        description: z.string().max(500).optional(),
     }),
-    authChallenge: zod_1.z.object({
-        wallet: zod_1.z.string().min(32).max(44),
+    authChallenge: z.object({
+        wallet: z.string().min(32).max(44),
     }),
-    authVerify: zod_1.z.object({
-        wallet: zod_1.z.string().min(32).max(44),
-        signature: zod_1.z.string().min(1),
+    authVerify: z.object({
+        wallet: z.string().min(32).max(44),
+        signature: z.string().min(1),
     }),
 };
 //# sourceMappingURL=validation.js.map

@@ -1,11 +1,17 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = require("express");
-const access_controller_js_1 = require("../controllers/access.controller.js");
-const auth_js_1 = require("../middleware/auth.js");
-const rateLimiter_js_1 = require("../middleware/rateLimiter.js");
-const router = (0, express_1.Router)();
-router.get('/verify', auth_js_1.authMiddleware, rateLimiter_js_1.rateLimitGet, access_controller_js_1.accessController.verifyAccess);
-router.post('/requirements', auth_js_1.authMiddleware, rateLimiter_js_1.rateLimitPost, access_controller_js_1.accessController.setRequirements);
-exports.default = router;
+import { Router } from 'express';
+import { accessController } from '../controllers/access.controller.js';
+import { authMiddleware } from '../middleware/auth.js';
+import { rateLimitGet, rateLimitPost } from '../middleware/rateLimiter.js';
+const router = Router();
+// Check if user has access to a post
+router.get('/verify', authMiddleware, rateLimitGet, accessController.verifyAccess);
+// Set access requirements for a post (creator only)
+router.post('/requirements', authMiddleware, rateLimitPost, accessController.setRequirements);
+// Verify token access (build transaction for on-chain verification)
+router.post('/verify-token', authMiddleware, rateLimitPost, accessController.verifyTokenAccess);
+// Verify NFT access (build transaction for on-chain verification)
+router.post('/verify-nft', authMiddleware, rateLimitPost, accessController.verifyNftAccess);
+// Check access status on-chain (read-only view call)
+router.get('/check', authMiddleware, rateLimitGet, accessController.checkAccess);
+export default router;
 //# sourceMappingURL=access.routes.js.map

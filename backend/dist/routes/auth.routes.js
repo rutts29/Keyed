@@ -1,12 +1,10 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = require("express");
-const auth_controller_js_1 = require("../controllers/auth.controller.js");
-const validation_js_1 = require("../middleware/validation.js");
-const rateLimiter_js_1 = require("../middleware/rateLimiter.js");
-const router = (0, express_1.Router)();
-router.post('/challenge', (0, validation_js_1.validateBody)(validation_js_1.schemas.authChallenge), auth_controller_js_1.authController.getChallenge);
-router.post('/verify', (0, validation_js_1.validateBody)(validation_js_1.schemas.authVerify), auth_controller_js_1.authController.verify);
-router.post('/refresh', rateLimiter_js_1.rateLimitPost, auth_controller_js_1.authController.refresh);
-exports.default = router;
+import { Router } from 'express';
+import { authController } from '../controllers/auth.controller.js';
+import { validateBody, schemas } from '../middleware/validation.js';
+import { rateLimitPost } from '../middleware/rateLimiter.js';
+const router = Router();
+router.post('/challenge', validateBody(schemas.authChallenge), authController.getChallenge);
+router.post('/verify', validateBody(schemas.authVerify), authController.verify);
+router.post('/refresh', rateLimitPost, authController.refresh);
+export default router;
 //# sourceMappingURL=auth.routes.js.map
