@@ -34,7 +34,7 @@ export const postsController = {
         }
         const base64 = file.buffer.toString('base64');
         const imageBase64 = `data:${file.mimetype};base64,${base64}`;
-        const moderationResult = await aiService.moderateContent(imageBase64, req.body.caption);
+        const moderationResult = await aiService.moderateContent(imageBase64, req.body.caption, wallet);
         if (moderationResult.verdict === 'block') {
             await supabase.from('content_violations').insert({
                 wallet,
@@ -77,7 +77,7 @@ export const postsController = {
             required_token: requiredToken,
         });
         await supabase.rpc('increment_user_stat', { wallet_addr: wallet, stat_name: 'post_count' });
-        await addJob('ai-analysis', { postId, contentUri, caption });
+        await addJob('ai-analysis', { postId, contentUri, caption, creatorWallet: wallet });
         await addJob('notification', { type: 'new_post', postId, creatorWallet: wallet });
         await cacheService.invalidateUser(wallet);
         res.json({

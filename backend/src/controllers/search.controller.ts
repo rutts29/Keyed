@@ -3,27 +3,42 @@ import { AuthenticatedRequest } from '../types/index.js';
 import { supabase } from '../config/supabase.js';
 import { aiService } from '../services/ai.service.js';
 import { AppError } from '../middleware/errorHandler.js';
-
-interface SemanticSearchResult {
-  results: Array<{ post_id: string; score: number }>;
-  expandedQuery: string;
-}
+import { logger } from '../utils/logger.js';
 
 export const searchController = {
+  /**
+   * AI-powered semantic search
+   * Expands query and searches by meaning, not just keywords
+   */
   async semanticSearch(req: AuthenticatedRequest, res: Response) {
-    const { query, limit, rerank } = req.body;
+    const { query, limit = 20, rerank = true } = req.body;
     
-    const aiResults = await aiService.semanticSearch(query, limit, rerank) as SemanticSearchResult;
-    
-    if (aiResults.results.length === 0) {
+    if (!query || query.trim().length < 2) {
       res.json({
         success: true,
-        data: { posts: [], expandedQuery: aiResults.expandedQuery },
+        data: { posts: [], expandedQuery: query || '' },
       });
       return;
     }
     
-    const postIds = aiResults.results.map(r => r.post_id);
+    const searchResults = await aiService.semanticSearch(query, limit, rerank);
+    
+    logger.debug({ 
+      query, 
+      resultCount: searchResults.results.length, 
+      expandedQuery: searchResults.expandedQuery 
+    }, 'Semantic search completed');
+    
+    if (searchResults.results.length === 0) {
+      res.json({
+        success: true,
+        data: { posts: [], expandedQuery: searchResults.expandedQuery },
+      });
+      return;
+    }
+    
+    // Fetch full post data for the results
+    const postIds = searchResults.results.map(r => r.postId);
     
     const { data: posts, error } = await supabase
       .from('posts')
@@ -34,20 +49,44 @@ export const searchController = {
       throw new AppError(500, 'DB_ERROR', 'Failed to fetch posts');
     }
     
-    const scoreMap = new Map(aiResults.results.map(r => [r.post_id, r.score]));
+    // Sort posts by relevance score and add score to response
+    const scoreMap = new Map(searchResults.results.map(r => [r.postId, r.score]));
     const sortedPosts = posts
-      .map(post => ({ ...post, relevanceScore: scoreMap.get(post.id) || 0 }))
+      .map(post => ({ 
+        ...post, 
+        relevanceScore: scoreMap.get(post.id) || 0,
+      }))
       .sort((a, b) => b.relevanceScore - a.relevanceScore);
+    
+    // Add like status if user is authenticated
+    let enrichedPosts = sortedPosts;
+    if (req.wallet) {
+      const { data: likes } = await supabase
+        .from('likes')
+        .select('post_id')
+        .eq('user_wallet', req.wallet)
+        .in('post_id', postIds);
+      
+      const likedSet = new Set(likes?.map(l => l.post_id) || []);
+      enrichedPosts = sortedPosts.map(post => ({
+        ...post,
+        isLiked: likedSet.has(post.id),
+      }));
+    }
     
     res.json({
       success: true,
       data: {
-        posts: sortedPosts,
-        expandedQuery: aiResults.expandedQuery,
+        posts: enrichedPosts,
+        expandedQuery: searchResults.expandedQuery,
+        totalResults: searchResults.results.length,
       },
     });
   },
 
+  /**
+   * Search autocomplete suggestions based on existing tags
+   */
   async suggest(req: AuthenticatedRequest, res: Response) {
     const q = (req.query.q as string) || '';
     
@@ -56,6 +95,7 @@ export const searchController = {
       return;
     }
     
+    // Get tags from posts that match the query
     const { data: tagMatches } = await supabase
       .from('posts')
       .select('auto_tags')
@@ -71,7 +111,17 @@ export const searchController = {
       });
     });
     
-    const suggestions = Array.from(allTags).slice(0, 10);
+    // Also search for usernames
+    const { data: users } = await supabase
+      .from('users')
+      .select('username')
+      .ilike('username', `${q}%`)
+      .limit(5);
+    
+    const suggestions = [
+      ...Array.from(allTags).slice(0, 10),
+      ...(users?.map(u => `@${u.username}`) || []),
+    ];
     
     res.json({
       success: true,
@@ -79,6 +129,9 @@ export const searchController = {
     });
   },
 
+  /**
+   * Search users by username
+   */
   async searchUsers(req: AuthenticatedRequest, res: Response) {
     const q = (req.query.q as string) || '';
     const limit = parseInt(req.query.limit as string) || 20;
@@ -92,6 +145,7 @@ export const searchController = {
       .from('users')
       .select('*')
       .ilike('username', `%${q}%`)
+      .order('follower_count', { ascending: false })
       .limit(limit);
     
     if (error) {
@@ -101,6 +155,60 @@ export const searchController = {
     res.json({
       success: true,
       data: { users: users || [] },
+    });
+  },
+
+  /**
+   * Search posts by tags
+   */
+  async searchByTag(req: AuthenticatedRequest, res: Response) {
+    const tag = req.query.tag as string;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const cursor = req.query.cursor as string;
+    
+    if (!tag) {
+      res.json({ success: true, data: { posts: [], nextCursor: null } });
+      return;
+    }
+    
+    let query = supabase
+      .from('posts')
+      .select('*, users!posts_creator_wallet_fkey(*)')
+      .contains('auto_tags', [tag])
+      .order('timestamp', { ascending: false })
+      .limit(limit);
+    
+    if (cursor) {
+      query = query.lt('timestamp', cursor);
+    }
+    
+    const { data: posts, error } = await query;
+    
+    if (error) {
+      throw new AppError(500, 'DB_ERROR', 'Failed to search by tag');
+    }
+    
+    let enrichedPosts = posts;
+    if (req.wallet) {
+      const postIds = posts.map(p => p.id);
+      const { data: likes } = await supabase
+        .from('likes')
+        .select('post_id')
+        .eq('user_wallet', req.wallet)
+        .in('post_id', postIds);
+      
+      const likedSet = new Set(likes?.map(l => l.post_id) || []);
+      enrichedPosts = posts.map(post => ({
+        ...post,
+        isLiked: likedSet.has(post.id),
+      }));
+    }
+    
+    const nextCursor = posts.length === limit ? posts[posts.length - 1].timestamp : null;
+    
+    res.json({
+      success: true,
+      data: { posts: enrichedPosts, nextCursor },
     });
   },
 };

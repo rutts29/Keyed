@@ -1,85 +1,315 @@
 import { env } from '../config/env.js';
 import { logger } from '../utils/logger.js';
-import type { ModerationResult, AIAnalysis } from '../types/index.js';
+import type { 
+  ModerationResult, 
+  AIAnalysis, 
+  SemanticSearchResult, 
+  RecommendationResult 
+} from '../types/index.js';
+
+const AI_SERVICE_TIMEOUT = 30000; // 30 seconds
+
+// Response types from AI service (camelCase due to response_model_by_alias=True)
+interface AIModerationResponse {
+  verdict: 'allow' | 'warn' | 'block';
+  scores: {
+    nsfw: number;
+    violence: number;
+    hate: number;
+    childSafety: number;
+    spam: number;
+    drugsWeapons: number;
+  };
+  maxScore: number;
+  blockedCategory?: string;
+  explanation: string;
+  processingTimeMs: number;
+  violationId?: string;
+}
+
+interface AIAnalysisResponse {
+  description: string;
+  tags: string[];
+  sceneType: string;
+  objects: string[];
+  mood: string;
+  colors: string[];
+  safetyScore: number;
+  altText: string;
+  embedding?: number[];
+}
+
+interface AISearchResponse {
+  results: Array<{
+    postId: string;
+    score: number;
+    description?: string;
+    creatorWallet?: string;
+  }>;
+  expandedQuery: string;
+}
+
+interface AIRecommendResponse {
+  recommendations: Array<{
+    postId: string;
+    score: number;
+    reason?: string;
+  }>;
+  tasteProfile?: string;
+}
+
+interface AIHashCheckResponse {
+  knownBad: boolean;
+  reason?: string;
+  blockedAt?: string;
+}
+
+async function fetchWithTimeout(url: string, options: RequestInit, timeout = AI_SERVICE_TIMEOUT): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    return response;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
 export const aiService = {
-  async moderateContent(imageBase64: string, caption?: string): Promise<ModerationResult> {
+  /**
+   * Pre-upload content moderation check
+   * Calls AI service synchronously before content is stored
+   */
+  async moderateContent(imageBase64: string, caption?: string, wallet?: string): Promise<ModerationResult> {
     const startTime = Date.now();
     
     try {
-      const response = await fetch(`${env.AI_SERVICE_URL}/api/moderate/check`, {
+      const response = await fetchWithTimeout(`${env.AI_SERVICE_URL}/api/moderate/check`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image_base64: imageBase64, caption }),
+        body: JSON.stringify({ 
+          image_base64: imageBase64, 
+          caption: caption || null,
+          wallet: wallet || null,
+        }),
       });
       
       if (!response.ok) {
-        logger.warn('AI moderation service unavailable, defaulting to allow');
+        const errorText = await response.text();
+        logger.warn({ status: response.status, error: errorText }, 'AI moderation service error');
         return createStubModerationResult(startTime);
       }
       
-      return await response.json() as ModerationResult;
+      const data = await response.json() as AIModerationResponse;
+      
+      return {
+        verdict: data.verdict,
+        scores: {
+          nsfw: data.scores.nsfw,
+          violence: data.scores.violence,
+          hate: data.scores.hate,
+          childSafety: data.scores.childSafety,
+          spam: data.scores.spam,
+          drugsWeapons: data.scores.drugsWeapons,
+        },
+        maxScore: data.maxScore,
+        blockedCategory: data.blockedCategory,
+        explanation: data.explanation,
+        processingTimeMs: data.processingTimeMs,
+        violationId: data.violationId,
+      };
     } catch (error) {
-      logger.warn({ error }, 'AI moderation failed, defaulting to allow (stub)');
+      if (error instanceof Error && error.name === 'AbortError') {
+        logger.warn('AI moderation request timed out');
+      } else {
+        logger.warn({ error }, 'AI moderation failed, defaulting to allow (stub)');
+      }
       return createStubModerationResult(startTime);
     }
   },
 
-  async analyzeContent(contentUri: string, caption?: string, postId?: string): Promise<AIAnalysis> {
+  /**
+   * Full content analysis - called asynchronously after post creation
+   * Generates description, tags, embedding, etc.
+   */
+  async analyzeContent(
+    contentUri: string, 
+    caption?: string, 
+    postId?: string, 
+    creatorWallet?: string
+  ): Promise<AIAnalysis> {
     try {
-      const response = await fetch(`${env.AI_SERVICE_URL}/api/analyze/content`, {
+      const response = await fetchWithTimeout(`${env.AI_SERVICE_URL}/api/analyze/content`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content_uri: contentUri, caption, post_id: postId }),
+        body: JSON.stringify({ 
+          content_uri: contentUri, 
+          caption: caption || null, 
+          post_id: postId || null,
+          creator_wallet: creatorWallet || null,
+        }),
       });
       
       if (!response.ok) {
-        logger.warn('AI analysis service unavailable, returning stub');
+        const errorText = await response.text();
+        logger.warn({ status: response.status, error: errorText }, 'AI analysis service error');
         return createStubAnalysis(caption);
       }
       
-      return await response.json() as AIAnalysis;
+      const data = await response.json() as AIAnalysisResponse;
+      
+      return {
+        description: data.description,
+        tags: data.tags,
+        sceneType: data.sceneType,
+        objects: data.objects,
+        mood: data.mood,
+        colors: data.colors,
+        safetyScore: data.safetyScore,
+        altText: data.altText,
+        embedding: data.embedding,
+      };
     } catch (error) {
-      logger.warn({ error }, 'AI analysis failed, returning stub');
+      if (error instanceof Error && error.name === 'AbortError') {
+        logger.warn('AI analysis request timed out');
+      } else {
+        logger.warn({ error }, 'AI analysis failed, returning stub');
+      }
       return createStubAnalysis(caption);
     }
   },
 
-  async semanticSearch(query: string, limit = 20, rerank = true) {
+  /**
+   * Semantic search with query expansion and optional re-ranking
+   */
+  async semanticSearch(
+    query: string, 
+    limit = 50, 
+    rerank = true
+  ): Promise<SemanticSearchResult> {
     try {
-      const response = await fetch(`${env.AI_SERVICE_URL}/api/search/semantic`, {
+      const response = await fetchWithTimeout(`${env.AI_SERVICE_URL}/api/search/semantic`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query, limit, rerank }),
       });
       
       if (!response.ok) {
-        logger.warn('AI search service unavailable');
+        const errorText = await response.text();
+        logger.warn({ status: response.status, error: errorText }, 'AI search service error');
         return { results: [], expandedQuery: query };
       }
       
-      return await response.json();
+      const data = await response.json() as AISearchResponse;
+      
+      return {
+        results: data.results.map(r => ({
+          postId: r.postId,
+          score: r.score,
+          description: r.description,
+          creatorWallet: r.creatorWallet,
+        })),
+        expandedQuery: data.expandedQuery,
+      };
     } catch (error) {
-      logger.warn({ error }, 'AI search failed');
+      if (error instanceof Error && error.name === 'AbortError') {
+        logger.warn('AI search request timed out');
+      } else {
+        logger.warn({ error }, 'AI search failed');
+      }
       return { results: [], expandedQuery: query };
     }
   },
 
-  async checkHash(imageHash: string): Promise<{ knownBad: boolean; reason?: string }> {
+  /**
+   * Personalized feed recommendations based on user's liked content
+   */
+  async getRecommendations(
+    userWallet: string,
+    likedPostIds: string[] = [],
+    limit = 50,
+    excludeSeen: string[] = []
+  ): Promise<RecommendationResult> {
     try {
-      const response = await fetch(`${env.AI_SERVICE_URL}/api/moderate/check-hash`, {
+      const response = await fetchWithTimeout(`${env.AI_SERVICE_URL}/api/recommend/feed`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_wallet: userWallet,
+          liked_post_ids: likedPostIds,
+          limit,
+          exclude_seen: excludeSeen,
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        logger.warn({ status: response.status, error: errorText }, 'AI recommendation service error');
+        return { recommendations: [], tasteProfile: null };
+      }
+      
+      const data = await response.json() as AIRecommendResponse;
+      
+      return {
+        recommendations: data.recommendations.map(r => ({
+          postId: r.postId,
+          score: r.score,
+          reason: r.reason,
+        })),
+        tasteProfile: data.tasteProfile || null,
+      };
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        logger.warn('AI recommendation request timed out');
+      } else {
+        logger.warn({ error }, 'AI recommendations failed');
+      }
+      return { recommendations: [], tasteProfile: null };
+    }
+  },
+
+  /**
+   * Check perceptual hash against blocked content database
+   */
+  async checkHash(imageHash: string): Promise<{ knownBad: boolean; reason?: string; blockedAt?: string }> {
+    try {
+      const response = await fetchWithTimeout(`${env.AI_SERVICE_URL}/api/moderate/check-hash`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image_hash: imageHash }),
-      });
+      }, 5000); // Shorter timeout for hash check
       
       if (!response.ok) {
         return { knownBad: false };
       }
       
-      return await response.json() as { knownBad: boolean; reason?: string };
+      const data = await response.json() as AIHashCheckResponse;
+      
+      return { 
+        knownBad: data.knownBad, 
+        reason: data.reason,
+        blockedAt: data.blockedAt,
+      };
     } catch {
       return { knownBad: false };
+    }
+  },
+
+  /**
+   * Health check for AI service
+   */
+  async healthCheck(): Promise<boolean> {
+    try {
+      const response = await fetchWithTimeout(`${env.AI_SERVICE_URL}/health`, {
+        method: 'GET',
+      }, 5000);
+      return response.ok;
+    } catch {
+      return false;
     }
   },
 };
