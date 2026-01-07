@@ -1,0 +1,1 @@
+{"version":3,"file":"feed.controller.d.ts","sourceRoot":"","sources":["../../src/controllers/feed.controller.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,QAAQ,EAAE,MAAM,SAAS,CAAC;AACnC,OAAO,EAAE,oBAAoB,EAAE,MAAM,mBAAmB,CAAC;AAKzD,eAAO,MAAM,cAAc;6BACM,oBAAoB,OAAO,QAAQ;wBAiExC,oBAAoB,OAAO,QAAQ;0BA6CjC,oBAAoB,OAAO,QAAQ;qBA+DxC,oBAAoB,OAAO,QAAQ;CAqB3D,CAAC"}
