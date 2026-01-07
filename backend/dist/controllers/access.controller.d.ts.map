@@ -1,0 +1,1 @@
+{"version":3,"file":"access.controller.d.ts","sourceRoot":"","sources":["../../src/controllers/access.controller.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,QAAQ,EAAE,MAAM,SAAS,CAAC;AACnC,OAAO,EAAE,oBAAoB,EAAE,MAAM,mBAAmB,CAAC;AAIzD,eAAO,MAAM,gBAAgB;sBACH,oBAAoB,OAAO,QAAQ;yBA8ChC,oBAAoB,OAAO,QAAQ;CAmC/D,CAAC"}
