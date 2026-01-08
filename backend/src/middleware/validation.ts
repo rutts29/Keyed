@@ -1,19 +1,45 @@
 import { Request, Response, NextFunction } from 'express';
-import { z, ZodSchema } from 'zod';
+import { z, ZodSchema, ZodError } from 'zod';
+import { env } from '../config/env.js';
+
+/**
+ * Format validation errors for response.
+ * In production, hide internal schema details to prevent information leakage.
+ * In development/test, include full details for debugging.
+ */
+function formatValidationError(error: ZodError, message: string) {
+  const isProduction = env.NODE_ENV === 'production';
+  
+  if (isProduction) {
+    // In production, only return generic field names without schema details
+    const fields = error.errors.map(e => e.path.join('.'));
+    return {
+      success: false,
+      error: {
+        code: 'VALIDATION_ERROR',
+        message,
+        fields: [...new Set(fields)], // Unique field names only
+      },
+    };
+  }
+  
+  // In development, include full error details
+  return {
+    success: false,
+    error: {
+      code: 'VALIDATION_ERROR',
+      message,
+      details: error.errors,
+    },
+  };
+}
 
 export function validateBody<T extends ZodSchema>(schema: T) {
   return (req: Request, res: Response, next: NextFunction): void => {
     const result = schema.safeParse(req.body);
     
     if (!result.success) {
-      res.status(400).json({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid request body',
-          details: result.error.errors,
-        },
-      });
+      res.status(400).json(formatValidationError(result.error, 'Invalid request body'));
       return;
     }
     
@@ -27,14 +53,7 @@ export function validateQuery<T extends ZodSchema>(schema: T) {
     const result = schema.safeParse(req.query);
     
     if (!result.success) {
-      res.status(400).json({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid query parameters',
-          details: result.error.errors,
-        },
-      });
+      res.status(400).json(formatValidationError(result.error, 'Invalid query parameters'));
       return;
     }
     
@@ -48,14 +67,7 @@ export function validateParams<T extends ZodSchema>(schema: T) {
     const result = schema.safeParse(req.params);
     
     if (!result.success) {
-      res.status(400).json({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid path parameters',
-          details: result.error.errors,
-        },
-      });
+      res.status(400).json(formatValidationError(result.error, 'Invalid path parameters'));
       return;
     }
     

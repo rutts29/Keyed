@@ -6,6 +6,7 @@ from app.models.schemas import (
     HashCheckResponse,
 )
 from app.services.moderator import moderate_content
+from app.services.database import check_blocked_hash
 
 router = APIRouter(prefix="/moderate", tags=["moderation"])
 
@@ -27,6 +28,13 @@ async def check_hash(request: HashCheckRequest) -> HashCheckResponse:
     """
     Check perceptual hash against blocked content database.
     Instant response for known bad content.
+    
+    This provides a fast check against previously blocked content hashes
+    stored in the Supabase blocked_content_hashes table.
     """
-    # TODO: Integrate with Supabase blocked_content_hashes table
-    return HashCheckResponse(known_bad=False)
+    result = await check_blocked_hash(request.image_hash)
+    return HashCheckResponse(
+        known_bad=result["known_bad"],
+        reason=result["reason"],
+        blocked_at=result["blocked_at"],
+    )

@@ -48,3 +48,35 @@ BEGIN
     ) USING delta, wallet_addr;
 END;
 $$ LANGUAGE plpgsql;
+
+-- Function to atomically increment post likes counter
+CREATE OR REPLACE FUNCTION increment_post_likes(post_id TEXT)
+RETURNS VOID AS $$
+BEGIN
+    UPDATE posts SET likes = COALESCE(likes, 0) + 1 WHERE id = post_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to atomically decrement post likes counter
+CREATE OR REPLACE FUNCTION decrement_post_likes(post_id TEXT)
+RETURNS VOID AS $$
+BEGIN
+    UPDATE posts SET likes = GREATEST(COALESCE(likes, 0) - 1, 0) WHERE id = post_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to atomically increment post comments counter
+CREATE OR REPLACE FUNCTION increment_post_comments(post_id TEXT)
+RETURNS VOID AS $$
+BEGIN
+    UPDATE posts SET comments = COALESCE(comments, 0) + 1 WHERE id = post_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to atomically decrement post comments counter
+CREATE OR REPLACE FUNCTION decrement_post_comments(post_id TEXT)
+RETURNS VOID AS $$
+BEGIN
+    UPDATE posts SET comments = GREATEST(COALESCE(comments, 0) - 1, 0) WHERE id = post_id;
+END;
+$$ LANGUAGE plpgsql;

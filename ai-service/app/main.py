@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 from app.api.routes import moderate, analyze, search, recommend
 from app.services import vector_db
+from app.config import get_settings
 
 
 @asynccontextmanager
@@ -19,12 +20,17 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# SECURITY: Restrict CORS to backend service only to prevent direct access from browsers
+# This ensures all requests go through the backend which applies rate limiting and authentication
+settings = get_settings()
+allowed_origins = [settings.backend_url]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["POST", "GET"],  # Only allow methods actually used by the service
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 app.include_router(moderate.router, prefix="/api")

@@ -100,8 +100,8 @@ export const aiService = {
       
       if (!response.ok) {
         const errorText = await response.text();
-        logger.warn({ status: response.status, error: errorText }, 'AI moderation service error');
-        return createStubModerationResult(startTime);
+        logger.error({ status: response.status, error: errorText }, 'AI moderation service error - blocking content');
+        return createFailedModerationResult(startTime);
       }
       
       const data = await response.json() as AIModerationResponse;
@@ -124,11 +124,11 @@ export const aiService = {
       };
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        logger.warn('AI moderation request timed out');
+        logger.error('AI moderation request timed out - blocking content');
       } else {
-        logger.warn({ error }, 'AI moderation failed, defaulting to allow (stub)');
+        logger.error({ error }, 'AI moderation failed - blocking content for safety');
       }
-      return createStubModerationResult(startTime);
+      return createFailedModerationResult(startTime);
     }
   },
 
@@ -314,9 +314,14 @@ export const aiService = {
   },
 };
 
-function createStubModerationResult(startTime: number): ModerationResult {
+/**
+ * SECURITY: When AI moderation service is unavailable, we fail CLOSED (block content)
+ * rather than fail OPEN (allow content). This prevents attackers from bypassing
+ * moderation by DoS'ing the AI service or exploiting maintenance windows.
+ */
+function createFailedModerationResult(startTime: number): ModerationResult {
   return {
-    verdict: 'allow',
+    verdict: 'block',
     scores: {
       nsfw: 0,
       violence: 0,
@@ -326,7 +331,8 @@ function createStubModerationResult(startTime: number): ModerationResult {
       drugsWeapons: 0,
     },
     maxScore: 0,
-    explanation: 'AI service unavailable - content allowed by default (stub)',
+    blockedCategory: 'service_unavailable',
+    explanation: 'Content moderation service temporarily unavailable. Please try again later.',
     processingTimeMs: Date.now() - startTime,
   };
 }
