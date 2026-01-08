@@ -1,6 +1,10 @@
 import { Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
 import { generateChallenge, verifyChallenge, verifyToken } from '../middleware/auth.js';
 import { supabase } from '../config/supabase.js';
+import { env } from '../config/env.js';
+
+const JWT_EXPIRY = '7d';
 
 export const authController = {
   async getChallenge(req: Request, res: Response) {
@@ -62,16 +66,36 @@ export const authController = {
     if (!payload) {
       res.status(401).json({
         success: false,
-        error: { code: 'UNAUTHORIZED', message: 'Invalid token' },
+        error: { code: 'UNAUTHORIZED', message: 'Invalid or expired token' },
       });
       return;
     }
     
-    const result = await verifyChallenge(payload.wallet, '');
+    // Check if wallet is restricted before issuing new token
+    const { data: restriction } = await supabase
+      .from('wallet_restrictions')
+      .select('restriction_level, restriction_until')
+      .eq('wallet', payload.wallet)
+      .single();
+    
+    if (restriction && restriction.restriction_level >= 3) {
+      const until = restriction.restriction_until;
+      if (!until || new Date(until) > new Date()) {
+        res.status(403).json({
+          success: false,
+          error: { code: 'FORBIDDEN', message: 'Wallet access restricted' },
+        });
+        return;
+      }
+    }
+    
+    // Generate new token directly since we already verified the existing token
+    // No need to re-verify signature - the valid JWT proves the user authenticated previously
+    const newToken = jwt.sign({ wallet: payload.wallet }, env.JWT_SECRET, { expiresIn: JWT_EXPIRY });
     
     res.json({
       success: true,
-      data: { token: result.token, wallet: payload.wallet },
+      data: { token: newToken, wallet: payload.wallet },
     });
   },
 };

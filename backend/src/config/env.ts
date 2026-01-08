@@ -9,6 +9,7 @@ const envSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
 
   UPSTASH_REDIS_URL: z.string().min(1),
+  // Redis token is optional in dev/test but required in production for security
   UPSTASH_REDIS_TOKEN: z.string().optional(),
 
   R2_ACCOUNT_ID: z.string().min(1),
@@ -44,7 +45,14 @@ function validateEnv(): Env {
     throw new Error('Invalid environment configuration');
   }
   
-  return result.data;
+  const env = result.data;
+  
+  // SECURITY: Redis token is required in production to prevent unauthenticated access
+  if (env.NODE_ENV === 'production' && !env.UPSTASH_REDIS_TOKEN) {
+    throw new Error('UPSTASH_REDIS_TOKEN is required in production environment');
+  }
+  
+  return env;
 }
 
 export const env = validateEnv();
