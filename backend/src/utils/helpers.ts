@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'crypto';
 import * as imageHash from 'imghash';
+import { logger } from './logger.js';
 
 /**
  * Generate a cryptographically secure random nonce for authentication challenges.
@@ -28,7 +29,12 @@ export async function hashImage(buffer: Buffer): Promise<string> {
     // Compute 16-bit perceptual hash for good balance of accuracy and size
     const hash = await imageHash.hash(buffer, 16);
     return hash;
-  } catch {
+  } catch (error) {
+    // Log the error for diagnosability before falling back
+    logger.warn({ 
+      err: error, 
+      bufferSize: buffer.length 
+    }, 'Perceptual hash failed, falling back to SHA-256');
     // Fallback to SHA-256 for non-image files or corrupted images
     return createHash('sha256').update(buffer).digest('hex');
   }
