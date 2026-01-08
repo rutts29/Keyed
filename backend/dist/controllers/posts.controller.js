@@ -19,7 +19,8 @@ export const postsController = {
         if (limit === 0) {
             throw new AppError(403, 'UPLOAD_BLOCKED', 'Upload privileges suspended');
         }
-        const imageHash = hashImage(file.buffer);
+        // Compute perceptual hash for detecting similar/modified versions of blocked content
+        const imageHash = await hashImage(file.buffer);
         const { data: blocked } = await supabase
             .from('blocked_content_hashes')
             .select('reason')
@@ -64,7 +65,9 @@ export const postsController = {
     async create(req, res) {
         const wallet = req.wallet;
         const { contentUri, contentType, caption, isTokenGated, requiredToken } = req.body;
-        const postId = uuidv4().replace(/-/g, '').slice(0, 44);
+        // Generate a 32-character hex ID from UUID v4 (without dashes)
+        // Note: This is an internal database ID, not a Solana address
+        const postId = uuidv4().replace(/-/g, '');
         const txResponse = await solanaService.buildCreatePostTx(wallet, contentUri, contentType, caption || '', isTokenGated, requiredToken);
         await supabase.from('posts').insert({
             id: postId,
@@ -128,14 +131,29 @@ export const postsController = {
         if (post.creator_wallet === wallet) {
             throw new AppError(400, 'INVALID_ACTION', 'Cannot like your own post');
         }
+        // Check if user already liked this post to prevent duplicate likes
+        const { data: existingLike } = await supabase
+            .from('likes')
+            .select('user_wallet')
+            .eq('user_wallet', wallet)
+            .eq('post_id', postId)
+            .single();
+        if (existingLike) {
+            throw new AppError(400, 'ALREADY_LIKED', 'You have already liked this post');
+        }
         const txResponse = await solanaService.buildLikeTx(wallet, postId);
-        await supabase.from('likes').insert({
+        // Use upsert with onConflict to handle race conditions gracefully
+        const { error: insertError } = await supabase.from('likes').upsert({
             user_wallet: wallet,
             post_id: postId,
-        });
-        await supabase.from('posts').update({ likes: supabase.rpc('increment', { x: 1 }) }).eq('id', postId);
-        await cacheService.invalidatePost(postId);
-        await realtimeService.notifyLike(postId, wallet, post.creator_wallet);
+        }, { onConflict: 'user_wallet,post_id', ignoreDuplicates: true });
+        // Only increment if insert was successful (not a duplicate)
+        if (!insertError) {
+            // Atomically increment likes counter using RPC
+            await supabase.rpc('increment_post_likes', { post_id: postId });
+            await cacheService.invalidatePost(postId);
+            await realtimeService.notifyLike(postId, wallet, post.creator_wallet);
+        }
         res.json({ success: true, data: txResponse });
     },
     async unlike(req, res) {
@@ -147,7 +165,8 @@ export const postsController = {
             .delete()
             .eq('user_wallet', wallet)
             .eq('post_id', postId);
-        await supabase.from('posts').update({ likes: supabase.rpc('decrement', { x: 1 }) }).eq('id', postId);
+        // Atomically decrement likes counter using RPC
+        await supabase.rpc('decrement_post_likes', { post_id: postId });
         await cacheService.invalidatePost(postId);
         res.json({ success: true, data: txResponse });
     },
@@ -186,7 +205,8 @@ export const postsController = {
         if (!post) {
             throw new AppError(404, 'NOT_FOUND', 'Post not found');
         }
-        const commentId = uuidv4().replace(/-/g, '').slice(0, 44);
+        // Generate a 32-character hex ID from UUID v4 (without dashes)
+        const commentId = uuidv4().replace(/-/g, '');
         const txResponse = await solanaService.buildCommentTx(wallet, postId, text);
         const { data: comment } = await supabase
             .from('comments')
@@ -198,7 +218,8 @@ export const postsController = {
         })
             .select('*')
             .single();
-        await supabase.from('posts').update({ comments: supabase.rpc('increment', { x: 1 }) }).eq('id', postId);
+        // Atomically increment comments counter using RPC
+        await supabase.rpc('increment_post_comments', { post_id: postId });
         await cacheService.invalidatePost(postId);
         await realtimeService.notifyComment(postId, comment, post.creator_wallet);
         res.json({

@@ -1,6 +1,6 @@
-import Redis from 'ioredis';
+import { Redis } from 'ioredis';
 import { env } from './env.js';
-export const redis = new Redis.default(env.UPSTASH_REDIS_URL, {
+export const redis = new Redis(env.UPSTASH_REDIS_URL, {
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
     retryStrategy: (times) => Math.min(times * 50, 2000),
