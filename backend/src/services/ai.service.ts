@@ -83,53 +83,78 @@ export const aiService = {
   /**
    * Pre-upload content moderation check
    * Calls AI service synchronously before content is stored
+   * 
+   * Includes retry logic for transient failures before failing closed.
    */
   async moderateContent(imageBase64: string, caption?: string, wallet?: string): Promise<ModerationResult> {
     const startTime = Date.now();
+    const maxRetries = 2;
     
-    try {
-      const response = await fetchWithTimeout(`${env.AI_SERVICE_URL}/api/moderate/check`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          image_base64: imageBase64, 
-          caption: caption || null,
-          wallet: wallet || null,
-        }),
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        logger.error({ status: response.status, error: errorText }, 'AI moderation service error - blocking content');
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await fetchWithTimeout(`${env.AI_SERVICE_URL}/api/moderate/check`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            image_base64: imageBase64, 
+            caption: caption || null,
+            wallet: wallet || null,
+          }),
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          
+          // Retry on 5xx server errors, but not on 4xx client errors
+          if (response.status >= 500 && attempt < maxRetries) {
+            logger.warn({ status: response.status, attempt }, 'AI moderation service error, retrying...');
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // Exponential backoff
+            continue;
+          }
+          
+          logger.error({ status: response.status, error: errorText }, 'AI moderation service error - blocking content');
+          return createFailedModerationResult(startTime);
+        }
+        
+        const data = await response.json() as AIModerationResponse;
+        
+        return {
+          verdict: data.verdict,
+          scores: {
+            nsfw: data.scores.nsfw,
+            violence: data.scores.violence,
+            hate: data.scores.hate,
+            childSafety: data.scores.childSafety,
+            spam: data.scores.spam,
+            drugsWeapons: data.scores.drugsWeapons,
+          },
+          maxScore: data.maxScore,
+          blockedCategory: data.blockedCategory,
+          explanation: data.explanation,
+          processingTimeMs: data.processingTimeMs,
+          violationId: data.violationId,
+        };
+      } catch (error) {
+        const isTimeout = error instanceof Error && error.name === 'AbortError';
+        
+        // Retry on network errors and timeouts
+        if (attempt < maxRetries) {
+          logger.warn({ error, attempt, isTimeout }, 'AI moderation failed, retrying...');
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // Exponential backoff
+          continue;
+        }
+        
+        if (isTimeout) {
+          logger.error('AI moderation request timed out after retries - blocking content');
+        } else {
+          logger.error({ error }, 'AI moderation failed after retries - blocking content for safety');
+        }
         return createFailedModerationResult(startTime);
       }
-      
-      const data = await response.json() as AIModerationResponse;
-      
-      return {
-        verdict: data.verdict,
-        scores: {
-          nsfw: data.scores.nsfw,
-          violence: data.scores.violence,
-          hate: data.scores.hate,
-          childSafety: data.scores.childSafety,
-          spam: data.scores.spam,
-          drugsWeapons: data.scores.drugsWeapons,
-        },
-        maxScore: data.maxScore,
-        blockedCategory: data.blockedCategory,
-        explanation: data.explanation,
-        processingTimeMs: data.processingTimeMs,
-        violationId: data.violationId,
-      };
-    } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        logger.error('AI moderation request timed out - blocking content');
-      } else {
-        logger.error({ error }, 'AI moderation failed - blocking content for safety');
-      }
-      return createFailedModerationResult(startTime);
     }
+    
+    // This should never be reached, but TypeScript needs it
+    return createFailedModerationResult(startTime);
   },
 
   /**
