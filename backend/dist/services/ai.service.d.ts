@@ -3,6 +3,8 @@ export declare const aiService: {
     /**
      * Pre-upload content moderation check
      * Calls AI service synchronously before content is stored
+     *
+     * Includes retry logic for transient failures before failing closed.
      */
     moderateContent(imageBase64: string, caption?: string, wallet?: string): Promise<ModerationResult>;
     /**

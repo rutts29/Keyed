@@ -1,17 +1,41 @@
-import { createHash } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
+import * as imageHash from 'imghash';
+/**
+ * Generate a cryptographically secure random nonce for authentication challenges.
+ * Uses crypto.randomBytes() instead of Math.random() for security.
+ */
 export function generateNonce(length = 32) {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let result = '';
-    for (let i = 0; i < length; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
+    return randomBytes(Math.ceil(length * 0.75))
+        .toString('base64url')
+        .slice(0, length);
 }
 export function generateChallengeMessage(wallet, nonce) {
     const timestamp = Date.now();
     return `Sign this message to authenticate with SolShare.\n\nWallet: ${wallet}\nNonce: ${nonce}\nTimestamp: ${timestamp}`;
 }
-export function hashImage(buffer) {
+/**
+ * Compute a perceptual hash (pHash) for an image.
+ * Unlike cryptographic hashes, perceptual hashes remain similar for visually similar images,
+ * making them effective for detecting modified versions of blocked content.
+ *
+ * Falls back to SHA-256 if perceptual hashing fails (e.g., invalid image format).
+ */
+export async function hashImage(buffer) {
+    try {
+        // Compute 16-bit perceptual hash for good balance of accuracy and size
+        const hash = await imageHash.hash(buffer, 16);
+        return hash;
+    }
+    catch {
+        // Fallback to SHA-256 for non-image files or corrupted images
+        return createHash('sha256').update(buffer).digest('hex');
+    }
+}
+/**
+ * Compute SHA-256 hash for exact duplicate detection.
+ * Use this when you need to detect exact byte-for-byte duplicates.
+ */
+export function hashImageExact(buffer) {
     return createHash('sha256').update(buffer).digest('hex');
 }
 export function extractIpfsHash(uri) {

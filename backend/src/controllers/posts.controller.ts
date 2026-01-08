@@ -25,7 +25,8 @@ export const postsController = {
       throw new AppError(403, 'UPLOAD_BLOCKED', 'Upload privileges suspended');
     }
     
-    const imageHash = hashImage(file.buffer);
+    // Compute perceptual hash for detecting similar/modified versions of blocked content
+    const imageHash = await hashImage(file.buffer);
     
     const { data: blocked } = await supabase
       .from('blocked_content_hashes')
