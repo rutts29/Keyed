@@ -50,6 +50,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Function to atomically increment post likes counter
+-- Note: Requires index on posts(id) for efficient updates (created in 002_core_tables.sql as PRIMARY KEY)
 CREATE OR REPLACE FUNCTION increment_post_likes(post_id TEXT)
 RETURNS VOID AS $$
 BEGIN
@@ -58,6 +59,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Function to atomically decrement post likes counter
+-- Uses GREATEST to prevent negative counts from race conditions
 CREATE OR REPLACE FUNCTION decrement_post_likes(post_id TEXT)
 RETURNS VOID AS $$
 BEGIN
@@ -66,6 +68,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Function to atomically increment post comments counter
+-- Note: Requires index on posts(id) for efficient updates (created in 002_core_tables.sql as PRIMARY KEY)
 CREATE OR REPLACE FUNCTION increment_post_comments(post_id TEXT)
 RETURNS VOID AS $$
 BEGIN
@@ -74,6 +77,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Function to atomically decrement post comments counter
+-- Uses GREATEST to prevent negative counts from race conditions
 CREATE OR REPLACE FUNCTION decrement_post_comments(post_id TEXT)
 RETURNS VOID AS $$
 BEGIN

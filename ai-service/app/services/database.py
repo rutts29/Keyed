@@ -1,6 +1,9 @@
 """
 Database service for AI service - Supabase integration.
 Used primarily for checking blocked content hashes.
+
+Note: The Supabase Python client handles connection pooling internally via httpx.
+We use a module-level singleton pattern for efficiency across requests.
 """
 from supabase import create_client, Client
 from app.config import get_settings
@@ -9,6 +12,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Singleton Supabase client - handles connection pooling internally
 _supabase_client: Optional[Client] = None
 
 
