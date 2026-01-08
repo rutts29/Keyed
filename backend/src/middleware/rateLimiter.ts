@@ -26,8 +26,39 @@ const RATE_LIMITS: Record<string, { auth: RateLimitConfig; unauth: RateLimitConf
   },
 };
 
-function getClientIdentifier(req: AuthenticatedRequest): string {
-  return req.wallet || req.ip || 'anonymous';
+/**
+ * Get a unique identifier for rate limiting.
+ * Priority: wallet address > forwarded IP > direct IP > reject
+ * 
+ * SECURITY: We avoid a shared 'anonymous' bucket which would allow
+ * all anonymous users to share the same rate limit.
+ */
+function getClientIdentifier(req: AuthenticatedRequest): string | null {
+  // Authenticated users are identified by wallet
+  if (req.wallet) {
+    return `wallet:${req.wallet}`;
+  }
+  
+  // For anonymous users, try to get the real IP
+  // Check X-Forwarded-For for proxied requests (common with load balancers)
+  const forwardedFor = req.headers['x-forwarded-for'];
+  if (forwardedFor) {
+    // X-Forwarded-For can be a comma-separated list; take the first (client) IP
+    const clientIp = Array.isArray(forwardedFor) 
+      ? forwardedFor[0] 
+      : forwardedFor.split(',')[0].trim();
+    if (clientIp) {
+      return `ip:${clientIp}`;
+    }
+  }
+  
+  // Fall back to direct IP
+  if (req.ip) {
+    return `ip:${req.ip}`;
+  }
+  
+  // No identifier available - return null to signal rate limiting should reject
+  return null;
 }
 
 export function createRateLimiter(category: keyof typeof RATE_LIMITS) {
@@ -44,6 +75,17 @@ export function createRateLimiter(category: keyof typeof RATE_LIMITS) {
     }
     
     const identifier = getClientIdentifier(req);
+    
+    // SECURITY: Reject requests with no identifiable client to prevent
+    // bypassing rate limits through missing headers
+    if (!identifier) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'BAD_REQUEST', message: 'Unable to identify client for rate limiting' },
+      });
+      return;
+    }
+    
     const key = `ratelimit:${category}:${identifier}`;
     
     const current = await redis.incr(key);

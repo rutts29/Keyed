@@ -94,15 +94,16 @@ pub fn handler(ctx: Context<TipCreator>, amount: u64, post: Option<Pubkey>, _tip
         creator_amount,
     )?;
 
-    // Update vault stats
+    // Update vault stats - tracks net amount received by creator
     vault.total_earned = vault.total_earned
         .checked_add(creator_amount)
         .ok_or(PaymentError::ArithmeticOverflow)?;
 
-    // Record tip
+    // Record tip with net amount (after fee) for consistency with vault accounting
+    // Note: The TipSent event below includes both gross amount and fee for full audit trail
     tip_record.from = ctx.accounts.tipper.key();
     tip_record.to = vault.creator;
-    tip_record.amount = amount;
+    tip_record.amount = creator_amount;  // Store net amount to match vault.total_earned
     tip_record.post = post;
     tip_record.timestamp = clock.unix_timestamp;
     tip_record.bump = ctx.bumps.tip_record;
