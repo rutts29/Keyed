@@ -22,6 +22,8 @@ const envSchema = z.object({
     PINATA_GATEWAY_URL: z.string().url().default('https://gateway.pinata.cloud'),
     JWT_SECRET: z.string().min(32),
     AI_SERVICE_URL: z.string().url(),
+    // Internal API key for AI service communication (optional in dev, recommended in production)
+    AI_SERVICE_API_KEY: z.string().optional(),
     FRONTEND_URL: z.string().url(),
 });
 function validateEnv() {

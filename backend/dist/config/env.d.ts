@@ -21,6 +21,7 @@ declare const envSchema: z.ZodObject<{
     PINATA_GATEWAY_URL: z.ZodDefault<z.ZodString>;
     JWT_SECRET: z.ZodString;
     AI_SERVICE_URL: z.ZodString;
+    AI_SERVICE_API_KEY: z.ZodOptional<z.ZodString>;
     FRONTEND_URL: z.ZodString;
 }, "strip", z.ZodTypeAny, {
     NODE_ENV: "development" | "production" | "test";
@@ -45,6 +46,7 @@ declare const envSchema: z.ZodObject<{
     SOCIAL_PROGRAM_ID?: string | undefined;
     PAYMENT_PROGRAM_ID?: string | undefined;
     TOKEN_GATE_PROGRAM_ID?: string | undefined;
+    AI_SERVICE_API_KEY?: string | undefined;
 }, {
     SUPABASE_URL: string;
     SUPABASE_ANON_KEY: string;
@@ -68,6 +70,7 @@ declare const envSchema: z.ZodObject<{
     PAYMENT_PROGRAM_ID?: string | undefined;
     TOKEN_GATE_PROGRAM_ID?: string | undefined;
     PINATA_GATEWAY_URL?: string | undefined;
+    AI_SERVICE_API_KEY?: string | undefined;
 }>;
 export type Env = z.infer<typeof envSchema>;
 export declare const env: {
@@ -93,6 +96,7 @@ export declare const env: {
     SOCIAL_PROGRAM_ID?: string | undefined;
     PAYMENT_PROGRAM_ID?: string | undefined;
     TOKEN_GATE_PROGRAM_ID?: string | undefined;
+    AI_SERVICE_API_KEY?: string | undefined;
 };
 export {};
 //# sourceMappingURL=env.d.ts.map
