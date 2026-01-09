@@ -4,7 +4,8 @@ import {
   SystemProgram,
   LAMPORTS_PER_SOL,
 } from '@solana/web3.js';
-import { BN } from '@coral-xyz/anchor';
+import pkg from '@coral-xyz/anchor';
+const { BN } = pkg;
 import {
   connection,
   getRecentBlockhash,
