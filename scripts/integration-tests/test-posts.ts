@@ -8,7 +8,7 @@
  * 3. Verify Qdrant indexing
  */
 
-import { api, apiFormData, wallet, signMessage, setAuthToken, test, assert, runTests, clearResults } from './config.js';
+import { api, apiFormData, wallet, signMessage, setAuthToken, getAuthToken, test, assert, runTests, clearResults } from './config.js';
 
 let uploadedContentUri: string;
 let createdPostId: string;
@@ -147,8 +147,8 @@ const tests = [
   }),
 
   test('Reject upload without auth', async () => {
-    // Clear token temporarily
-    const savedToken = process.env._TEST_TOKEN;
+    // Save current token and clear it temporarily
+    const savedToken = getAuthToken();
     setAuthToken('');
     
     const formData = new FormData();
@@ -156,8 +156,12 @@ const tests = [
     
     const res = await apiFormData('/api/posts/upload', formData);
     
-    // Restore
-    await authenticate();
+    // Restore the saved token
+    if (savedToken) {
+      setAuthToken(savedToken);
+    } else {
+      await authenticate();
+    }
     
     assert(!res.ok, 'Should reject upload without auth');
     assert(res.status === 401, `Expected 401, got ${res.status}`);
