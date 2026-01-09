@@ -192,21 +192,28 @@ anchor deploy --provider.cluster devnet
 
 ### Phase 5: Backend Deployment (Railway)
 
+Railway runs one process per service, so you need **two separate services** for the backend:
+
+**Service 1: API Server**
 ```bash
 cd backend
-npm run build
-
-# Deploy via Railway CLI or connect GitHub
 railway login
-railway init
+railway init --name solshare-api
 railway up
 ```
+Uses `railway.json` → runs `npm run start:api`
 
-Configure all environment variables in Railway dashboard.
+**Service 2: Background Worker**
+```bash
+# In Railway dashboard, create a new service in the same project
+# Set the start command to: npm run start:worker
+# Or use railway.worker.json as reference
+```
+Uses `railway.worker.json` → runs `npm run start:worker`
 
-Procfile processes:
-- `web`: Main API server
-- `worker`: Background job processor
+Configure the same environment variables for both services in Railway dashboard.
+
+> **Note:** Both services share the same codebase but run different processes. The worker handles BullMQ background jobs (AI analysis, notifications, feed refresh).
 
 ### Phase 6: AI Service Deployment (Railway)
 
