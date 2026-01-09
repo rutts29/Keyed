@@ -1,5 +1,5 @@
 import { Connection, PublicKey } from '@solana/web3.js';
-import { Program, Idl } from '@coral-xyz/anchor';
+import anchor from '@coral-xyz/anchor';
 export declare const connection: Connection;
 export declare const programIds: {
     social: PublicKey | null;
@@ -7,9 +7,9 @@ export declare const programIds: {
     tokenGate: PublicKey | null;
 };
 export declare const programs: {
-    social: Program<Idl> | null;
-    payment: Program<Idl> | null;
-    tokenGate: Program<Idl> | null;
+    social: anchor.Program<anchor.Idl> | null;
+    payment: anchor.Program<anchor.Idl> | null;
+    tokenGate: anchor.Program<anchor.Idl> | null;
 };
 export declare const pdaDerivation: {
     userProfile(authority: PublicKey): [PublicKey, number];
