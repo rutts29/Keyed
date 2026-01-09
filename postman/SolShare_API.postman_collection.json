@@ -1,0 +1,1030 @@
+{
+  "info": {
+    "name": "SolShare API",
+    "description": "Complete API collection for SolShare - Decentralized Social Media Platform on Solana",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001",
+      "type": "string"
+    },
+    {
+      "key": "aiServiceUrl",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "testWallet",
+      "value": "YourWalletPublicKey",
+      "type": "string"
+    },
+    {
+      "key": "testPostId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Health Checks",
+      "item": [
+        {
+          "name": "Backend Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            }
+          }
+        },
+        {
+          "name": "AI Service Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{aiServiceUrl}}/health",
+              "host": ["{{aiServiceUrl}}"],
+              "path": ["health"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "1. Get Challenge",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data) {",
+                  "    pm.collectionVariables.set('challengeMessage', jsonData.data.message);",
+                  "    pm.collectionVariables.set('challengeNonce', jsonData.data.nonce);",
+                  "}",
+                  "",
+                  "pm.test('Challenge received', function () {",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data.message).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"wallet\": \"{{testWallet}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/challenge",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "challenge"]
+            }
+          }
+        },
+        {
+          "name": "2. Verify Signature",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data && jsonData.data.token) {",
+                  "    pm.collectionVariables.set('authToken', jsonData.data.token);",
+                  "}",
+                  "",
+                  "pm.test('Token received', function () {",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data.token).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"wallet\": \"{{testWallet}}\",\n  \"signature\": \"YOUR_SIGNATURE_HERE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "verify"]
+            },
+            "description": "Sign the challenge message with your wallet and paste the signature here"
+          }
+        },
+        {
+          "name": "3. Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data && jsonData.data.token) {",
+                  "    pm.collectionVariables.set('authToken', jsonData.data.token);",
+                  "}",
+                  "",
+                  "pm.test('Token refreshed', function () {",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "refresh"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get User Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{testWallet}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{testWallet}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"myusername\",\n  \"bio\": \"Solana enthusiast and content creator\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Get User Posts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{testWallet}}/posts?limit=20&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{testWallet}}", "posts"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Follow User",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{testWallet}}/follow",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{testWallet}}", "follow"]
+            }
+          }
+        },
+        {
+          "name": "Unfollow User",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{testWallet}}/follow",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{testWallet}}", "follow"]
+            }
+          }
+        },
+        {
+          "name": "Get Followers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{testWallet}}/followers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{testWallet}}", "followers"]
+            }
+          }
+        },
+        {
+          "name": "Get Following",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{testWallet}}/following",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{testWallet}}", "following"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Posts",
+      "item": [
+        {
+          "name": "Upload Image",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data) {",
+                  "    pm.collectionVariables.set('uploadedContentUri', jsonData.data.contentUri);",
+                  "}",
+                  "",
+                  "pm.test('Image uploaded', function () {",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data.contentUri).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/posts/upload",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "posts", "upload"]
+            },
+            "description": "Upload an image file (JPEG, PNG, GIF, WebP)"
+          }
+        },
+        {
+          "name": "Create Post",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data) {",
+                  "    pm.collectionVariables.set('testPostId', jsonData.data.postId);",
+                  "}",
+                  "",
+                  "pm.test('Post created', function () {",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data.postId).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contentUri\": \"{{uploadedContentUri}}\",\n  \"caption\": \"My first SolShare post!\",\n  \"contentType\": \"image\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/posts/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "posts", "create"]
+            }
+          }
+        },
+        {
+          "name": "Get Post",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/posts/{{testPostId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "posts", "{{testPostId}}"]
+            }
+          }
+        },
+        {
+          "name": "Like Post",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/posts/{{testPostId}}/like",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "posts", "{{testPostId}}", "like"]
+            }
+          }
+        },
+        {
+          "name": "Unlike Post",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/posts/{{testPostId}}/like",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "posts", "{{testPostId}}", "like"]
+            }
+          }
+        },
+        {
+          "name": "Get Comments",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/posts/{{testPostId}}/comments?limit=20&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "posts", "{{testPostId}}", "comments"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Add Comment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Great post!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/posts/{{testPostId}}/comments",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "posts", "{{testPostId}}", "comments"]
+            }
+          }
+        },
+        {
+          "name": "Report Post",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"spam\",\n  \"details\": \"This looks like promotional content\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/posts/{{testPostId}}/report",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "posts", "{{testPostId}}", "report"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Feed",
+      "item": [
+        {
+          "name": "Get Home Feed",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/feed?limit=20&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "feed"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Following Feed",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/feed/following?limit=20&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "feed", "following"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Trending",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/feed/trending?limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "feed", "trending"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Search",
+      "item": [
+        {
+          "name": "Semantic Search",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"beautiful sunset over the ocean\",\n  \"limit\": 20\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/search/semantic",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "search", "semantic"]
+            },
+            "description": "AI-powered semantic search across all posts"
+          }
+        },
+        {
+          "name": "Semantic Search with Filters",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"nature photography\",\n  \"limit\": 10,\n  \"filters\": {\n    \"sceneType\": \"outdoor\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/search/semantic",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "search", "semantic"]
+            }
+          }
+        },
+        {
+          "name": "Search Users",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/search/users?q=test&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "search", "users"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "test"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search by Tag",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/search/tag?tag=sunset&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "search", "tag"],
+              "query": [
+                {
+                  "key": "tag",
+                  "value": "sunset"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Autocomplete Suggestions",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/search/suggest?q=sun",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "search", "suggest"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "sun"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Initialize Vault",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/vault/initialize",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "vault", "initialize"]
+            },
+            "description": "Initialize creator vault for receiving tips/subscriptions"
+          }
+        },
+        {
+          "name": "Get Vault Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/vault",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "vault"]
+            }
+          }
+        },
+        {
+          "name": "Send Tip",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"creatorWallet\": \"CreatorWalletAddressHere\",\n  \"amount\": 1000000,\n  \"postId\": \"{{testPostId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/tip",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "tip"]
+            },
+            "description": "Amount is in lamports (1 SOL = 1,000,000,000 lamports)"
+          }
+        },
+        {
+          "name": "Subscribe to Creator",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"creatorWallet\": \"CreatorWalletAddressHere\",\n  \"tier\": \"basic\",\n  \"duration\": 30\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/subscribe",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "subscribe"]
+            },
+            "description": "Duration is in days"
+          }
+        },
+        {
+          "name": "Cancel Subscription",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/subscribe/CreatorWalletAddressHere",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "subscribe", "CreatorWalletAddressHere"]
+            }
+          }
+        },
+        {
+          "name": "Get Earnings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/earnings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "earnings"]
+            }
+          }
+        },
+        {
+          "name": "Withdraw Earnings",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 1000000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/withdraw",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "withdraw"]
+            },
+            "description": "Amount in lamports"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Access Control (Token Gating)",
+      "item": [
+        {
+          "name": "Verify Access",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/access/verify?postId={{testPostId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "access", "verify"],
+              "query": [
+                {
+                  "key": "postId",
+                  "value": "{{testPostId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Set Token Requirements",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"postId\": \"{{testPostId}}\",\n  \"requirementType\": \"token\",\n  \"tokenMint\": \"So11111111111111111111111111111111111111112\",\n  \"minAmount\": 1000000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/access/requirements",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "access", "requirements"]
+            },
+            "description": "Set token-based access requirements for a post"
+          }
+        },
+        {
+          "name": "Set NFT Requirements",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"postId\": \"{{testPostId}}\",\n  \"requirementType\": \"nft\",\n  \"collectionAddress\": \"NFTCollectionAddressHere\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/access/requirements",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "access", "requirements"]
+            },
+            "description": "Set NFT-based access requirements for a post"
+          }
+        },
+        {
+          "name": "Verify Token Access",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"postId\": \"{{testPostId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/access/verify-token",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "access", "verify-token"]
+            }
+          }
+        },
+        {
+          "name": "Verify NFT Access",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"postId\": \"{{testPostId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/access/verify-nft",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "access", "verify-nft"]
+            }
+          }
+        },
+        {
+          "name": "Check On-Chain Access",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/access/check?postId={{testPostId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "access", "check"],
+              "query": [
+                {
+                  "key": "postId",
+                  "value": "{{testPostId}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI Service (Direct)",
+      "item": [
+        {
+          "name": "Moderate Content",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"image_url\": \"https://example.com/image.jpg\",\n  \"caption\": \"Test image for moderation\"\n}"
+            },
+            "url": {
+              "raw": "{{aiServiceUrl}}/api/moderate",
+              "host": ["{{aiServiceUrl}}"],
+              "path": ["api", "moderate"]
+            }
+          }
+        },
+        {
+          "name": "Analyze Content",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content_uri\": \"ipfs://...\",\n  \"caption\": \"Beautiful sunset\",\n  \"post_id\": \"test-post-123\",\n  \"creator_wallet\": \"{{testWallet}}\"\n}"
+            },
+            "url": {
+              "raw": "{{aiServiceUrl}}/api/analyze",
+              "host": ["{{aiServiceUrl}}"],
+              "path": ["api", "analyze"]
+            }
+          }
+        },
+        {
+          "name": "Semantic Search (AI)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"sunset over mountains\",\n  \"limit\": 20,\n  \"rerank\": true\n}"
+            },
+            "url": {
+              "raw": "{{aiServiceUrl}}/api/search",
+              "host": ["{{aiServiceUrl}}"],
+              "path": ["api", "search"]
+            }
+          }
+        },
+        {
+          "name": "Get Recommendations",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_wallet\": \"{{testWallet}}\",\n  \"liked_post_ids\": [],\n  \"limit\": 20\n}"
+            },
+            "url": {
+              "raw": "{{aiServiceUrl}}/api/recommend",
+              "host": ["{{aiServiceUrl}}"],
+              "path": ["api", "recommend"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
