@@ -1,0 +1,134 @@
+version: '3.8'
+
+services:
+  # Backend API Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: solshare-backend
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      # Supabase
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      # Redis
+      - UPSTASH_REDIS_URL=${UPSTASH_REDIS_URL}
+      - UPSTASH_REDIS_TOKEN=${UPSTASH_REDIS_TOKEN}
+      # R2 Storage
+      - R2_ACCOUNT_ID=${R2_ACCOUNT_ID}
+      - R2_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID}
+      - R2_SECRET_ACCESS_KEY=${R2_SECRET_ACCESS_KEY}
+      - R2_BUCKET_NAME=${R2_BUCKET_NAME}
+      - R2_PUBLIC_URL=${R2_PUBLIC_URL}
+      # Solana
+      - SOLANA_RPC_URL=${SOLANA_RPC_URL}
+      - SOCIAL_PROGRAM_ID=${SOCIAL_PROGRAM_ID}
+      - PAYMENT_PROGRAM_ID=${PAYMENT_PROGRAM_ID}
+      - TOKEN_GATE_PROGRAM_ID=${TOKEN_GATE_PROGRAM_ID}
+      # Pinata IPFS
+      - PINATA_API_KEY=${PINATA_API_KEY}
+      - PINATA_SECRET_KEY=${PINATA_SECRET_KEY}
+      - PINATA_GATEWAY_URL=${PINATA_GATEWAY_URL}
+      # Auth
+      - JWT_SECRET=${JWT_SECRET}
+      # AI Service (internal docker network)
+      - AI_SERVICE_URL=http://ai-service:8000
+      # Frontend
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+    depends_on:
+      ai-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - solshare-network
+
+  # Backend Worker (Background Jobs)
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    container_name: solshare-worker
+    environment:
+      - NODE_ENV=development
+      # Supabase
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      # Redis
+      - UPSTASH_REDIS_URL=${UPSTASH_REDIS_URL}
+      - UPSTASH_REDIS_TOKEN=${UPSTASH_REDIS_TOKEN}
+      # R2 Storage
+      - R2_ACCOUNT_ID=${R2_ACCOUNT_ID}
+      - R2_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID}
+      - R2_SECRET_ACCESS_KEY=${R2_SECRET_ACCESS_KEY}
+      - R2_BUCKET_NAME=${R2_BUCKET_NAME}
+      - R2_PUBLIC_URL=${R2_PUBLIC_URL}
+      # Solana
+      - SOLANA_RPC_URL=${SOLANA_RPC_URL}
+      - SOCIAL_PROGRAM_ID=${SOCIAL_PROGRAM_ID}
+      - PAYMENT_PROGRAM_ID=${PAYMENT_PROGRAM_ID}
+      - TOKEN_GATE_PROGRAM_ID=${TOKEN_GATE_PROGRAM_ID}
+      # Pinata IPFS
+      - PINATA_API_KEY=${PINATA_API_KEY}
+      - PINATA_SECRET_KEY=${PINATA_SECRET_KEY}
+      - PINATA_GATEWAY_URL=${PINATA_GATEWAY_URL}
+      # Auth
+      - JWT_SECRET=${JWT_SECRET}
+      # AI Service (internal docker network)
+      - AI_SERVICE_URL=http://ai-service:8000
+      # Frontend
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - solshare-network
+
+  # AI/ML Service
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: solshare-ai
+    ports:
+      - "8000:8000"
+    environment:
+      # Gemini AI
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      # Voyage AI (Embeddings)
+      - VOYAGE_API_KEY=${VOYAGE_API_KEY}
+      # Qdrant Vector DB
+      - QDRANT_URL=${QDRANT_URL}
+      - QDRANT_API_KEY=${QDRANT_API_KEY}
+      - QDRANT_COLLECTION=${QDRANT_COLLECTION:-solshare_posts}
+      # Backend URL (internal docker network)
+      - BACKEND_URL=http://backend:3001
+      # Supabase (for violation logging)
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      # IPFS Gateway
+      - IPFS_GATEWAY=${IPFS_GATEWAY:-https://gateway.pinata.cloud/ipfs}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - solshare-network
+
+networks:
+  solshare-network:
+    driver: bridge
