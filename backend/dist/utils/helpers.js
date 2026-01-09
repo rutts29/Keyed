@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'crypto';
-import * as imageHash from 'imghash';
+import imageHash from 'imghash';
 import { logger } from './logger.js';
 /**
  * Generate a cryptographically secure random nonce for authentication challenges.

@@ -1,5 +1,6 @@
 import { PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, } from '@solana/web3.js';
-import { BN } from '@coral-xyz/anchor';
+import pkg from '@coral-xyz/anchor';
+const { BN } = pkg;
 import { connection, getRecentBlockhash, programIds, programs, pdaDerivation, fetchUserProfile, fetchCreatorVault, fetchPlatformConfig, fetchPost, } from '../config/solana.js';
 import { logger } from '../utils/logger.js';
 const PLATFORM_FEE_BPS = 200; // 2% (used as fallback)
