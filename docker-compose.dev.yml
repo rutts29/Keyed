@@ -1,0 +1,52 @@
+# Development Docker Compose
+# Simpler setup without worker for quick testing
+# Usage: docker-compose -f docker-compose.dev.yml up --build
+
+version: '3.8'
+
+services:
+  # Backend API Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: solshare-backend
+    ports:
+      - "3001:3001"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=development
+      - AI_SERVICE_URL=http://ai-service:8000
+    depends_on:
+      ai-service:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - solshare-network
+
+  # AI/ML Service
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: solshare-ai
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - BACKEND_URL=http://backend:3001
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - solshare-network
+
+networks:
+  solshare-network:
+    driver: bridge
