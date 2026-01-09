@@ -1,6 +1,19 @@
 import { env } from '../config/env.js';
 import { logger } from '../utils/logger.js';
 const AI_SERVICE_TIMEOUT = 30000; // 30 seconds
+/**
+ * Build headers for AI service requests.
+ * Includes internal API key for service-to-service authentication if configured.
+ */
+function getAIServiceHeaders() {
+    const headers = {
+        'Content-Type': 'application/json'
+    };
+    if (env.AI_SERVICE_API_KEY) {
+        headers['X-Internal-API-Key'] = env.AI_SERVICE_API_KEY;
+    }
+    return headers;
+}
 async function fetchWithTimeout(url, options, timeout = AI_SERVICE_TIMEOUT) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -29,7 +42,7 @@ export const aiService = {
             try {
                 const response = await fetchWithTimeout(`${env.AI_SERVICE_URL}/api/moderate/check`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: getAIServiceHeaders(),
                     body: JSON.stringify({
                         image_base64: imageBase64,
                         caption: caption || null,
@@ -93,7 +106,7 @@ export const aiService = {
         try {
             const response = await fetchWithTimeout(`${env.AI_SERVICE_URL}/api/analyze/content`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAIServiceHeaders(),
                 body: JSON.stringify({
                     content_uri: contentUri,
                     caption: caption || null,
@@ -136,7 +149,7 @@ export const aiService = {
         try {
             const response = await fetchWithTimeout(`${env.AI_SERVICE_URL}/api/search/semantic`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAIServiceHeaders(),
                 body: JSON.stringify({ query, limit, rerank }),
             });
             if (!response.ok) {
@@ -172,7 +185,7 @@ export const aiService = {
         try {
             const response = await fetchWithTimeout(`${env.AI_SERVICE_URL}/api/recommend/feed`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAIServiceHeaders(),
                 body: JSON.stringify({
                     user_wallet: userWallet,
                     liked_post_ids: likedPostIds,
@@ -212,7 +225,7 @@ export const aiService = {
         try {
             const response = await fetchWithTimeout(`${env.AI_SERVICE_URL}/api/moderate/check-hash`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAIServiceHeaders(),
                 body: JSON.stringify({ image_hash: imageHash }),
             }, 5000); // Shorter timeout for hash check
             if (!response.ok) {

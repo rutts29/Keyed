@@ -16,6 +16,12 @@ class Settings(BaseSettings):
     # Backend service
     backend_url: str = "http://localhost:3001"
     
+    # Internal API key for service-to-service auth (optional in dev, required in production)
+    internal_api_key: str | None = None
+    
+    # Environment
+    environment: str = "development"
+    
     # Supabase (for violation logging)
     supabase_url: str | None = None
     supabase_service_role_key: str | None = None

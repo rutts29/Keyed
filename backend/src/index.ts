@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import { env } from './config/env.js';
 import { logger } from './utils/logger.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
+import { requestIdMiddleware } from './middleware/requestId.js';
 
 import authRoutes from './routes/auth.routes.js';
 import usersRoutes from './routes/users.routes.js';
@@ -14,6 +15,9 @@ import searchRoutes from './routes/search.routes.js';
 import accessRoutes from './routes/access.routes.js';
 
 const app = express();
+
+// Request ID middleware should be first to ensure all requests are traceable
+app.use(requestIdMiddleware);
 
 app.use(helmet());
 app.use(cors({
