@@ -1,7 +1,10 @@
 from fastapi import APIRouter, HTTPException
+import logging
 from app.models.schemas import RecommendRequest, RecommendResponse
 from app.services.recommender import recommend
+from app.config import get_settings
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/recommend", tags=["recommendations"])
 
 
@@ -18,4 +21,8 @@ async def get_recommendations(request: RecommendRequest) -> RecommendResponse:
             exclude_seen=request.exclude_seen,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # SECURITY: Log full error but only expose generic message in production
+        logger.exception("Recommendation generation failed")
+        settings = get_settings()
+        detail = str(e) if settings.environment != "production" else "Recommendation service error"
+        raise HTTPException(status_code=500, detail=detail)
