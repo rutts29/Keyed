@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Build output (will be rebuilt in container)
+dist/
+
+# Development files
+.env
+.env.*
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Testing
+coverage/
+.nyc_output/
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile*
+docker-compose*
