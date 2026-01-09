@@ -1,5 +1,7 @@
 import { Connection, PublicKey, clusterApiUrl } from '@solana/web3.js';
-import { AnchorProvider, Program, Idl } from '@coral-xyz/anchor';
+import anchor from '@coral-xyz/anchor';
+const { AnchorProvider, Program } = anchor;
+type Idl = anchor.Idl;
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { env } from './env.js';
