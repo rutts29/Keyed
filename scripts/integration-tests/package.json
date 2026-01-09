@@ -1,0 +1,25 @@
+{
+  "name": "solshare-integration-tests",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Integration tests for SolShare platform",
+  "scripts": {
+    "test": "tsx test-all.ts",
+    "test:auth": "tsx test-auth.ts",
+    "test:posts": "tsx test-posts.ts",
+    "test:search": "tsx test-search.ts",
+    "test:payments": "tsx test-payments.ts",
+    "test:access": "tsx test-access.ts"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.98.0",
+    "bs58": "^6.0.0",
+    "dotenv": "^16.4.7",
+    "tweetnacl": "^1.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
