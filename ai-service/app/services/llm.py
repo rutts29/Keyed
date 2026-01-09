@@ -1,57 +1,115 @@
 import json
-from openai import AsyncOpenAI
+import base64
+from google import genai
+from google.genai import types
 from app.config import get_settings
 
-_client: AsyncOpenAI | None = None
+_client: genai.Client | None = None
 
 
-def get_client() -> AsyncOpenAI:
+def _get_client() -> genai.Client:
+    """Get or create Gemini client."""
     global _client
     if _client is None:
         settings = get_settings()
-        _client = AsyncOpenAI(api_key=settings.openai_api_key)
+        _client = genai.Client(api_key=settings.gemini_api_key)
     return _client
 
 
-async def analyze_image(image_base64: str, prompt: str, use_thinking: bool = False) -> dict:
-    """Analyze image using GPT 5.2 Vision."""
+def _get_model_name(use_thinking: bool = False) -> str:
+    """Get the appropriate model name."""
     settings = get_settings()
-    model = settings.gpt_thinking_model if use_thinking else settings.gpt_instant_model
+    return settings.gemini_pro_model if use_thinking else settings.gemini_flash_model
 
-    response = await get_client().chat.completions.create(
-        model=model,
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {"type": "image_url", "image_url": {"url": image_base64}},
-                ],
-            }
-        ],
-        response_format={"type": "json_object"},
-        max_tokens=1000,
+
+async def analyze_image(image_base64: str, prompt: str, use_thinking: bool = False) -> dict:
+    """Analyze image using Gemini Vision.
+    
+    Args:
+        image_base64: Base64 encoded image (can include data:image prefix or raw base64)
+        prompt: Analysis prompt
+        use_thinking: Use Pro model for complex reasoning
+        
+    Returns:
+        Parsed JSON response from Gemini
+    """
+    client = _get_client()
+    model_name = _get_model_name(use_thinking)
+    
+    # Handle base64 format - strip data URL prefix if present
+    if image_base64.startswith("data:"):
+        # Format: data:image/jpeg;base64,/9j/4AAQ...
+        header, image_data = image_base64.split(",", 1)
+        mime_type = header.split(":")[1].split(";")[0]
+    else:
+        # Assume JPEG if no prefix
+        image_data = image_base64
+        mime_type = "image/jpeg"
+    
+    # Create image part for Gemini
+    image_bytes = base64.b64decode(image_data)
+    image_part = types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
+    
+    # Add JSON instruction to prompt
+    json_prompt = f"{prompt}\n\nRespond with valid JSON only, no markdown formatting."
+    
+    # Generate response
+    response = await client.aio.models.generate_content(
+        model=model_name,
+        contents=[json_prompt, image_part],
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+            max_output_tokens=1000,
+        ),
     )
-
-    return json.loads(response.choices[0].message.content)
+    
+    try:
+        return json.loads(response.text)
+    except json.JSONDecodeError:
+        # If JSON parsing fails, try to extract JSON from response
+        text = response.text
+        if "{" in text and "}" in text:
+            start = text.index("{")
+            end = text.rindex("}") + 1
+            return json.loads(text[start:end])
+        raise ValueError(f"Failed to parse JSON from Gemini response: {text[:200]}")
 
 
 async def generate_text(prompt: str, use_thinking: bool = False) -> str:
-    """Generate text using GPT 5.2."""
-    settings = get_settings()
-    model = settings.gpt_thinking_model if use_thinking else settings.gpt_instant_model
-
-    response = await get_client().chat.completions.create(
-        model=model,
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=500,
+    """Generate text using Gemini.
+    
+    Args:
+        prompt: Text prompt
+        use_thinking: Use Pro model for complex reasoning
+        
+    Returns:
+        Generated text response
+    """
+    client = _get_client()
+    model_name = _get_model_name(use_thinking)
+    
+    response = await client.aio.models.generate_content(
+        model=model_name,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            max_output_tokens=500,
+        ),
     )
-
-    return response.choices[0].message.content
+    
+    return response.text
 
 
 async def rerank_results(query: str, items: list[dict], top_k: int = 20) -> list[dict]:
-    """Re-rank search results for relevance using GPT 5.2 Thinking."""
+    """Re-rank search results for relevance using Gemini Pro.
+    
+    Args:
+        query: Search query
+        items: List of search result items with post_id and description
+        top_k: Number of top results to return
+        
+    Returns:
+        Re-ranked list of items
+    """
     if not items:
         return []
 
@@ -67,16 +125,28 @@ Results:
 {items_text}
 
 Return JSON with "rankings" array of post_id strings in order of relevance (most relevant first).
-Only include the top {top_k} most relevant results."""
+Only include the top {top_k} most relevant results.
 
-    response = await get_client().chat.completions.create(
-        model=get_settings().gpt_thinking_model,
-        messages=[{"role": "user", "content": prompt}],
-        response_format={"type": "json_object"},
-        max_tokens=500,
+Respond with valid JSON only."""
+
+    client = _get_client()
+    model_name = _get_model_name(use_thinking=True)
+    
+    response = await client.aio.models.generate_content(
+        model=model_name,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+            max_output_tokens=500,
+        ),
     )
 
-    result = json.loads(response.choices[0].message.content)
+    try:
+        result = json.loads(response.text)
+    except json.JSONDecodeError:
+        # Fallback: return original order
+        return items[:top_k]
+    
     rankings = result.get("rankings", [])
 
     items_by_id = {item["post_id"]: item for item in items}
@@ -84,4 +154,5 @@ Only include the top {top_k} most relevant results."""
     for post_id in rankings:
         if post_id in items_by_id:
             reranked.append(items_by_id[post_id])
+    
     return reranked
