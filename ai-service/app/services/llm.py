@@ -1,26 +1,25 @@
 import json
 import base64
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from app.config import get_settings
 
-_configured = False
+_client: genai.Client | None = None
 
 
-def _configure_gemini():
-    """Configure Gemini API client."""
-    global _configured
-    if not _configured:
+def _get_client() -> genai.Client:
+    """Get or create Gemini client."""
+    global _client
+    if _client is None:
         settings = get_settings()
-        genai.configure(api_key=settings.gemini_api_key)
-        _configured = True
+        _client = genai.Client(api_key=settings.gemini_api_key)
+    return _client
 
 
-def _get_model(use_thinking: bool = False):
-    """Get the appropriate Gemini model."""
-    _configure_gemini()
+def _get_model_name(use_thinking: bool = False) -> str:
+    """Get the appropriate model name."""
     settings = get_settings()
-    model_name = settings.gemini_pro_model if use_thinking else settings.gemini_flash_model
-    return genai.GenerativeModel(model_name)
+    return settings.gemini_pro_model if use_thinking else settings.gemini_flash_model
 
 
 async def analyze_image(image_base64: str, prompt: str, use_thinking: bool = False) -> dict:
@@ -34,7 +33,8 @@ async def analyze_image(image_base64: str, prompt: str, use_thinking: bool = Fal
     Returns:
         Parsed JSON response from Gemini
     """
-    model = _get_model(use_thinking)
+    client = _get_client()
+    model_name = _get_model_name(use_thinking)
     
     # Handle base64 format - strip data URL prefix if present
     if image_base64.startswith("data:"):
@@ -47,20 +47,20 @@ async def analyze_image(image_base64: str, prompt: str, use_thinking: bool = Fal
         mime_type = "image/jpeg"
     
     # Create image part for Gemini
-    image_part = {
-        "mime_type": mime_type,
-        "data": base64.b64decode(image_data)
-    }
+    image_bytes = base64.b64decode(image_data)
+    image_part = types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
     
-    # Generate response with JSON output
-    generation_config = genai.GenerationConfig(
-        response_mime_type="application/json",
-        max_output_tokens=1000,
-    )
+    # Add JSON instruction to prompt
+    json_prompt = f"{prompt}\n\nRespond with valid JSON only, no markdown formatting."
     
-    response = await model.generate_content_async(
-        [prompt, image_part],
-        generation_config=generation_config,
+    # Generate response
+    response = await client.aio.models.generate_content(
+        model=model_name,
+        contents=[json_prompt, image_part],
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+            max_output_tokens=1000,
+        ),
     )
     
     try:
@@ -85,15 +85,15 @@ async def generate_text(prompt: str, use_thinking: bool = False) -> str:
     Returns:
         Generated text response
     """
-    model = _get_model(use_thinking)
+    client = _get_client()
+    model_name = _get_model_name(use_thinking)
     
-    generation_config = genai.GenerationConfig(
-        max_output_tokens=500,
-    )
-    
-    response = await model.generate_content_async(
-        prompt,
-        generation_config=generation_config,
+    response = await client.aio.models.generate_content(
+        model=model_name,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            max_output_tokens=500,
+        ),
     )
     
     return response.text
@@ -125,18 +125,20 @@ Results:
 {items_text}
 
 Return JSON with "rankings" array of post_id strings in order of relevance (most relevant first).
-Only include the top {top_k} most relevant results."""
+Only include the top {top_k} most relevant results.
 
-    model = _get_model(use_thinking=True)
+Respond with valid JSON only."""
+
+    client = _get_client()
+    model_name = _get_model_name(use_thinking=True)
     
-    generation_config = genai.GenerationConfig(
-        response_mime_type="application/json",
-        max_output_tokens=500,
-    )
-    
-    response = await model.generate_content_async(
-        prompt,
-        generation_config=generation_config,
+    response = await client.aio.models.generate_content(
+        model=model_name,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+            max_output_tokens=500,
+        ),
     )
 
     try:
