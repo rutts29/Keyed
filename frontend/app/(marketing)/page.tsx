@@ -1,0 +1,281 @@
+import Link from "next/link";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
+  ArrowUpRight,
+  Lock,
+  ShieldCheck,
+  Sparkles,
+  Zap,
+} from "lucide-react";
+
+const features = [
+  {
+    title: "Creator-first monetization",
+    description:
+      "Run gated drops, subscriptions, and tipping without leaving the feed.",
+    icon: Sparkles,
+  },
+  {
+    title: "Access that scales",
+    description:
+      "Token-gates, NFT passes, and subscriber tiers keep the signal clean.",
+    icon: Lock,
+  },
+  {
+    title: "Instant discovery",
+    description:
+      "Algorithmic trends and curated rooms surface the best creators.",
+    icon: Zap,
+  },
+  {
+    title: "Trust by default",
+    description:
+      "Verified creators, transparent metrics, and on-chain receipts.",
+    icon: ShieldCheck,
+  },
+];
+
+const activity = [
+  "Drop preview approved for @mayastream",
+  "Token-gated Q&A scheduled for tonight",
+  "24 creators tipped in the last hour",
+  "New trend: Live mint rooms",
+  "7 creators unlocked their premium rooms",
+];
+
+export default function MarketingPage() {
+  return (
+    <div className="relative min-h-screen overflow-hidden bg-background">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute left-1/2 top-[-20%] h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-primary/20 blur-[120px]" />
+      </div>
+
+      <header className="relative z-10 border-b border-border/60">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/20 text-primary">
+              <span className="text-sm font-semibold">S</span>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">SolShare</p>
+              <p className="text-xs text-muted-foreground">
+                Social layer for Solana
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" className="hidden sm:inline-flex">
+              Docs
+            </Button>
+            <Button asChild>
+              <Link href="/app">Launch app</Link>
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <main className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-24 pt-16">
+        <section className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+          <div className="space-y-6">
+            <Badge variant="secondary" className="w-fit">
+              Creator beta is live
+            </Badge>
+            <h1 className="text-4xl font-semibold leading-tight text-foreground md:text-5xl">
+              The minimal, premium home for Solana creators.
+            </h1>
+            <p className="text-base leading-7 text-muted-foreground md:text-lg">
+              SolShare pairs social discovery with on-chain access. Launch gated
+              drops, host private rooms, and keep your community in one
+              beautifully focused feed.
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button asChild className="h-11 px-6 text-sm font-semibold">
+                <Link href="/app">Enter the network</Link>
+              </Button>
+              <Button
+                variant="secondary"
+                className="h-11 px-6 text-sm font-semibold"
+              >
+                Request access
+              </Button>
+            </div>
+            <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+              <div>
+                <span className="text-sm font-semibold text-foreground">
+                  3.2k
+                </span>{" "}
+                creators onboarded
+              </div>
+              <div>
+                <span className="text-sm font-semibold text-foreground">
+                  14k+
+                </span>{" "}
+                gated posts shipped
+              </div>
+              <div>
+                <span className="text-sm font-semibold text-foreground">
+                  $2.8m
+                </span>{" "}
+                tips processed
+              </div>
+            </div>
+          </div>
+
+          <Card className="border-border/70 bg-card/70">
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold text-foreground">
+                Creator workspace
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Tabs defaultValue="creators">
+                <TabsList className="grid w-full grid-cols-2 bg-muted/40">
+                  <TabsTrigger value="creators">Creators</TabsTrigger>
+                  <TabsTrigger value="fans">Fans</TabsTrigger>
+                </TabsList>
+                <TabsContent value="creators" className="space-y-4">
+                  <div className="rounded-xl border border-border/70 bg-background/50 p-4">
+                    <p className="text-xs font-semibold text-foreground">
+                      Drop overview
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Access rules, engagement, and tips in one view.
+                    </p>
+                    <div className="mt-3 flex items-center gap-2">
+                      <Badge variant="secondary">Token gated</Badge>
+                      <Badge variant="outline">142 members</Badge>
+                    </div>
+                  </div>
+                  <Separator className="bg-border/70" />
+                  <div className="space-y-2 text-xs text-muted-foreground">
+                    <p className="text-sm font-semibold text-foreground">
+                      Activity feed
+                    </p>
+                    <ScrollArea className="h-24">
+                      <div className="space-y-2 pr-2">
+                        {activity.map((item) => (
+                          <div
+                            key={item}
+                            className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2"
+                          >
+                            {item}
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                </TabsContent>
+                <TabsContent value="fans" className="space-y-4">
+                  <div className="rounded-xl border border-border/70 bg-background/50 p-4">
+                    <p className="text-xs font-semibold text-foreground">
+                      Fan overview
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Curated creators, live drops, and instant access checks.
+                    </p>
+                    <div className="mt-3 flex items-center gap-2">
+                      <Badge variant="secondary">Verified</Badge>
+                      <Badge variant="outline">Access unlocked</Badge>
+                    </div>
+                  </div>
+                  <Separator className="bg-border/70" />
+                  <div className="grid gap-3 text-xs text-muted-foreground">
+                    <div className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2">
+                      Jump into a live mint room in one tap.
+                    </div>
+                    <div className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2">
+                      Receive creator updates without the noise.
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        </section>
+
+        <section className="mt-16 space-y-6">
+          <div className="flex items-center justify-between gap-6">
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                Built for signal
+              </p>
+              <h2 className="text-2xl font-semibold text-foreground">
+                Everything creators need, nothing they don&apos;t.
+              </h2>
+            </div>
+            <Button variant="ghost" className="hidden text-xs sm:inline-flex">
+              View product tour
+              <ArrowUpRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {features.map((feature) => {
+              const Icon = feature.icon;
+              return (
+                <Card
+                  key={feature.title}
+                  className="border-border/70 bg-card/70"
+                >
+                  <CardContent className="space-y-3 p-5">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20 text-primary">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">
+                        {feature.title}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {feature.description}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="mt-16">
+          <Card className="border-border/70 bg-card/70">
+            <CardContent className="flex flex-wrap items-center justify-between gap-6 p-6">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                  Ready to launch
+                </p>
+                <h3 className="text-2xl font-semibold text-foreground">
+                  Ship your next creator drop in minutes.
+                </h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Set your access rules, publish once, and stay connected with
+                  your community.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button asChild className="h-11 px-6 text-sm font-semibold">
+                  <Link href="/app">Open SolShare</Link>
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="h-11 px-6 text-sm font-semibold"
+                >
+                  Talk to us
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+      </main>
+    </div>
+  );
+}
