@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { PrivacyBalance } from "@/components/PrivacyBalance";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -98,6 +99,7 @@ export function AppSidebar() {
             );
           })}
         </nav>
+        <PrivacyBalance />
         <Button className="h-11 w-full rounded-xl text-sm font-semibold" asChild>
           <Link href="/create">Post update</Link>
         </Button>
