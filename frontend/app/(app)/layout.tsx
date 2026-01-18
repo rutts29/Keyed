@@ -4,6 +4,8 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { AuthSync } from "@/components/AuthSync";
 import { RealtimeSync } from "@/components/RealtimeSync";
 import { RightRailCard } from "@/components/RightRailCard";
+import { ShieldModal } from "@/components/ShieldModal";
+import { TipModal } from "@/components/TipModal";
 import { SuggestedUsers } from "@/components/SuggestedUsers";
 import { TopNav } from "@/components/TopNav";
 import { TrendingPanel } from "@/components/TrendingPanel";
@@ -20,6 +22,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
     <div className="min-h-screen bg-background">
       <AuthSync />
       <RealtimeSync />
+      <ShieldModal />
+      <TipModal />
       <div className="mx-auto flex w-full max-w-6xl gap-6 px-4">
         <aside className="sticky top-0 hidden h-screen w-60 flex-col py-6 lg:flex">
           <AppSidebar />

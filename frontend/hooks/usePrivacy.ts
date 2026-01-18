@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/queryClient"
+import { useAuthStore } from "@/store/authStore"
 import { usePrivacyStore } from "@/store/privacyStore"
 import type {
   ApiResponse,
@@ -16,6 +17,7 @@ import type {
 export function usePrivacyBalance() {
   const setBalance = usePrivacyStore((state) => state.setBalance)
   const setLoading = usePrivacyStore((state) => state.setLoadingBalance)
+  const token = useAuthStore((state) => state.token)
 
   return useQuery({
     queryKey: queryKeys.privacyBalance(),
@@ -31,6 +33,7 @@ export function usePrivacyBalance() {
       return data.data
     },
     onSettled: () => setLoading(false),
+    enabled: Boolean(token),
   })
 }
 
@@ -85,6 +88,7 @@ export function usePrivateTip() {
 
 export function usePrivacySettings() {
   const setSettings = usePrivacyStore((state) => state.setSettings)
+  const token = useAuthStore((state) => state.token)
 
   return useQuery({
     queryKey: queryKeys.privacySettings(),
@@ -98,6 +102,7 @@ export function usePrivacySettings() {
       setSettings(data.data)
       return data.data
     },
+    enabled: Boolean(token),
   })
 }
 
@@ -122,6 +127,8 @@ export function useUpdatePrivacySettings() {
 }
 
 export function usePrivateTipsReceived() {
+  const token = useAuthStore((state) => state.token)
+
   return useQuery({
     queryKey: queryKeys.privacyTipsReceived(),
     queryFn: async () => {
@@ -133,10 +140,13 @@ export function usePrivateTipsReceived() {
       }
       return data.data
     },
+    enabled: Boolean(token),
   })
 }
 
 export function usePrivateTipsSent() {
+  const token = useAuthStore((state) => state.token)
+
   return useQuery({
     queryKey: queryKeys.privacyTipsSent(),
     queryFn: async () => {
@@ -148,10 +158,13 @@ export function usePrivateTipsSent() {
       }
       return data.data
     },
+    enabled: Boolean(token),
   })
 }
 
 export function usePrivacyPoolInfo() {
+  const token = useAuthStore((state) => state.token)
+
   return useQuery({
     queryKey: queryKeys.privacyPoolInfo(),
     queryFn: async () => {
@@ -163,5 +176,6 @@ export function usePrivacyPoolInfo() {
       }
       return data.data
     },
+    enabled: Boolean(token),
   })
 }
