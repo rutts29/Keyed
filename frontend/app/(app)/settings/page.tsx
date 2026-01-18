@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { PrivateTipHistory } from "@/components/PrivateTipHistory";
@@ -18,17 +18,15 @@ export default function SettingsPage() {
   const { data } = usePrivacySettings();
   const { mutateAsync, isPending } = useUpdatePrivacySettings();
   const [defaultPrivateTips, setDefaultPrivateTips] = useState(false);
-
-  useEffect(() => {
-    if (data) {
-      setDefaultPrivateTips(data.default_private_tips);
-    }
-  }, [data]);
+  const [isDirty, setIsDirty] = useState(false);
+  const currentDefaultPrivate =
+    isDirty ? defaultPrivateTips : data?.default_private_tips ?? false;
 
   const handleSavePrivacy = async () => {
     try {
-      await mutateAsync({ defaultPrivateTips });
+      await mutateAsync({ defaultPrivateTips: currentDefaultPrivate });
       toast.success("Privacy settings updated");
+      setIsDirty(false);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Update failed"
@@ -86,8 +84,11 @@ export default function SettingsPage() {
               </p>
             </div>
             <Switch
-              checked={defaultPrivateTips}
-              onCheckedChange={setDefaultPrivateTips}
+              checked={currentDefaultPrivate}
+              onCheckedChange={(value) => {
+                setIsDirty(true);
+                setDefaultPrivateTips(value);
+              }}
             />
           </div>
           <div className="flex justify-end">

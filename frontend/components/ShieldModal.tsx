@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useDynamicContext } from "@dynamic-labs/sdk-react-core"
 import { toast } from "sonner"
 
@@ -20,12 +20,15 @@ export function ShieldModal() {
   const [amount, setAmount] = useState("")
   const [status, setStatus] = useState<"idle" | "shielding" | "success">("idle")
 
-  useEffect(() => {
-    if (!isOpen) {
-      setAmount("")
-      setStatus("idle")
-    }
-  }, [isOpen])
+  const resetState = () => {
+    setAmount("")
+    setStatus("idle")
+  }
+
+  const handleClose = () => {
+    resetState()
+    closeShieldModal()
+  }
 
   const handleSubmit = async () => {
     const value = Number.parseFloat(amount)
@@ -44,7 +47,7 @@ export function ShieldModal() {
       await signAndSubmitTransaction(transaction.transaction, primaryWallet)
       setStatus("success")
       toast.success("Shield transaction confirmed")
-      closeShieldModal()
+      handleClose()
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Shielding failed"
@@ -57,7 +60,7 @@ export function ShieldModal() {
     <Dialog
       open={isOpen}
       onOpenChange={(open) => {
-        if (!open) closeShieldModal()
+        if (!open) handleClose()
       }}
     >
       <DialogContent>
@@ -84,7 +87,7 @@ export function ShieldModal() {
           </div>
           {status === "shielding" ? <Progress value={60} /> : null}
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={closeShieldModal}>
+            <Button variant="secondary" onClick={handleClose}>
               Cancel
             </Button>
             <Button onClick={handleSubmit} disabled={isPending}>
