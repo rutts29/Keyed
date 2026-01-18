@@ -1,3 +1,5 @@
+import { vi } from 'vitest';
+
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'test-secret-key-that-is-at-least-32-characters-long';
 process.env.SUPABASE_URL = 'https://test.supabase.co';
@@ -18,3 +20,13 @@ process.env.PINATA_SECRET_KEY = 'test';
 process.env.PINATA_GATEWAY_URL = 'https://gateway.pinata.cloud';
 process.env.AI_SERVICE_URL = 'http://localhost:8000';
 process.env.FRONTEND_URL = 'http://localhost:3000';
+
+// Global mock for logger to avoid console noise during tests
+vi.mock('../src/utils/logger.js', () => ({
+  logger: {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+  },
+}));

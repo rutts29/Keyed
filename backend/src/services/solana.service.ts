@@ -18,6 +18,7 @@ import {
   fetchPost,
 } from '../config/solana.js';
 import { logger } from '../utils/logger.js';
+import { toValidatedPublicKey, toOptionalPublicKey } from '../utils/validation.js';
 import type { TransactionResponse } from '../types/index.js';
 
 const PLATFORM_FEE_BPS = 200; // 2% (used as fallback)

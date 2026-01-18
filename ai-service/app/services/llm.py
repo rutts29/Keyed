@@ -1,8 +1,18 @@
 import json
 import base64
+import asyncio
 from google import genai
 from google.genai import types
+from fastapi import HTTPException
 from app.config import get_settings
+
+# Default timeout for Gemini API calls (in seconds)
+GEMINI_TIMEOUT_SECONDS = 60
+
+
+class GeminiTimeoutError(Exception):
+    """Raised when a Gemini API call times out."""
+    pass
 
 _client: genai.Client | None = None
 
@@ -53,15 +63,24 @@ async def analyze_image(image_base64: str, prompt: str, use_thinking: bool = Fal
     # Add JSON instruction to prompt
     json_prompt = f"{prompt}\n\nRespond with valid JSON only, no markdown formatting."
     
-    # Generate response
-    response = await client.aio.models.generate_content(
-        model=model_name,
-        contents=[json_prompt, image_part],
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            max_output_tokens=1000,
-        ),
-    )
+    # Generate response with timeout
+    try:
+        response = await asyncio.wait_for(
+            client.aio.models.generate_content(
+                model=model_name,
+                contents=[json_prompt, image_part],
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    max_output_tokens=1000,
+                ),
+            ),
+            timeout=GEMINI_TIMEOUT_SECONDS
+        )
+    except asyncio.TimeoutError:
+        raise HTTPException(
+            status_code=504,
+            detail="Image analysis request timed out. Please try again."
+        )
     
     try:
         return json.loads(response.text)
@@ -87,15 +106,24 @@ async def generate_text(prompt: str, use_thinking: bool = False) -> str:
     """
     client = _get_client()
     model_name = _get_model_name(use_thinking)
-    
-    response = await client.aio.models.generate_content(
-        model=model_name,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            max_output_tokens=500,
-        ),
-    )
-    
+
+    try:
+        response = await asyncio.wait_for(
+            client.aio.models.generate_content(
+                model=model_name,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    max_output_tokens=500,
+                ),
+            ),
+            timeout=GEMINI_TIMEOUT_SECONDS
+        )
+    except asyncio.TimeoutError:
+        raise HTTPException(
+            status_code=504,
+            detail="Text generation request timed out. Please try again."
+        )
+
     return response.text
 
 
@@ -131,15 +159,22 @@ Respond with valid JSON only."""
 
     client = _get_client()
     model_name = _get_model_name(use_thinking=True)
-    
-    response = await client.aio.models.generate_content(
-        model=model_name,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            max_output_tokens=500,
-        ),
-    )
+
+    try:
+        response = await asyncio.wait_for(
+            client.aio.models.generate_content(
+                model=model_name,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    max_output_tokens=500,
+                ),
+            ),
+            timeout=GEMINI_TIMEOUT_SECONDS
+        )
+    except asyncio.TimeoutError:
+        # For reranking, we can gracefully fallback to original order
+        return items[:top_k]
 
     try:
         result = json.loads(response.text)

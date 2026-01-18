@@ -5,6 +5,7 @@ import { env } from './config/env.js';
 import { logger } from './utils/logger.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { requestIdMiddleware } from './middleware/requestId.js';
+import { requestLogger } from './middleware/requestLogger.js';
 
 import authRoutes from './routes/auth.routes.js';
 import usersRoutes from './routes/users.routes.js';
@@ -19,6 +20,11 @@ const app = express();
 
 // Request ID middleware should be first to ensure all requests are traceable
 app.use(requestIdMiddleware);
+
+// Request logging for observability (skip health checks in production)
+if (env.NODE_ENV !== 'test') {
+  app.use(requestLogger);
+}
 
 app.use(helmet());
 app.use(cors({
