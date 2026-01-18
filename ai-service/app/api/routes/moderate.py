@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException
+import logging
 from app.models.schemas import (
     ModerationRequest,
     ModerationResponse,
@@ -7,7 +8,9 @@ from app.models.schemas import (
 )
 from app.services.moderator import moderate_content
 from app.services.database import check_blocked_hash
+from app.config import get_settings
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/moderate", tags=["moderation"])
 
 
@@ -20,7 +23,11 @@ async def check_content(request: ModerationRequest) -> ModerationResponse:
     try:
         return await moderate_content(request.image_base64, request.caption)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # SECURITY: Log full error but only expose generic message in production
+        logger.exception("Moderation check failed")
+        settings = get_settings()
+        detail = str(e) if settings.environment != "production" else "Content moderation service error"
+        raise HTTPException(status_code=500, detail=detail)
 
 
 @router.post("/check-hash", response_model=HashCheckResponse, response_model_by_alias=True)

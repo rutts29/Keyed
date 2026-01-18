@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../types/index.js';
 import { supabase } from '../config/supabase.js';
 import { aiService } from '../services/ai.service.js';
+import { cacheService } from '../services/cache.service.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { logger } from '../utils/logger.js';
 
@@ -86,22 +87,30 @@ export const searchController = {
 
   /**
    * Search autocomplete suggestions based on existing tags
+   * Cached for 2 minutes per prefix to reduce database load
    */
   async suggest(req: AuthenticatedRequest, res: Response) {
     const q = (req.query.q as string) || '';
-    
+
     if (q.length < 2) {
       res.json({ success: true, data: { suggestions: [] } });
       return;
     }
-    
+
+    // Check cache first
+    const cached = await cacheService.getSuggestions(q);
+    if (cached) {
+      res.json({ success: true, data: { suggestions: cached } });
+      return;
+    }
+
     // Get tags from posts that match the query
     const { data: tagMatches } = await supabase
       .from('posts')
       .select('auto_tags')
       .not('auto_tags', 'is', null)
       .limit(100);
-    
+
     const allTags = new Set<string>();
     tagMatches?.forEach(p => {
       p.auto_tags?.forEach((tag: string) => {
@@ -110,19 +119,22 @@ export const searchController = {
         }
       });
     });
-    
+
     // Also search for usernames
     const { data: users } = await supabase
       .from('users')
       .select('username')
       .ilike('username', `${q}%`)
       .limit(5);
-    
+
     const suggestions = [
       ...Array.from(allTags).slice(0, 10),
       ...(users?.map(u => `@${u.username}`) || []),
     ];
-    
+
+    // Cache the suggestions
+    await cacheService.setSuggestions(q, suggestions);
+
     res.json({
       success: true,
       data: { suggestions },

@@ -1,7 +1,10 @@
 from fastapi import APIRouter, HTTPException
+import logging
 from app.models.schemas import AnalyzeRequest, AnalyzeResponse
 from app.services.content_analyzer import analyze_content
+from app.config import get_settings
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/analyze", tags=["analysis"])
 
 
@@ -19,4 +22,8 @@ async def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
             creator_wallet=request.creator_wallet,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # SECURITY: Log full error but only expose generic message in production
+        logger.exception("Content analysis failed")
+        settings = get_settings()
+        detail = str(e) if settings.environment != "production" else "Content analysis service error"
+        raise HTTPException(status_code=500, detail=detail)
