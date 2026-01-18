@@ -1,8 +1,12 @@
+"use client";
+
 import { PostCard } from "@/components/PostCard";
+import { FollowButton } from "@/components/FollowButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { useUIStore } from "@/store/uiStore";
 import { posts } from "@/lib/mock-data";
 
 type ProfilePageProps = {
@@ -12,6 +16,9 @@ type ProfilePageProps = {
 };
 
 export default function ProfilePage({ params }: ProfilePageProps) {
+  const openSubscribeModal = useUIStore((state) => state.openSubscribeModal);
+  const isSelf = params.wallet === "me";
+
   return (
     <div className="space-y-6">
       <Card className="border-border/70 bg-card/70">
@@ -27,9 +34,22 @@ export default function ProfilePage({ params }: ProfilePageProps) {
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="secondary">Creator</Badge>
-              <Button variant="secondary" className="h-9">
-                Follow
-              </Button>
+              {isSelf ? (
+                <Button variant="secondary" className="h-9" disabled>
+                  This is you
+                </Button>
+              ) : (
+                <>
+                  <FollowButton wallet={params.wallet} />
+                  <Button
+                    variant="secondary"
+                    className="h-9"
+                    onClick={() => openSubscribeModal(params.wallet)}
+                  >
+                    Subscribe
+                  </Button>
+                </>
+              )}
             </div>
           </div>
           <Separator className="bg-border/70" />

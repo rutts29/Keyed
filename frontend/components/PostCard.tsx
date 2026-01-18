@@ -1,14 +1,16 @@
+"use client";
+
+import Link from "next/link";
+
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { LikeButton } from "@/components/LikeButton";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { useUIStore } from "@/store/uiStore";
 import type { Post as MockPost } from "@/lib/mock-data";
 import type { FeedItem } from "@/types";
-import {
-  Heart,
-  MessageCircle,
-  Repeat2,
-  Share2,
-} from "lucide-react";
+import { MessageCircle, Repeat2, Share2 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 type PostCardPost = FeedItem | MockPost;
@@ -47,6 +49,7 @@ const resolveImageUrl = (uri?: string | null) => {
 };
 
 export function PostCard({ post }: PostCardProps) {
+  const openTipModal = useUIStore((state) => state.openTipModal);
   const isFeed = isFeedItem(post);
   const authorName = isFeed
     ? post.creator.username ?? post.creator.wallet
@@ -98,23 +101,34 @@ export function PostCard({ post }: PostCardProps) {
           </div>
         ) : null}
         <Separator className="bg-border/70" />
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <MessageCircle className="h-3.5 w-3.5" />
-            {stats.replies}
-          </div>
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between text-xs text-muted-foreground">
+          <Button variant="ghost" size="sm" className="gap-2 text-xs" asChild>
+            <Link href={`/post/${post.id}`}>
+              <MessageCircle className="h-3.5 w-3.5" />
+              {stats.replies}
+            </Link>
+          </Button>
+          <Button variant="ghost" size="sm" className="gap-2 text-xs">
             <Repeat2 className="h-3.5 w-3.5" />
             {stats.reposts}
-          </div>
-          <div className="flex items-center gap-2">
-            <Heart className="h-3.5 w-3.5" />
-            {stats.likes}
-          </div>
-          <div className="flex items-center gap-2">
+          </Button>
+          <LikeButton
+            postId={post.id}
+            initialLiked={isFeed ? post.isLiked ?? false : false}
+            initialLikes={stats.likes}
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-2 text-xs"
+            onClick={() =>
+              isFeed ? openTipModal(post.creatorWallet, post.id) : null
+            }
+            disabled={!isFeed}
+          >
             <Share2 className="h-3.5 w-3.5" />
-            Share
-          </div>
+            Tip
+          </Button>
         </div>
       </CardContent>
     </Card>

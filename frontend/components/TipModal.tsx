@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
 import { useDynamicContext } from "@dynamic-labs/sdk-react-core"
-import { useMutation } from "@tanstack/react-query"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -8,12 +7,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { api } from "@/lib/api"
-import { signAndSubmitTransaction, solToLamports } from "@/lib/solana"
+import { signAndSubmitTransaction } from "@/lib/solana"
 import { usePrivateTip, usePrivacyBalance, usePrivacySettings } from "@/hooks/usePrivacy"
+import { useTip } from "@/hooks/usePayments"
 import { usePrivacyStore } from "@/store/privacyStore"
 import { useUIStore } from "@/store/uiStore"
-import type { ApiResponse, TransactionResponse } from "@/types"
 
 const presets = [0.1, 0.5, 1]
 
@@ -40,33 +38,8 @@ export function TipModal() {
 
   const { mutateAsync: sendPrivateTip, isPending: isPrivatePending } =
     usePrivateTip()
-
-  const publicTip = useMutation({
-    mutationFn: async ({
-      creatorWallet,
-      amountInSol,
-      postId,
-    }: {
-      creatorWallet: string
-      amountInSol: number
-      postId?: string
-    }) => {
-      const { data } = await api.post<ApiResponse<TransactionResponse>>(
-        "/payments/tip",
-        {
-          creatorWallet,
-          amount: solToLamports(amountInSol),
-          postId,
-        }
-      )
-      if (!data.data) {
-        throw new Error("Tip unavailable")
-      }
-      return data.data
-    },
-  })
-
-  const isPending = publicTip.isPending || isPrivatePending
+  const { mutateAsync: sendPublicTip, isPending: isPublicPending } = useTip()
+  const isPending = isPublicPending || isPrivatePending
 
   const recipient = useMemo(
     () => tipTarget?.wallet ?? "creator",
@@ -98,19 +71,20 @@ export function TipModal() {
     }
 
     try {
-      const transaction = isPrivate
-        ? await sendPrivateTip({
+      if (isPrivate) {
+        const transaction = await sendPrivateTip({
             creatorWallet: tipTarget.wallet,
             amount: amountValue,
             postId: tipTarget.postId,
-          })
-        : await publicTip.mutateAsync({
-            creatorWallet: tipTarget.wallet,
-            amountInSol: amountValue,
-            postId: tipTarget.postId,
-          })
-
-      await signAndSubmitTransaction(transaction.transaction, primaryWallet)
+        })
+        await signAndSubmitTransaction(transaction.transaction, primaryWallet)
+      } else {
+        await sendPublicTip({
+          creatorWallet: tipTarget.wallet,
+          amountInSol: amountValue,
+          postId: tipTarget.postId,
+        })
+      }
       toast.success("Tip sent")
       closeTipModal()
     } catch (error) {

@@ -6,6 +6,7 @@ import { RealtimeSync } from "@/components/RealtimeSync";
 import { CreatePostModal } from "@/components/CreatePostModal";
 import { RightRailCard } from "@/components/RightRailCard";
 import { ShieldModal } from "@/components/ShieldModal";
+import { SubscribeModal } from "@/components/SubscribeModal";
 import { TipModal } from "@/components/TipModal";
 import { SuggestedUsers } from "@/components/SuggestedUsers";
 import { TopNav } from "@/components/TopNav";
@@ -26,6 +27,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <CreatePostModal />
       <ShieldModal />
       <TipModal />
+      <SubscribeModal />
       <div className="mx-auto flex w-full max-w-6xl gap-6 px-4">
         <aside className="sticky top-0 hidden h-screen w-60 flex-col py-6 lg:flex">
           <AppSidebar />

@@ -1,5 +1,6 @@
 "use client";
 
+import { CommentSection } from "@/components/CommentSection";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -74,6 +75,7 @@ export default function PostPage({ params }: PostPageProps) {
           </div>
         </CardContent>
       </Card>
+      {hasAccess ? <CommentSection postId={params.id} /> : null}
     </div>
   );
 }
