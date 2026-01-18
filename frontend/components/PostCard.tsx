@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { LikeButton } from "@/components/LikeButton";
+import { TokenGateBadge } from "@/components/TokenGateBadge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useUIStore } from "@/store/uiStore";
@@ -66,7 +67,8 @@ export function PostCard({ post }: PostCardProps) {
   const content = isFeed
     ? post.caption ?? post.llmDescription ?? "New post"
     : post.content;
-  const topic = isFeed ? (post.isTokenGated ? "Token gated" : null) : post.topic;
+  const tokenGated = isFeed ? post.isTokenGated : false;
+  const topic = !isFeed ? post.topic : null;
   const stats = isFeed
     ? { replies: post.comments, reposts: 0, likes: post.likes }
     : post.stats;
@@ -86,7 +88,9 @@ export function PostCard({ post }: PostCardProps) {
               </span>
               <span className="text-muted-foreground">{authorHandle}</span>
               <span className="text-muted-foreground">• {createdAt}</span>
-              {topic ? (
+              {tokenGated ? (
+                <TokenGateBadge />
+              ) : topic ? (
                 <Badge variant="secondary" className="text-[10px]">
                   {topic}
                 </Badge>
