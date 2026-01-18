@@ -13,6 +13,7 @@ import feedRoutes from './routes/feed.routes.js';
 import paymentsRoutes from './routes/payments.routes.js';
 import searchRoutes from './routes/search.routes.js';
 import accessRoutes from './routes/access.routes.js';
+import privacyRoutes from './routes/privacy.routes.js';
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.use('/api/feed', feedRoutes);
 app.use('/api/payments', paymentsRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/access', accessRoutes);
+app.use('/api/privacy', privacyRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
