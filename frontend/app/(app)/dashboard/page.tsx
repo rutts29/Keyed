@@ -17,6 +17,7 @@ export default function DashboardPage() {
   const { data: vault } = useCreatorVault();
   const { mutateAsync, isPending } = useWithdrawEarnings();
   const [withdrawAmount, setWithdrawAmount] = useState("");
+  const recentTransactions = earnings?.recentTransactions ?? [];
 
   const handleWithdraw = async () => {
     const value = Number.parseFloat(withdrawAmount);
@@ -91,6 +92,34 @@ export default function DashboardPage() {
             <Button className="h-9" onClick={handleWithdraw} disabled={isPending}>
               Withdraw earnings
             </Button>
+          </div>
+          <Separator className="bg-border/70" />
+          <div className="space-y-2 text-xs">
+            {recentTransactions.length === 0 ? (
+              <p>No recent transactions yet.</p>
+            ) : (
+              recentTransactions.slice(0, 5).map((tx) => (
+                <div
+                  key={tx.signature}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/70 px-3 py-2"
+                >
+                  <div>
+                    <p className="text-foreground">{tx.type.toUpperCase()}</p>
+                    <p className="text-muted-foreground">
+                      {new Date(tx.timestamp).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-foreground">
+                      {tx.amount
+                        ? `${lamportsToSol(tx.amount).toFixed(2)} SOL`
+                        : "--"}
+                    </p>
+                    <p className="text-muted-foreground">{tx.status}</p>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </CardContent>
       </Card>

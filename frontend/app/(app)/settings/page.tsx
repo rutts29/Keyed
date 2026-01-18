@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { PrivateTipHistory } from "@/components/PrivateTipHistory";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -100,6 +101,7 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+      <PrivateTipHistory />
     </div>
   );
 }
