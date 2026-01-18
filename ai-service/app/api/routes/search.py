@@ -1,7 +1,10 @@
 from fastapi import APIRouter, HTTPException
+import logging
 from app.models.schemas import SearchRequest, SearchResponse
 from app.services.semantic_search import search
+from app.config import get_settings
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/search", tags=["search"])
 
 
@@ -17,4 +20,8 @@ async def semantic_search(request: SearchRequest) -> SearchResponse:
             rerank=request.rerank,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # SECURITY: Log full error but only expose generic message in production
+        logger.exception("Semantic search failed")
+        settings = get_settings()
+        detail = str(e) if settings.environment != "production" else "Search service error"
+        raise HTTPException(status_code=500, detail=detail)

@@ -38,6 +38,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       # AI Service (internal docker network)
       - AI_SERVICE_URL=http://ai-service:8000
+      - AI_SERVICE_API_KEY=${AI_SERVICE_API_KEY}
       # Frontend
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
     depends_on:
@@ -87,6 +88,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       # AI Service (internal docker network)
       - AI_SERVICE_URL=http://ai-service:8000
+      - AI_SERVICE_API_KEY=${AI_SERVICE_API_KEY}
       # Frontend
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
     depends_on:
@@ -114,6 +116,9 @@ services:
       - QDRANT_COLLECTION=${QDRANT_COLLECTION:-solshare_posts}
       # Backend URL (internal docker network)
       - BACKEND_URL=http://backend:3001
+      # Internal API key for service-to-service auth (must match backend's AI_SERVICE_API_KEY)
+      - INTERNAL_API_KEY=${AI_SERVICE_API_KEY}
+      - ENVIRONMENT=${NODE_ENV:-development}
       # Supabase (for violation logging)
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
