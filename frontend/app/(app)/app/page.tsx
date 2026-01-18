@@ -32,7 +32,7 @@ export default function AppFeedPage() {
     [data]
   );
   const showMock = !hasApi || isError;
-  const showAuthNotice = !token && feedType !== "explore";
+  const showAuthNotice = !token && hasApi;
 
   return (
     <div className="space-y-5">
