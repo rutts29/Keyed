@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { NotificationBell } from "@/components/NotificationBell";
 import { SearchBar } from "@/components/SearchBar";
 import { WalletButton } from "@/components/WalletButton";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +28,7 @@ export function TopNav() {
           <Button variant="secondary" className="h-9" asChild>
             <Link href="/create">Create post</Link>
           </Button>
+          <NotificationBell />
           <WalletButton />
         </div>
       </div>

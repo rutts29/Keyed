@@ -5,10 +5,14 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
+import { useUIStore } from "@/store/uiStore";
 
 export function useRealtimeNotifications() {
   const wallet = useAuthStore((state) => state.wallet);
   const queryClient = useQueryClient();
+  const incrementNotifications = useUIStore(
+    (state) => state.incrementNotifications
+  );
 
   useEffect(() => {
     if (
@@ -33,6 +37,7 @@ export function useRealtimeNotifications() {
           queryClient.invalidateQueries({
             queryKey: ["post", payload.new.post_id],
           });
+          incrementNotifications();
         }
       )
       .subscribe();
@@ -49,6 +54,7 @@ export function useRealtimeNotifications() {
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ["user", wallet] });
+          incrementNotifications();
         }
       )
       .subscribe();
