@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 
 import { AppSidebar } from "@/components/AppSidebar";
+import { AuthSync } from "@/components/AuthSync";
+import { RealtimeSync } from "@/components/RealtimeSync";
 import { RightRailCard } from "@/components/RightRailCard";
 import { SuggestedUsers } from "@/components/SuggestedUsers";
 import { TopNav } from "@/components/TopNav";
@@ -16,6 +18,8 @@ type AppLayoutProps = {
 export default function AppLayout({ children }: AppLayoutProps) {
   return (
     <div className="min-h-screen bg-background">
+      <AuthSync />
+      <RealtimeSync />
       <div className="mx-auto flex w-full max-w-6xl gap-6 px-4">
         <aside className="sticky top-0 hidden h-screen w-60 flex-col py-6 lg:flex">
           <AppSidebar />

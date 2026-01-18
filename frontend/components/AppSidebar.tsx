@@ -1,3 +1,8 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,24 +21,31 @@ import {
   Home,
   Mail,
   MoreHorizontal,
+  Search,
   Settings,
   User,
   Zap,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useAuthStore } from "@/store/authStore";
 
 const navItems = [
-  { label: "Home", icon: Home, active: true },
-  { label: "Discover", icon: Zap },
-  { label: "Notifications", icon: Bell },
-  { label: "Messages", icon: Mail },
-  { label: "Bookmarks", icon: Bookmark },
-  { label: "Creator Hub", icon: Gem, badge: "New" },
-  { label: "Profile", icon: User },
-  { label: "Settings", icon: Settings },
+  { label: "Home", icon: Home, href: "/app" },
+  { label: "Discover", icon: Zap, href: "/explore" },
+  { label: "Search", icon: Search, href: "/search" },
+  { label: "Notifications", icon: Bell, disabled: true },
+  { label: "Messages", icon: Mail, disabled: true },
+  { label: "Bookmarks", icon: Bookmark, disabled: true },
+  { label: "Creator Hub", icon: Gem, href: "/dashboard", badge: "New" },
+  { label: "Profile", icon: User, href: "/profile/me", match: "/profile" },
+  { label: "Settings", icon: Settings, href: "/settings" },
 ];
 
 export function AppSidebar() {
+  const pathname = usePathname();
+  const wallet = useAuthStore((state) => state.wallet);
+  const profileHref = wallet ? `/profile/${wallet}` : "/profile/me";
+
   return (
     <div className="flex h-full flex-col justify-between gap-6">
       <div className="space-y-6">
@@ -49,15 +61,20 @@ export function AppSidebar() {
         <nav className="space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
-            return (
-              <Button
-                key={item.label}
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start gap-3 rounded-xl px-3 text-sm font-medium transition-colors hover:bg-muted/80 hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-0",
-                  item.active && "bg-muted text-foreground"
-                )}
-              >
+            const href = item.label === "Profile" ? profileHref : item.href;
+            const isActive = href
+              ? item.match
+                ? pathname.startsWith(item.match)
+                : pathname === href
+              : false;
+            const isDisabled = Boolean(item.disabled);
+            const navClasses = cn(
+              "w-full justify-start gap-3 rounded-xl px-3 text-sm font-medium transition-colors hover:bg-muted/80 hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-0",
+              isActive && "bg-muted text-foreground",
+              isDisabled && "cursor-not-allowed opacity-60 hover:bg-transparent"
+            );
+            const content = (
+              <>
                 <Icon className="h-4 w-4" />
                 <span className="flex-1 text-left">{item.label}</span>
                 {item.badge ? (
@@ -65,12 +82,24 @@ export function AppSidebar() {
                     {item.badge}
                   </Badge>
                 ) : null}
+              </>
+            );
+
+            return (
+              <Button
+                key={item.label}
+                variant="ghost"
+                className={navClasses}
+                asChild={Boolean(href && !isDisabled)}
+                disabled={isDisabled}
+              >
+                {href && !isDisabled ? <Link href={href}>{content}</Link> : content}
               </Button>
             );
           })}
         </nav>
-        <Button className="h-11 w-full rounded-xl text-sm font-semibold">
-          Post update
+        <Button className="h-11 w-full rounded-xl text-sm font-semibold" asChild>
+          <Link href="/create">Post update</Link>
         </Button>
         <Separator className="bg-border/70" />
         <div className="rounded-xl border border-border/70 bg-card/60 p-3 text-xs text-muted-foreground">
