@@ -1,4 +1,4 @@
-import { Worker } from 'bullmq';
+import { Worker, Job } from 'bullmq';
 import { env } from './config/env.js';
 import { logger } from './utils/logger.js';
 import { processAIAnalysis } from './jobs/ai-analysis.job.js';
@@ -11,7 +11,7 @@ const connection = { url: env.UPSTASH_REDIS_URL };
 
 const workers: Worker[] = [];
 
-function createWorker(name: string, processor: (job: any) => Promise<any>) {
+function createWorker<T = unknown, R = unknown>(name: string, processor: (job: Job<T>) => Promise<R>) {
   const worker = new Worker(name, processor, {
     connection,
     concurrency: 5,

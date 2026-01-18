@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
+import { v4 as uuidv4 } from 'uuid';
 import { logger } from '../utils/logger.js';
+import { AuthenticatedRequest } from '../types/index.js';
 
 export class AppError extends Error {
   constructor(
@@ -15,16 +17,25 @@ export class AppError extends Error {
 
 export function errorHandler(
   err: Error,
-  _req: Request,
+  req: Request,
   res: Response,
   _next: NextFunction
 ): void {
-  logger.error({ err }, 'Error occurred');
+  const requestId = (req.headers['x-request-id'] as string) || uuidv4();
+  const wallet = (req as AuthenticatedRequest).wallet || 'anonymous';
+
+  logger.error({
+    err,
+    requestId,
+    path: req.path,
+    method: req.method,
+    wallet,
+  }, 'Error occurred');
 
   if (err instanceof AppError) {
     res.status(err.statusCode).json({
       success: false,
-      error: { code: err.code, message: err.message },
+      error: { code: err.code, message: err.message, requestId },
     });
     return;
   }
@@ -36,6 +47,7 @@ export function errorHandler(
         code: 'VALIDATION_ERROR',
         message: 'Invalid request data',
         details: err.errors,
+        requestId,
       },
     });
     return;
@@ -43,7 +55,7 @@ export function errorHandler(
 
   res.status(500).json({
     success: false,
-    error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred' },
+    error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', requestId },
   });
 }
 

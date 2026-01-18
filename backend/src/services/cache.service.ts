@@ -1,10 +1,23 @@
 import { redis } from '../config/redis.js';
 
+/**
+ * Cache TTL values (in seconds)
+ *
+ * Caching strategy:
+ * - USER: Medium TTL - profile data changes infrequently
+ * - POST: Long TTL - post content is immutable, only stats change
+ * - FEED: Medium TTL - balance between freshness and performance
+ * - FOLLOWING: Medium TTL - social graph changes infrequently
+ * - SEARCH: Short TTL - search results should be relatively fresh
+ * - TRENDING: Short TTL - trending content changes frequently
+ */
 const TTL = {
   USER: 300,        // 5 min
   POST: 3600,       // 1 hour
-  FEED: 30,         // 30 sec
+  FEED: 300,        // 5 min (increased from 30s to reduce DB load)
   FOLLOWING: 300,   // 5 min
+  SEARCH: 120,      // 2 min
+  TRENDING: 60,     // 1 min
 };
 
 export const cacheService = {
@@ -66,5 +79,39 @@ export const cacheService = {
       this.invalidateFeed(wallet),
       this.invalidateFollowing(wallet),
     ]);
+  },
+
+  // Trending content cache
+  async getTrending() {
+    const data = await redis.get('trending:posts');
+    return data ? JSON.parse(data) : null;
+  },
+
+  async setTrending(posts: unknown) {
+    await redis.setex('trending:posts', TTL.TRENDING, JSON.stringify(posts));
+  },
+
+  // Search suggestions cache
+  async getSuggestions(prefix: string) {
+    const data = await redis.get(`suggestions:${prefix.toLowerCase()}`);
+    return data ? JSON.parse(data) : null;
+  },
+
+  async setSuggestions(prefix: string, suggestions: unknown) {
+    await redis.setex(`suggestions:${prefix.toLowerCase()}`, TTL.SEARCH, JSON.stringify(suggestions));
+  },
+
+  // Generic cache helpers
+  async get<T>(key: string): Promise<T | null> {
+    const data = await redis.get(key);
+    return data ? JSON.parse(data) : null;
+  },
+
+  async set(key: string, value: unknown, ttl: number) {
+    await redis.setex(key, ttl, JSON.stringify(value));
+  },
+
+  async del(key: string) {
+    await redis.del(key);
   },
 };

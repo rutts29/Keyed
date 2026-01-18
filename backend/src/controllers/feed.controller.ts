@@ -276,39 +276,54 @@ export const feedController = {
 
   /**
    * Trending posts from the last 24 hours
+   * Cached for 1 minute to reduce database load
    */
   async getTrending(req: AuthenticatedRequest, res: Response) {
     const limit = parseInt(req.query.limit as string) || 20;
-    
+
+    // Try cache first for unauthenticated requests (no user-specific like status)
+    if (!req.wallet) {
+      const cached = await cacheService.getTrending();
+      if (cached) {
+        res.json({ success: true, data: { posts: cached } });
+        return;
+      }
+    }
+
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    
+
     const { data: posts, error } = await supabase
       .from('posts')
       .select('*, users!posts_creator_wallet_fkey(*)')
       .gte('timestamp', oneDayAgo)
       .order('likes', { ascending: false })
       .limit(limit);
-    
+
     if (error) {
       throw new AppError(500, 'DB_ERROR', 'Failed to fetch trending');
     }
-    
-    let feedItems = posts;
-    if (req.wallet) {
-      const postIds = posts.map(p => p.id);
-      const { data: likes } = await supabase
-        .from('likes')
-        .select('post_id')
-        .eq('user_wallet', req.wallet)
-        .in('post_id', postIds);
-      
-      const likedPostIds = new Set(likes?.map(l => l.post_id) || []);
-      feedItems = posts.map(post => ({
-        ...post,
-        isLiked: likedPostIds.has(post.id),
-      }));
+
+    // Cache base results for unauthenticated users
+    if (!req.wallet) {
+      await cacheService.setTrending(posts);
+      res.json({ success: true, data: { posts } });
+      return;
     }
-    
+
+    // Add like status for authenticated users
+    const postIds = posts.map(p => p.id);
+    const { data: likes } = await supabase
+      .from('likes')
+      .select('post_id')
+      .eq('user_wallet', req.wallet)
+      .in('post_id', postIds);
+
+    const likedPostIds = new Set(likes?.map(l => l.post_id) || []);
+    const feedItems = posts.map(post => ({
+      ...post,
+      isLiked: likedPostIds.has(post.id),
+    }));
+
     res.json({
       success: true,
       data: { posts: feedItems },

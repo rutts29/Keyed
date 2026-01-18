@@ -1,5 +1,6 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from typing import Literal
+import re
 
 
 def to_camel(string: str) -> str:
@@ -21,8 +22,9 @@ class ModerationScores(CamelModel):
 
 
 class ModerationRequest(BaseModel):
-    image_base64: str
-    caption: str | None = None
+    # 50MB max image = ~67M chars in base64 encoding
+    image_base64: str = Field(..., max_length=67_000_000)
+    caption: str | None = Field(default=None, max_length=10_000)
     wallet: str | None = None
 
 
@@ -37,7 +39,15 @@ class ModerationResponse(CamelModel):
 
 
 class HashCheckRequest(BaseModel):
-    image_hash: str
+    image_hash: str = Field(..., min_length=16, max_length=128)
+
+    @field_validator('image_hash')
+    @classmethod
+    def validate_hex_format(cls, v: str) -> str:
+        """Validate that image_hash contains only hexadecimal characters."""
+        if not re.fullmatch(r'[a-fA-F0-9]+', v):
+            raise ValueError('image_hash must contain only hexadecimal characters')
+        return v.lower()
 
 
 class HashCheckResponse(CamelModel):
@@ -47,8 +57,8 @@ class HashCheckResponse(CamelModel):
 
 
 class AnalyzeRequest(BaseModel):
-    content_uri: str
-    caption: str | None = None
+    content_uri: str = Field(..., max_length=2048)
+    caption: str | None = Field(default=None, max_length=10_000)
     post_id: str | None = None
     creator_wallet: str | None = None
 
