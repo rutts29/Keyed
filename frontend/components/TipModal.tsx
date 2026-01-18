@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { useDynamicContext } from "@dynamic-labs/sdk-react-core"
 import { toast } from "sonner"
 
