@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { AppSidebar } from "@/components/AppSidebar";
 import { AuthSync } from "@/components/AuthSync";
 import { RealtimeSync } from "@/components/RealtimeSync";
+import { CreatePostModal } from "@/components/CreatePostModal";
 import { RightRailCard } from "@/components/RightRailCard";
 import { ShieldModal } from "@/components/ShieldModal";
 import { TipModal } from "@/components/TipModal";
@@ -22,6 +23,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     <div className="min-h-screen bg-background">
       <AuthSync />
       <RealtimeSync />
+      <CreatePostModal />
       <ShieldModal />
       <TipModal />
       <div className="mx-auto flex w-full max-w-6xl gap-6 px-4">
