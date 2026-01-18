@@ -49,6 +49,7 @@ Run migrations in Supabase SQL Editor in order:
 3. `migrations/003_moderation_tables.sql`
 4. `migrations/004_functions.sql`
 5. `migrations/005_realtime.sql`
+6. `migrations/006_privacy_tables.sql` (for Privacy Cash integration)
 
 ### Development
 
@@ -117,6 +118,18 @@ npm run start:worker # Background worker
 | GET | `/api/payments/earnings` | Get earnings |
 | POST | `/api/payments/withdraw` | Withdraw earnings |
 
+### Privacy (Private Tipping)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/privacy/shield` | Shield SOL into privacy pool |
+| POST | `/api/privacy/tip` | Send private anonymous tip |
+| GET | `/api/privacy/balance` | Get shielded balance |
+| GET | `/api/privacy/tips/received` | Get private tips received |
+| GET | `/api/privacy/tips/sent` | Get private tips sent |
+| GET | `/api/privacy/settings` | Get privacy preferences |
+| PUT | `/api/privacy/settings` | Update privacy preferences |
+| GET | `/api/privacy/pool/info` | Get privacy pool stats |
+
 ### Search
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -161,6 +174,77 @@ PDAs are derived using standard seeds:
 - Vault: `["vault", creator]`
 - Subscription: `["subscription", subscriber, creator]`
 - Access Control: `["access", post]`
+
+## Privacy Cash Integration (Solana Privacy Hackathon)
+
+SolShare integrates Privacy Cash SDK for anonymous tipping, enabling creators to receive tips without revealing the tipper's identity.
+
+### Architecture
+
+```
+User → Shield SOL → Privacy Pool (Zero-Knowledge Commitment)
+         ↓
+    Private Tip (ZK Proof) → Creator Wallet
+         ↓
+    Tipper Identity Hidden ✓
+```
+
+### How Private Tipping Works
+
+1. **Shield**: User deposits SOL into Privacy Cash pool
+   - Creates zero-knowledge commitment
+   - SOL is pooled with other users' funds
+   - User receives private balance
+
+2. **Private Tip**: User sends tip from shielded balance
+   - Generates zero-knowledge proof of balance
+   - Withdraws to creator wallet via relayer
+   - Transaction doesn't reveal tipper identity
+   - Creator sees tip amount, not the source
+
+3. **Privacy Preserved**: On-chain analysis cannot link tipper to tip
+
+### Privacy Features
+
+- **Anonymous Tipping**: Tips sent without revealing identity
+- **Shielded Balance**: User's privacy pool balance
+- **Private History**: Creator can see tips received (amounts only)
+- **Privacy Settings**: Configure default privacy preferences
+
+### Database Schema
+
+**private_tips**: Stores tips received by creators (tipper NOT stored)
+- `creator_wallet`: Who received the tip
+- `amount`: Tip amount in lamports
+- `tx_signature`: Transaction signature
+- `post_id`: Optional post reference
+- **NOTE**: Tipper wallet is intentionally NOT stored
+
+**user_privacy_settings**: User privacy preferences
+- `wallet`: User wallet
+- `default_private_tips`: Auto-enable private tips
+
+**privacy_shield_cache**: Cached shielded balances
+- `wallet`: User wallet
+- `shielded_balance`: Cached balance (source of truth is on-chain)
+
+### Privacy Cash SDK Integration
+
+**Status**: Architecture ready, SDK pending integration
+
+**TODO**:
+1. Install Privacy Cash SDK when available
+2. Update `privacy.service.ts` placeholder methods
+3. Add `PRIVACY_CASH_RELAYER_URL` and `PRIVACY_CASH_PROGRAM_ID` to `.env`
+4. Test shield → tip → verify flow
+
+**SDK Documentation**: https://docs.privacy.cash
+
+### Hackathon Bounties Targeted
+
+- **Privacy Cash** ($6k): Best Integration to Existing App
+- **Helius** ($5k): Best Privacy Project (using Helius RPC)
+- **Open Track** ($18k pool): Innovative privacy features
 
 ## AI Service Integration
 

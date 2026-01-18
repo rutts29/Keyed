@@ -52,8 +52,17 @@ export async function verifyChallenge(
   if (!stored) {
     return { valid: false };
   }
-  
-  const { message } = JSON.parse(stored);
+
+  // Safely parse Redis data to handle potential corruption
+  let message: string;
+  try {
+    const parsed = JSON.parse(stored);
+    message = parsed.message;
+  } catch (error) {
+    logger.error({ error, wallet }, 'Failed to parse stored challenge data from Redis');
+    await redis.del(`auth:challenge:${wallet}`);
+    return { valid: false };
+  }
   const isValid = await verifySignature(wallet, signature, message);
   
   if (!isValid) {
