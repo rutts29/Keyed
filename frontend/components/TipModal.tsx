@@ -24,13 +24,23 @@ export function TipModal() {
   const tipTarget = useUIStore((state) => state.tipTarget)
   const closeTipModal = useUIStore((state) => state.closeTipModal)
   const [amount, setAmount] = useState("0.1")
-  const [isPrivate, setIsPrivate] = useState(false)
+  const [manualPrivate, setManualPrivate] = useState(false)
+  const [hasManualPrivate, setHasManualPrivate] = useState(false)
 
-  useEffect(() => {
-    if (privacySettings) {
-      setIsPrivate(privacySettings.default_private_tips)
-    }
-  }, [privacySettings])
+  const isPrivate = hasManualPrivate
+    ? manualPrivate
+    : privacySettings?.default_private_tips ?? false
+
+  const resetState = () => {
+    setAmount("0.1")
+    setManualPrivate(false)
+    setHasManualPrivate(false)
+  }
+
+  const handleClose = () => {
+    resetState()
+    closeTipModal()
+  }
 
   const privateBalance = privacyBalance?.available ?? 0
   const amountValue = Number.parseFloat(amount) || 0
@@ -46,11 +56,7 @@ export function TipModal() {
     [tipTarget]
   )
 
-  useEffect(() => {
-    if (isOpen && !tipTarget) {
-      closeTipModal()
-    }
-  }, [closeTipModal, isOpen, tipTarget])
+  const hasTarget = Boolean(tipTarget)
 
   const handleSubmit = async () => {
     if (!primaryWallet) {
@@ -86,7 +92,7 @@ export function TipModal() {
         })
       }
       toast.success("Tip sent")
-      closeTipModal()
+      handleClose()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Tip failed")
     }
@@ -96,7 +102,7 @@ export function TipModal() {
     <Dialog
       open={isOpen}
       onOpenChange={(open) => {
-        if (!open) closeTipModal()
+        if (!open) handleClose()
       }}
     >
       <DialogContent>
@@ -136,7 +142,13 @@ export function TipModal() {
                 Hide your identity from the creator.
               </p>
             </div>
-            <Switch checked={isPrivate} onCheckedChange={setIsPrivate} />
+            <Switch
+              checked={isPrivate}
+              onCheckedChange={(value) => {
+                setHasManualPrivate(true)
+                setManualPrivate(value)
+              }}
+            />
           </div>
           {isPrivate ? (
             <div className="rounded-lg border border-border/70 bg-muted/40 p-3 text-xs">
@@ -154,10 +166,10 @@ export function TipModal() {
             </div>
           ) : null}
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={closeTipModal}>
+            <Button variant="secondary" onClick={handleClose}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit} disabled={isPending}>
+            <Button onClick={handleSubmit} disabled={isPending || !hasTarget}>
               Send tip
             </Button>
           </div>
