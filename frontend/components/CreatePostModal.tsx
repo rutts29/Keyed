@@ -5,6 +5,8 @@ import { useDynamicContext } from "@dynamic-labs/sdk-react-core"
 import { useMutation } from "@tanstack/react-query"
 import { toast } from "sonner"
 
+import Link from "next/link"
+
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -143,15 +145,11 @@ export function CreatePostModal() {
     setStage("posting")
     try {
       const transaction = await createMutation.mutateAsync()
-      const signature = await signAndSubmitTransaction(
-        transaction.transaction,
-        primaryWallet
-      )
       setAiAnalysis(transaction.metadata?.aiAnalysis ?? null)
       setPostId(transaction.metadata?.postId ?? null)
+      await signAndSubmitTransaction(transaction.transaction, primaryWallet)
       setStage("success")
       toast.success("Post published")
-      closeCreatePost()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Post failed")
       setStage("preview")
@@ -184,7 +182,14 @@ export function CreatePostModal() {
               <img src={previewUrl} alt="" className="h-auto w-full" />
             </div>
           ) : null}
-          {stage === "uploading" ? <Progress value={50} /> : null}
+          {stage === "uploading" ? (
+            <div className="space-y-2">
+              <Progress value={50} />
+              <p className="text-xs text-muted-foreground">
+                Uploading and moderating content...
+              </p>
+            </div>
+          ) : null}
           {stage === "preview" ? (
             <div className="space-y-4">
               <div className="space-y-2">
@@ -238,14 +243,37 @@ export function CreatePostModal() {
               </div>
             </div>
           ) : null}
-          {stage === "posting" ? <Progress value={80} /> : null}
+          {stage === "posting" ? (
+            <div className="space-y-2">
+              <Progress value={80} />
+              <p className="text-xs text-muted-foreground">
+                Preparing on-chain transaction...
+              </p>
+            </div>
+          ) : null}
           {stage === "success" ? (
             <div className="rounded-lg border border-border/70 bg-muted/40 p-3 text-xs">
               <p className="font-semibold text-foreground">Post published</p>
               {postId ? <p className="mt-1">Post ID: {postId}</p> : null}
               {aiAnalysis ? (
-                <p className="mt-1">Tags: {aiAnalysis.tags.join(", ")}</p>
+                <div className="mt-3 space-y-1">
+                  <p>Description: {aiAnalysis.description}</p>
+                  <p>Scene: {aiAnalysis.sceneType}</p>
+                  <p>Mood: {aiAnalysis.mood}</p>
+                  <p>Alt text: {aiAnalysis.altText}</p>
+                  <p>Tags: {aiAnalysis.tags.join(", ")}</p>
+                </div>
               ) : null}
+              <div className="mt-3 flex flex-wrap gap-2">
+                {postId ? (
+                  <Button size="sm" variant="secondary" asChild>
+                    <Link href={`/post/${postId}`}>View post</Link>
+                  </Button>
+                ) : null}
+                <Button size="sm" onClick={closeCreatePost}>
+                  Close
+                </Button>
+              </div>
             </div>
           ) : null}
           {stage === "blocked" ? (
