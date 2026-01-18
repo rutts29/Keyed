@@ -20,7 +20,8 @@ export const postsController = {
       throw new AppError(400, 'NO_FILE', 'No file uploaded');
     }
     
-    const { data: limit } = await supabase.rpc('get_wallet_upload_limit', { wallet_address: wallet });
+    const { data } = await supabase.rpc('get_wallet_upload_limit', { wallet_address: wallet });
+    const limit = data?.limit ?? data ?? 0;
     if (limit === 0) {
       throw new AppError(403, 'UPLOAD_BLOCKED', 'Upload privileges suspended');
     }
