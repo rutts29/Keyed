@@ -16,6 +16,8 @@ declare const envSchema: z.ZodObject<{
     SOCIAL_PROGRAM_ID: z.ZodOptional<z.ZodString>;
     PAYMENT_PROGRAM_ID: z.ZodOptional<z.ZodString>;
     TOKEN_GATE_PROGRAM_ID: z.ZodOptional<z.ZodString>;
+    PRIVACY_CASH_RELAYER_URL: z.ZodOptional<z.ZodString>;
+    PRIVACY_CASH_PROGRAM_ID: z.ZodOptional<z.ZodString>;
     PINATA_API_KEY: z.ZodString;
     PINATA_SECRET_KEY: z.ZodString;
     PINATA_GATEWAY_URL: z.ZodDefault<z.ZodString>;
@@ -45,6 +47,8 @@ declare const envSchema: z.ZodObject<{
     SOCIAL_PROGRAM_ID?: string | undefined;
     PAYMENT_PROGRAM_ID?: string | undefined;
     TOKEN_GATE_PROGRAM_ID?: string | undefined;
+    PRIVACY_CASH_RELAYER_URL?: string | undefined;
+    PRIVACY_CASH_PROGRAM_ID?: string | undefined;
 }, {
     SUPABASE_URL: string;
     SUPABASE_ANON_KEY: string;
@@ -67,6 +71,8 @@ declare const envSchema: z.ZodObject<{
     SOCIAL_PROGRAM_ID?: string | undefined;
     PAYMENT_PROGRAM_ID?: string | undefined;
     TOKEN_GATE_PROGRAM_ID?: string | undefined;
+    PRIVACY_CASH_RELAYER_URL?: string | undefined;
+    PRIVACY_CASH_PROGRAM_ID?: string | undefined;
     PINATA_GATEWAY_URL?: string | undefined;
 }>;
 export type Env = z.infer<typeof envSchema>;
@@ -93,6 +99,8 @@ export declare const env: {
     SOCIAL_PROGRAM_ID?: string | undefined;
     PAYMENT_PROGRAM_ID?: string | undefined;
     TOKEN_GATE_PROGRAM_ID?: string | undefined;
+    PRIVACY_CASH_RELAYER_URL?: string | undefined;
+    PRIVACY_CASH_PROGRAM_ID?: string | undefined;
 };
 export {};
 //# sourceMappingURL=env.d.ts.map

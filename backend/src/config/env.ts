@@ -23,6 +23,10 @@ const envSchema = z.object({
   PAYMENT_PROGRAM_ID: z.string().optional(),
   TOKEN_GATE_PROGRAM_ID: z.string().optional(),
 
+  // Privacy Cash configuration (optional - for private tipping)
+  PRIVACY_CASH_RELAYER_URL: z.string().url().optional(),
+  PRIVACY_CASH_PROGRAM_ID: z.string().optional(),
+
   PINATA_API_KEY: z.string().min(1),
   PINATA_SECRET_KEY: z.string().min(1),
   PINATA_GATEWAY_URL: z.string().url().default('https://gateway.pinata.cloud'),
