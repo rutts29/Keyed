@@ -42,19 +42,22 @@ export function CreatePostModal() {
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis | null>(null)
   const [postId, setPostId] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!isOpen) {
-      setFile(null)
-      setCaption("")
-      setIsTokenGated(false)
-      setRequiredToken("")
-      setStage("idle")
-      setContentUri(null)
-      setModeration(null)
-      setAiAnalysis(null)
-      setPostId(null)
-    }
-  }, [isOpen])
+  const resetState = () => {
+    setFile(null)
+    setCaption("")
+    setIsTokenGated(false)
+    setRequiredToken("")
+    setStage("idle")
+    setContentUri(null)
+    setModeration(null)
+    setAiAnalysis(null)
+    setPostId(null)
+  }
+
+  const handleClose = () => {
+    resetState()
+    closeCreatePost()
+  }
 
   const previewUrl = useMemo(
     () => (file ? URL.createObjectURL(file) : null),
@@ -160,7 +163,7 @@ export function CreatePostModal() {
     <Dialog
       open={isOpen}
       onOpenChange={(open) => {
-        if (!open) closeCreatePost()
+        if (!open) handleClose()
       }}
     >
       <DialogContent>
@@ -234,7 +237,7 @@ export function CreatePostModal() {
                 </div>
               ) : null}
               <div className="flex justify-end gap-2">
-                <Button variant="secondary" onClick={closeCreatePost}>
+                <Button variant="secondary" onClick={handleClose}>
                   Cancel
                 </Button>
                 <Button onClick={handleCreate} disabled={createMutation.isPending}>
@@ -270,7 +273,7 @@ export function CreatePostModal() {
                     <Link href={`/post/${postId}`}>View post</Link>
                   </Button>
                 ) : null}
-                <Button size="sm" onClick={closeCreatePost}>
+                <Button size="sm" onClick={handleClose}>
                   Close
                 </Button>
               </div>

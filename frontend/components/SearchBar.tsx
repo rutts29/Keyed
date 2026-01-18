@@ -20,44 +20,27 @@ export function SearchBar({ className }: { className?: string }) {
   const router = useRouter()
   const [query, setQuery] = useState("")
   const [suggestions, setSuggestions] = useState<string[]>([])
-  const [recent, setRecent] = useState<string[]>([])
+  const [recent, setRecent] = useState<string[]>(() => {
+    if (typeof window === "undefined") return []
+    try {
+      const saved = localStorage.getItem(RECENT_KEY)
+      return saved ? JSON.parse(saved) : []
+    } catch {
+      return []
+    }
+  })
   const [isOpen, setIsOpen] = useState(false)
   const blurTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const suggestionsTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hasApi = Boolean(process.env.NEXT_PUBLIC_API_URL)
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(RECENT_KEY)
-      if (saved) {
-        setRecent(JSON.parse(saved))
+    return () => {
+      if (suggestionsTimeout.current) {
+        clearTimeout(suggestionsTimeout.current)
       }
-    } catch {
-      setRecent([])
     }
   }, [])
-
-  useEffect(() => {
-    if (!hasApi) return
-    const trimmed = query.trim()
-    if (!trimmed) {
-      setSuggestions([])
-      return
-    }
-
-    const handle = setTimeout(async () => {
-      try {
-        const { data } = await api.get<ApiResponse<SuggestResponse>>(
-          "/search/suggest",
-          { params: { q: trimmed } }
-        )
-        setSuggestions(data.data?.suggestions ?? [])
-      } catch {
-        setSuggestions([])
-      }
-    }, 300)
-
-    return () => clearTimeout(handle)
-  }, [hasApi, query])
 
   const allSuggestions = useMemo(() => {
     if (query.trim()) return suggestions
@@ -92,6 +75,33 @@ export function SearchBar({ className }: { className?: string }) {
     setIsOpen(true)
   }
 
+  const handleChange = (value: string) => {
+    setQuery(value)
+    if (!hasApi) {
+      setSuggestions([])
+      return
+    }
+    const trimmed = value.trim()
+    if (!trimmed) {
+      setSuggestions([])
+      return
+    }
+    if (suggestionsTimeout.current) {
+      clearTimeout(suggestionsTimeout.current)
+    }
+    suggestionsTimeout.current = setTimeout(async () => {
+      try {
+        const { data } = await api.get<ApiResponse<SuggestResponse>>(
+          "/search/suggest",
+          { params: { q: trimmed } }
+        )
+        setSuggestions(data.data?.suggestions ?? [])
+      } catch {
+        setSuggestions([])
+      }
+    }, 300)
+  }
+
   return (
     <div className={cn("relative", className)}>
       <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -99,7 +109,7 @@ export function SearchBar({ className }: { className?: string }) {
         placeholder="Search creators, posts, or drops (e.g. cozy workspaces)"
         className="h-10 pl-9"
         value={query}
-        onChange={(event) => setQuery(event.target.value)}
+        onChange={(event) => handleChange(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === "Enter") {
             event.preventDefault()

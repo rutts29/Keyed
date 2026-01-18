@@ -63,5 +63,5 @@ export function useRealtimeNotifications() {
       supabase.removeChannel(likesChannel);
       supabase.removeChannel(followsChannel);
     };
-  }, [queryClient, wallet]);
+  }, [incrementNotifications, queryClient, wallet]);
 }
