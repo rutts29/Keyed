@@ -67,6 +67,7 @@ export function PostCard({ post }: PostCardProps) {
   const content = isFeed
     ? post.caption ?? post.llmDescription ?? "New post"
     : post.content;
+  const tags = isFeed ? post.autoTags ?? [] : [];
   const tokenGated = isFeed ? post.isTokenGated : false;
   const topic = !isFeed ? post.topic : null;
   const stats = isFeed
@@ -97,6 +98,17 @@ export function PostCard({ post }: PostCardProps) {
               ) : null}
             </div>
             <p className="text-sm leading-6 text-foreground">{content}</p>
+            {tags.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {tags.slice(0, 6).map((tag) => (
+                  <Link key={tag} href={`/search?q=${encodeURIComponent(tag)}`}>
+                    <Badge variant="outline" className="text-[10px]">
+                      #{tag}
+                    </Badge>
+                  </Link>
+                ))}
+              </div>
+            ) : null}
           </div>
         </div>
         {imageUrl ? (
