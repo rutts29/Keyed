@@ -2,9 +2,34 @@
 
 > **Document Purpose:** Complete technical reference for frontend development  
 > **Target:** Frontend Agent / Developer  
-> **Last Updated:** January 2026  
-> **Backend Status:** Complete and deployed  
-> **Solana Programs:** Deployed to devnet
+> **Last Updated:** January 18, 2026  
+> **Backend Status:** Complete and deployed (v1.1 with Privacy features)  
+> **Solana Programs:** Deployed to devnet  
+> **Hackathon:** Solana Privacy Hack (Jan 12-30, 2026) - Targeting Privacy Cash + Helius bounties
+
+---
+
+## Important Notes
+
+### Privacy Cash SDK Integration Status
+The backend has **complete architecture** for Privacy Cash SDK integration. The [Privacy Cash SDK](https://github.com/Privacy-Cash/privacy-cash-sdk) is available and can be installed from GitHub:
+
+```bash
+npm install git+https://github.com/Privacy-Cash/privacy-cash-sdk
+```
+
+The SDK provides these main APIs:
+- `deposit()` / `withdraw()` / `getPrivateBalance()` - for SOL
+- `depositSPL()` / `withdrawSPL()` / `getPrivateBalanceSpl()` - for SPL tokens (USDC, USDT)
+
+**Note:** Requires Node.js version 24 or above.
+
+### Recent Security Fixes (v1.1)
+- SSRF protection in AI service with URL validation
+- Input validation (50MB image limit, 10k char caption limit)
+- Rate limiting on all routes (in-memory + Redis)
+- Request logging middleware for observability
+- All route handlers wrapped with `asyncHandler` for proper error handling
 
 ---
 
@@ -14,16 +39,23 @@
 2. [Tech Stack](#2-tech-stack)
 3. [Environment Configuration](#3-environment-configuration)
 4. [API Reference](#4-api-reference)
+   - 4.1-4.7: Core APIs (Auth, Users, Posts, Feed, Search, Payments, Access)
+   - 4.8: Privacy APIs (Shield, Private Tip, Balance)
 5. [TypeScript Types & Interfaces](#5-typescript-types--interfaces)
 6. [Authentication Flow](#6-authentication-flow)
 7. [Solana Integration](#7-solana-integration)
 8. [State Management](#8-state-management)
+   - 8.4: Privacy Store
 9. [Real-Time Features](#9-real-time-features)
 10. [Page & Route Structure](#10-page--route-structure)
 11. [Component Requirements](#11-component-requirements)
+    - 11.1.1: Privacy Components (Hackathon Priority)
+    - 11.5-11.7: TipModal, ShieldModal, PrivacyBalance
 12. [Design System](#12-design-system)
 13. [Error Handling](#13-error-handling)
 14. [Performance Considerations](#14-performance-considerations)
+15. [Privacy Hooks Reference](#privacy-hooks-reference)
+16. [Hackathon Submission Notes](#hackathon-submission-notes)
 
 ---
 
@@ -45,6 +77,7 @@ SolShare is an AI-native decentralized social platform built on Solana combining
 | **View Feed** | Personalized AI-ranked feed or chronological following feed |
 | **Semantic Search** | Natural language search (e.g., "cozy workspaces") |
 | **Tip Creator** | Build tx → Sign with wallet → Submit to Solana |
+| **Private Tip** | Shield SOL → Send anonymous tip → Creator sees amount only |
 | **Token-Gated Content** | Verify token/NFT ownership → Access content |
 
 ---
@@ -103,6 +136,12 @@ NEXT_PUBLIC_TOKEN_GATE_PROGRAM_ID=EXVqoivgZKebHm8VeQNBEFYZLRjJ61ZWNieXg3Npy4Hi
 # Content CDN
 NEXT_PUBLIC_R2_PUBLIC_URL=https://cdn.solshare.app  # IPFS cache CDN
 NEXT_PUBLIC_IPFS_GATEWAY=https://gateway.pinata.cloud/ipfs
+
+# Privacy Cash (for Hackathon)
+# Note: These are used by the backend. Frontend doesn't need them directly
+# but good to know for documentation purposes.
+# PRIVACY_CASH_RELAYER_URL=https://relayer.privacy.cash
+# PRIVACY_CASH_PROGRAM_ID=9fhQBbumKEFuXtMBDw8AaQyAjCorLGJQiS3skWZdQyQD
 ```
 
 ---
@@ -673,6 +712,180 @@ Verify NFT access.
 
 ---
 
+### 4.8 Privacy (Anonymous Tipping via Privacy Cash)
+
+> **Note:** Backend architecture is complete. Install the [Privacy Cash SDK](https://github.com/Privacy-Cash/privacy-cash-sdk) from GitHub to enable full functionality.
+
+#### POST `/privacy/shield`
+Shield SOL into privacy pool for anonymous tipping.
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Request:**
+```typescript
+{
+  amount: number;  // Amount in SOL to shield
+}
+```
+
+**Response:**
+```typescript
+{
+  success: true;
+  data: {
+    transaction: string;      // Base64 unsigned tx
+    blockhash: string;
+    lastValidBlockHeight: number;
+    message: string;          // "Shield transaction ready..."
+  }
+}
+```
+
+#### POST `/privacy/tip`
+Send anonymous private tip from shielded balance.
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Request:**
+```typescript
+{
+  creatorWallet: string;    // Creator to tip
+  amount: number;           // Amount in SOL
+  postId?: string;          // Optional: tip on specific post
+}
+```
+
+**Response:**
+```typescript
+{
+  success: true;
+  data: {
+    transaction: string;
+    blockhash: string;
+    lastValidBlockHeight: number;
+    message: string;          // "Private tip transaction ready. Your identity will remain anonymous."
+  }
+}
+```
+
+**Error (insufficient balance):**
+```typescript
+{
+  success: false;
+  error: {
+    code: 'INSUFFICIENT_BALANCE';
+    message: 'Insufficient shielded balance. Please shield more SOL first.';
+  }
+}
+```
+
+#### GET `/privacy/balance`
+Get user's shielded balance in privacy pool.
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response:**
+```typescript
+{
+  success: true;
+  data: {
+    shielded: number;     // Total shielded (SOL)
+    available: number;    // Available for tips (SOL)
+    pending: number;      // Pending confirmations (SOL)
+  }
+}
+```
+
+#### GET `/privacy/tips/received`
+Get private tips received by creator (amounts only, NO tipper identity).
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response:**
+```typescript
+{
+  success: true;
+  data: {
+    tips: PrivateTipReceived[];
+    total: number;        // Total in SOL
+    count: number;
+  }
+}
+```
+
+```typescript
+interface PrivateTipReceived {
+  id: string;
+  amount: number;         // Lamports
+  tx_signature: string;
+  post_id: string | null;
+  timestamp: string;
+  // NOTE: No tipper wallet - privacy preserved!
+}
+```
+
+#### GET `/privacy/tips/sent`
+Get user's own private tip history.
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response:**
+```typescript
+{
+  success: true;
+  data: {
+    tips: PrivateTipSent[];
+    total: number;
+    count: number;
+  }
+}
+```
+
+#### GET `/privacy/settings`
+Get user's privacy preferences.
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response:**
+```typescript
+{
+  success: true;
+  data: {
+    wallet: string;
+    default_private_tips: boolean;  // Auto-enable private tips
+  }
+}
+```
+
+#### PUT `/privacy/settings`
+Update privacy preferences.
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Request:**
+```typescript
+{
+  defaultPrivateTips: boolean;
+}
+```
+
+#### GET `/privacy/pool/info`
+Get Privacy Cash pool statistics.
+
+**Response:**
+```typescript
+{
+  success: true;
+  data: {
+    totalDeposits: number;
+    totalWithdrawals: number;
+    activeCommitments: number;
+  }
+}
+```
+
+---
+
 ## 5. TypeScript Types & Interfaces
 
 Create `src/types/index.ts`:
@@ -893,6 +1106,56 @@ export interface AuthSession {
   wallet: string;
   user: UserProfile | null;
   expiresAt: number;
+}
+
+// ============================================
+// Privacy Types (Privacy Cash Integration)
+// ============================================
+
+export interface PrivacyBalance {
+  shielded: number;      // Total shielded balance (SOL)
+  available: number;     // Available for tips (SOL)
+  pending: number;       // Pending confirmations (SOL)
+}
+
+export interface PrivateTipRequest {
+  creatorWallet: string;
+  amount: number;        // In SOL
+  postId?: string;
+  isPrivate: true;       // Always true for private tips
+}
+
+export interface PrivateTipReceived {
+  id: string;
+  amount: number;        // In lamports
+  tx_signature: string;
+  post_id: string | null;
+  timestamp: string;
+  // NOTE: No tipper wallet - this is intentional for privacy
+}
+
+export interface PrivateTipSent {
+  signature: string;
+  to_wallet: string;
+  amount: number;        // In lamports
+  post_id: string | null;
+  timestamp: string;
+  status: TransactionStatus;
+}
+
+export interface PrivacySettings {
+  wallet: string;
+  default_private_tips: boolean;
+}
+
+export interface PrivacyPoolInfo {
+  totalDeposits: number;
+  totalWithdrawals: number;
+  activeCommitments: number;
+}
+
+export interface ShieldRequest {
+  amount: number;        // In SOL
 }
 ```
 
@@ -1218,7 +1481,67 @@ export const queryKeys = {
   comments: (postId: string) => ['comments', postId] as const,
   vault: () => ['vault'] as const,
   earnings: () => ['earnings'] as const,
+  // Privacy keys
+  privacyBalance: () => ['privacy', 'balance'] as const,
+  privacyTipsReceived: () => ['privacy', 'tips', 'received'] as const,
+  privacyTipsSent: () => ['privacy', 'tips', 'sent'] as const,
+  privacySettings: () => ['privacy', 'settings'] as const,
+  privacyPoolInfo: () => ['privacy', 'pool'] as const,
 };
+```
+
+### 8.4 Privacy Store
+
+```typescript
+// src/store/privacyStore.ts
+import { create } from 'zustand';
+import type { PrivacyBalance, PrivacySettings } from '@/types';
+
+interface PrivacyState {
+  // Balance
+  balance: PrivacyBalance | null;
+  isLoadingBalance: boolean;
+  
+  // Settings
+  settings: PrivacySettings | null;
+  
+  // UI State
+  isShieldModalOpen: boolean;
+  isPrivateTipModalOpen: boolean;
+  privateTipTarget: { wallet: string; postId?: string } | null;
+  
+  // Actions
+  setBalance: (balance: PrivacyBalance) => void;
+  setSettings: (settings: PrivacySettings) => void;
+  setLoadingBalance: (loading: boolean) => void;
+  openShieldModal: () => void;
+  closeShieldModal: () => void;
+  openPrivateTipModal: (wallet: string, postId?: string) => void;
+  closePrivateTipModal: () => void;
+}
+
+export const usePrivacyStore = create<PrivacyState>((set) => ({
+  balance: null,
+  isLoadingBalance: false,
+  settings: null,
+  isShieldModalOpen: false,
+  isPrivateTipModalOpen: false,
+  privateTipTarget: null,
+
+  setBalance: (balance) => set({ balance }),
+  setSettings: (settings) => set({ settings }),
+  setLoadingBalance: (loading) => set({ isLoadingBalance: loading }),
+  openShieldModal: () => set({ isShieldModalOpen: true }),
+  closeShieldModal: () => set({ isShieldModalOpen: false }),
+  openPrivateTipModal: (wallet, postId) => set({ 
+    isPrivateTipModalOpen: true, 
+    privateTipTarget: { wallet, postId } 
+  }),
+  closePrivateTipModal: () => set({ 
+    isPrivateTipModalOpen: false, 
+    privateTipTarget: null 
+  }),
+}));
 ```
 
 ---
@@ -1358,7 +1681,7 @@ src/app/
 | `CreatePostModal` | P0 | Image upload + AI preview + publish |
 | `ProfileHeader` | P0 | User profile info + follow button |
 | `SearchBar` | P0 | Semantic search with suggestions |
-| `TipModal` | P0 | Tip amount input + send |
+| `TipModal` | P0 | Tip amount input + send (with privacy toggle) |
 | `CommentSection` | P1 | Post comments + add comment |
 | `FollowButton` | P1 | Follow/unfollow with loading |
 | `LikeButton` | P1 | Like/unlike with animation |
@@ -1366,6 +1689,19 @@ src/app/
 | `EarningsDashboard` | P2 | Creator earnings charts |
 | `NotificationBell` | P2 | Real-time notifications |
 | `SubscribeModal` | P2 | Subscription flow |
+
+### 11.1.1 Privacy Components (Hackathon Priority)
+
+| Component | Priority | Description |
+|-----------|----------|-------------|
+| `PrivacyBalance` | P0-H | Display shielded balance in header/sidebar |
+| `ShieldModal` | P0-H | Modal to shield SOL into privacy pool |
+| `PrivateTipToggle` | P0-H | Toggle in TipModal for private/public tip |
+| `PrivateTipsReceived` | P1-H | Creator view: anonymous tips received |
+| `PrivacySettings` | P1-H | Settings page: default private tips toggle |
+| `PrivateTipHistory` | P2-H | User's sent private tips history |
+
+> **P0-H** = Priority 0 for Hackathon submission
 
 ### 11.2 PostCard Requirements
 
@@ -1420,6 +1756,106 @@ interface PostCardProps {
 - Recent searches (localStorage)
 - Semantic search hint in placeholder ("Try: cozy workspaces")
 - Enter to search, click suggestion to navigate
+
+### 11.5 TipModal Requirements (Updated with Privacy)
+
+```typescript
+interface TipModalProps {
+  creatorWallet: string;
+  postId?: string;
+  onClose: () => void;
+}
+```
+
+**States:**
+1. **Amount Input** - SOL amount with presets (0.1, 0.5, 1 SOL)
+2. **Privacy Toggle** - Switch between public/private tip
+3. **Balance Check** - If private, verify shielded balance
+4. **Insufficient Shield** - Prompt to shield more SOL
+5. **Sending** - Transaction in progress
+6. **Success** - Show confirmation
+
+**Privacy Toggle UI:**
+```typescript
+// In TipModal.tsx
+const [isPrivate, setIsPrivate] = useState(privacySettings?.default_private_tips ?? false);
+const { data: privacyBalance } = usePrivacyBalance();
+
+// Check if sufficient shielded balance
+const canSendPrivate = isPrivate && (privacyBalance?.available ?? 0) >= amount;
+
+<div className="flex items-center justify-between">
+  <div>
+    <Label>Tip Privately</Label>
+    <p className="text-sm text-muted-foreground">
+      Your identity will be hidden from the creator
+    </p>
+  </div>
+  <Switch 
+    checked={isPrivate} 
+    onCheckedChange={setIsPrivate}
+  />
+</div>
+
+{isPrivate && privacyBalance && (
+  <div className="text-sm">
+    Shielded balance: {privacyBalance.available} SOL
+    {!canSendPrivate && (
+      <Button variant="link" onClick={openShieldModal}>
+        Shield more SOL
+      </Button>
+    )}
+  </div>
+)}
+```
+
+**Tip Flow:**
+- If `isPrivate: false` → Call `POST /payments/tip`
+- If `isPrivate: true` → Call `POST /privacy/tip`
+
+### 11.6 ShieldModal Requirements
+
+**Purpose:** Allow users to deposit SOL into Privacy Cash pool for private tipping.
+
+**States:**
+1. **Amount Input** - SOL amount to shield
+2. **Info** - Explain what shielding does
+3. **Shielding** - Transaction in progress
+4. **Success** - Show new shielded balance
+
+**UI Elements:**
+- Amount input with wallet balance shown
+- "Shield" button
+- Explanation text: "Shielded SOL can be used to send anonymous tips"
+- Warning: "Shielding is non-reversible until withdrawn"
+
+### 11.7 PrivacyBalance Component
+
+**Purpose:** Display user's shielded balance, shown in header or sidebar.
+
+```typescript
+// src/components/privacy/PrivacyBalance.tsx
+export function PrivacyBalance() {
+  const { data: balance, isLoading } = useQuery({
+    queryKey: queryKeys.privacyBalance(),
+    queryFn: () => api.get('/privacy/balance'),
+  });
+
+  if (isLoading) return <Skeleton className="w-24 h-6" />;
+  
+  return (
+    <div className="flex items-center gap-2">
+      <ShieldIcon className="w-4 h-4 text-primary" />
+      <span className="text-sm">
+        {balance?.available ?? 0} SOL shielded
+      </span>
+      <Button size="sm" variant="outline" onClick={openShieldModal}>
+        Shield
+      </Button>
+    </div>
+  );
+}
+```
 
 ---
 
@@ -1509,6 +1945,11 @@ npx shadcn@latest add switch        # Token-gate toggle
 | `CONTENT_BLOCKED` | 400 | Moderation blocked | "Content violates guidelines" |
 | `INSUFFICIENT_FUNDS` | 400 | Not enough SOL | "Insufficient SOL balance" |
 | `TRANSACTION_FAILED` | 500 | Solana error | "Transaction failed, please try again" |
+| `INVALID_AMOUNT` | 400 | Amount <= 0 | "Amount must be greater than 0" |
+| `INVALID_ACTION` | 400 | Self-tip/self-follow | "Cannot tip/follow yourself" |
+| `INSUFFICIENT_BALANCE` | 400 | Not enough shielded SOL | "Insufficient shielded balance. Shield more SOL first." |
+| `MISSING_CREATOR` | 400 | Creator wallet required | "Creator wallet is required" |
+| `DATABASE_ERROR` | 500 | Supabase error | "Something went wrong. Please try again." |
 
 ### 13.2 Error Handling Hook
 
@@ -1525,6 +1966,12 @@ const errorMessages: Record<string, string> = {
   CONTENT_BLOCKED: 'This content violates community guidelines',
   INSUFFICIENT_FUNDS: 'Insufficient SOL balance',
   TRANSACTION_FAILED: 'Transaction failed. Please try again.',
+  // Privacy-related errors
+  INVALID_AMOUNT: 'Amount must be greater than 0',
+  INVALID_ACTION: 'You cannot perform this action',
+  INSUFFICIENT_BALANCE: 'Insufficient shielded balance. Please shield more SOL first.',
+  MISSING_CREATOR: 'Creator wallet is required',
+  DATABASE_ERROR: 'Something went wrong. Please try again.',
 };
 
 export function handleApiError(error: any) {
@@ -1536,6 +1983,11 @@ export function handleApiError(error: any) {
   // Special handling for auth errors
   if (code === 'UNAUTHORIZED') {
     // Redirect to login or trigger re-auth
+  }
+  
+  // Special handling for insufficient shielded balance
+  if (code === 'INSUFFICIENT_BALANCE') {
+    // Could open shield modal here
   }
 }
 ```
@@ -1644,13 +2096,16 @@ npm install @supabase/supabase-js
 npm install sonner                  # Toast notifications
 npm install react-intersection-observer  # Infinite scroll
 npm install framer-motion           # Animations
+npm install lucide-react            # Icons (for ShieldIcon, etc.)
 
-# Additional shadcn components
-npx shadcn@latest add dialog toast tooltip popover sheet progress switch
+# Additional shadcn components (including switch for privacy toggle)
+npx shadcn@latest add dialog toast tooltip popover sheet progress switch label
 
 # Development
 npm install -D @types/node
 ```
+
+> **Note:** The Privacy Cash SDK (`privacy-cash-sdk`) is not needed on the frontend. All privacy operations go through the backend API which handles the SDK integration.
 
 ---
 
@@ -1680,7 +2135,15 @@ npm install -D @types/node
 2. Build creator dashboard
 3. Add subscription flow
 
-### Phase 5: Polish
+### Phase 5: Privacy Features (Hackathon Priority)
+1. Add privacy store (Zustand)
+2. Build PrivacyBalance component
+3. Build ShieldModal for depositing SOL
+4. Update TipModal with privacy toggle
+5. Add PrivateTipsReceived for creator dashboard
+6. Add privacy settings page
+
+### Phase 6: Polish
 1. Add real-time notifications
 2. Implement token-gating UI
 3. Add loading states and error handling
@@ -1688,5 +2151,140 @@ npm install -D @types/node
 
 ---
 
-**Document Version:** 1.0  
-**Backend Compatibility:** v1.0  
+## Privacy Hooks Reference
+
+```typescript
+// src/hooks/usePrivacy.ts
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/lib/api';
+import { queryKeys } from '@/lib/queryClient';
+
+// Get shielded balance
+export function usePrivacyBalance() {
+  return useQuery({
+    queryKey: queryKeys.privacyBalance(),
+    queryFn: async () => {
+      const { data } = await api.get('/privacy/balance');
+      return data.data;
+    },
+  });
+}
+
+// Shield SOL into privacy pool
+export function useShieldSol() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (amount: number) => {
+      const { data } = await api.post('/privacy/shield', { amount });
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.privacyBalance() });
+    },
+  });
+}
+
+// Send private tip
+export function usePrivateTip() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ 
+      creatorWallet, 
+      amount, 
+      postId 
+    }: { 
+      creatorWallet: string; 
+      amount: number; 
+      postId?: string;
+    }) => {
+      const { data } = await api.post('/privacy/tip', {
+        creatorWallet,
+        amount,
+        postId,
+      });
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.privacyBalance() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.privacyTipsSent() });
+    },
+  });
+}
+
+// Get privacy settings
+export function usePrivacySettings() {
+  return useQuery({
+    queryKey: queryKeys.privacySettings(),
+    queryFn: async () => {
+      const { data } = await api.get('/privacy/settings');
+      return data.data;
+    },
+  });
+}
+
+// Update privacy settings
+export function useUpdatePrivacySettings() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (settings: { defaultPrivateTips: boolean }) => {
+      const { data } = await api.put('/privacy/settings', settings);
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.privacySettings() });
+    },
+  });
+}
+
+// Get private tips received (for creators)
+export function usePrivateTipsReceived() {
+  return useQuery({
+    queryKey: queryKeys.privacyTipsReceived(),
+    queryFn: async () => {
+      const { data } = await api.get('/privacy/tips/received');
+      return data.data;
+    },
+  });
+}
+```
+
+---
+
+## Hackathon Submission Notes
+
+### Target Bounties
+1. **Privacy Cash "Best Integration to Existing App"**
+   - Private tipping feature
+   - Shield and withdraw flow
+   - Tipper identity hidden
+
+2. **Helius "Best Privacy Project"**
+   - Already using Helius RPC
+   - Document in submission
+
+3. **Open Track**
+   - Full privacy-enabled social platform
+   - Demo video required (3 min max)
+
+### Demo Video Outline (3 minutes)
+1. **Intro (30s):** SolShare overview + privacy problem
+2. **Shield Flow (45s):** Deposit SOL into privacy pool
+3. **Private Tip (60s):** Send anonymous tip, show creator view
+4. **Technical (30s):** Highlight Privacy Cash SDK integration
+5. **Compliance (15s):** Mention Helius RPC + AI moderation
+
+### Privacy Cash SDK
+The SDK is available on GitHub and can be installed directly:
+```bash
+npm install git+https://github.com/Privacy-Cash/privacy-cash-sdk
+```
+Requires Node.js v24+. See the [SDK repository](https://github.com/Privacy-Cash/privacy-cash-sdk) for examples and documentation.
+
+---
+
+**Document Version:** 1.1  
+**Backend Compatibility:** v1.1 (with Privacy features)  
+**Last Updated:** January 18, 2026
