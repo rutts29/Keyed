@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useUIStore } from "@/store/uiStore";
-import { posts } from "@/lib/mock-data";
+import { feedItems } from "@/lib/mock-data";
 
 type ProfilePageProps = {
   params: Promise<{
@@ -19,6 +19,7 @@ type ProfilePageProps = {
 export default function ProfilePage({ params }: ProfilePageProps) {
   const { wallet } = use(params);
   const openSubscribeModal = useUIStore((state) => state.openSubscribeModal);
+  const openTipModal = useUIStore((state) => state.openTipModal);
   const isSelf = wallet === "me";
 
   return (
@@ -43,6 +44,13 @@ export default function ProfilePage({ params }: ProfilePageProps) {
               ) : (
                 <>
                   <FollowButton wallet={wallet} />
+                  <Button
+                    variant="secondary"
+                    className="h-9"
+                    onClick={() => openTipModal(wallet)}
+                  >
+                    Tip
+                  </Button>
                   <Button
                     variant="secondary"
                     className="h-9"
@@ -73,7 +81,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
       </Card>
 
       <div className="space-y-4">
-        {posts.map((post) => (
+        {feedItems.map((post) => (
           <PostCard key={post.id} post={post} />
         ))}
       </div>
