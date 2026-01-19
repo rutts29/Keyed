@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useUIStore } from "@/store/uiStore";
 import { feedItems } from "@/lib/mock-data";
 
@@ -78,17 +79,20 @@ export default function ProfilePage({ params }: ProfilePageProps) {
           <div className="grid gap-3 text-sm text-muted-foreground md:grid-cols-3">
             <div>
               <p className="text-xs uppercase tracking-[0.2em]">Followers</p>
-              <p className="text-lg font-semibold text-foreground">3.2k</p>
+              <Skeleton className="mt-1 h-6 w-12" />
             </div>
             <div>
               <p className="text-xs uppercase tracking-[0.2em]">Following</p>
-              <p className="text-lg font-semibold text-foreground">210</p>
+              <Skeleton className="mt-1 h-6 w-12" />
             </div>
             <div>
               <p className="text-xs uppercase tracking-[0.2em]">Posts</p>
-              <p className="text-lg font-semibold text-foreground">128</p>
+              <Skeleton className="mt-1 h-6 w-12" />
             </div>
           </div>
+          <p className="text-xs text-muted-foreground">
+            Profile stats will be available once connected to the backend.
+          </p>
         </CardContent>
       </Card>
 

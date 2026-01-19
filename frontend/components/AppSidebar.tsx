@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
 
 import { PrivacyBalance } from "@/components/PrivacyBalance";
 import { Badge } from "@/components/ui/badge";
@@ -34,9 +35,9 @@ const navItems = [
   { label: "Home", icon: Home, href: "/app" },
   { label: "Discover", icon: Zap, href: "/explore" },
   { label: "Search", icon: Search, href: "/search" },
-  { label: "Notifications", icon: Bell, disabled: true },
-  { label: "Messages", icon: Mail, disabled: true },
-  { label: "Bookmarks", icon: Bookmark, disabled: true },
+  { label: "Notifications", icon: Bell, disabled: true, badge: "Soon" },
+  { label: "Messages", icon: Mail, disabled: true, badge: "Soon" },
+  { label: "Bookmarks", icon: Bookmark, disabled: true, badge: "Soon" },
   { label: "Creator Hub", icon: Gem, href: "/dashboard", badge: "New" },
   { label: "Profile", icon: User, href: "/profile/me", match: "/profile" },
   { label: "Settings", icon: Settings, href: "/settings" },
@@ -44,8 +45,21 @@ const navItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { handleLogOut } = useDynamicContext();
   const wallet = useAuthStore((state) => state.wallet);
+  const clearAuth = useAuthStore((state) => state.clearAuth);
   const profileHref = wallet ? `/profile/${wallet}` : "/profile/me";
+
+  const handleSignOut = async () => {
+    try {
+      await handleLogOut();
+    } catch {
+      // Ignore logout errors
+    }
+    clearAuth();
+    router.push("/");
+  };
 
   return (
     <div className="flex h-full flex-col justify-between gap-6">
@@ -105,13 +119,18 @@ export function AppSidebar() {
         </Button>
         <Separator className="bg-border/70" />
         <div className="rounded-xl border border-border/70 bg-card/60 p-3 text-xs text-muted-foreground">
-          <p className="text-sm font-semibold text-foreground">
-            Weekly creator digest
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-foreground">
+              Weekly creator digest
+            </p>
+            <Badge variant="outline" className="text-[9px]">
+              Soon
+            </Badge>
+          </div>
           <p className="mt-1 leading-5">
             Curated threads, drop calendars, and top creators.
           </p>
-          <Button variant="secondary" className="mt-3 h-8 w-full text-xs">
+          <Button variant="secondary" className="mt-3 h-8 w-full text-xs" disabled>
             Subscribe
           </Button>
         </div>
@@ -124,23 +143,33 @@ export function AppSidebar() {
           >
             <div className="flex items-center gap-3">
               <Avatar className="h-9 w-9">
-                <AvatarFallback>SS</AvatarFallback>
+                <AvatarFallback>
+                  {wallet ? wallet.slice(0, 2).toUpperCase() : "SS"}
+                </AvatarFallback>
               </Avatar>
               <div>
                 <p className="text-sm font-medium text-foreground">
-                  SolShare Labs
+                  {wallet ? `${wallet.slice(0, 4)}...${wallet.slice(-4)}` : "SolShare Labs"}
                 </p>
-                <p className="text-xs text-muted-foreground">@solshare</p>
+                <p className="text-xs text-muted-foreground">
+                  {wallet ? "Connected" : "@solshare"}
+                </p>
               </div>
             </div>
             <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-44">
-          <DropdownMenuItem>View profile</DropdownMenuItem>
-          <DropdownMenuItem>Creator settings</DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href={profileHref}>View profile</Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href="/settings">Settings</Link>
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>Sign out</DropdownMenuItem>
+          <DropdownMenuItem onClick={handleSignOut}>
+            Sign out
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

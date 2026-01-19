@@ -133,7 +133,7 @@ export default function PostPage({ params }: PostPageProps) {
                 </Button>
               </div>
             ) : null}
-            <Button variant="secondary" className="h-9">
+            <Button variant="secondary" className="h-9" disabled>
               View creator profile
             </Button>
           </div>

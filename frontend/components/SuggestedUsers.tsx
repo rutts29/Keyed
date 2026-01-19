@@ -1,3 +1,4 @@
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RightRailCard } from "@/components/RightRailCard";
 import type { SuggestedUser } from "@/lib/mock-data";
@@ -10,7 +11,14 @@ type SuggestedUsersProps = {
 
 export function SuggestedUsers({ users }: SuggestedUsersProps) {
   return (
-    <RightRailCard title="Suggested creators">
+    <RightRailCard
+      title="Suggested creators"
+      action={
+        <Badge variant="outline" className="text-[9px]">
+          Preview
+        </Badge>
+      }
+    >
       {users.length === 0
         ? Array.from({ length: 3 }).map((_, index) => (
             <div key={`user-skeleton-${index}`} className="flex items-center gap-3">
@@ -35,7 +43,7 @@ export function SuggestedUsers({ users }: SuggestedUsersProps) {
                 <p className="text-xs text-muted-foreground">{user.handle}</p>
                 <p className="text-xs text-muted-foreground">{user.summary}</p>
               </div>
-              <Button variant="secondary" className="h-8 px-3 text-xs">
+              <Button variant="secondary" className="h-8 px-3 text-xs" disabled>
                 Follow
               </Button>
             </div>
