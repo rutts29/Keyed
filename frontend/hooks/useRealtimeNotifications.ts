@@ -15,15 +15,15 @@ export function useRealtimeNotifications() {
   );
 
   useEffect(() => {
-    if (
-      !wallet ||
-      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-      !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    ) {
+    // Early return if supabase client is not available or wallet is not connected
+    if (!supabase || !wallet) {
       return;
     }
 
-    const likesChannel = supabase
+    // Store reference to supabase client for cleanup
+    const client = supabase;
+
+    const likesChannel = client
       .channel("likes")
       .on(
         "postgres_changes",
@@ -42,7 +42,7 @@ export function useRealtimeNotifications() {
       )
       .subscribe();
 
-    const followsChannel = supabase
+    const followsChannel = client
       .channel("follows")
       .on(
         "postgres_changes",
@@ -60,8 +60,8 @@ export function useRealtimeNotifications() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(likesChannel);
-      supabase.removeChannel(followsChannel);
+      client.removeChannel(likesChannel);
+      client.removeChannel(followsChannel);
     };
   }, [incrementNotifications, queryClient, wallet]);
 }
