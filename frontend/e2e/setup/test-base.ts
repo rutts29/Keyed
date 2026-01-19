@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/rules-of-hooks */
 import { test as base, expect } from "@playwright/test";
 import { injectMockWallet, TestWalletType, TEST_WALLETS } from "./mock-wallet";
 import { FeedPage } from "../pages/feed.page";
@@ -24,8 +25,8 @@ type TestFixtures = {
  * Custom test with fixtures for SolShare E2E testing.
  */
 export const test = base.extend<TestFixtures>({
-  // Default mock wallet type
-  mockWalletType: ["viewer", { option: true }],
+  // Default mock wallet type - cast needed for Playwright fixture option type
+  mockWalletType: ["viewer", { option: true }] as [TestWalletType, { option: true }],
 
   // Inject mock wallet before each test
   page: async ({ page, mockWalletType }, use) => {
@@ -66,7 +67,7 @@ export { expect, TEST_WALLETS };
  */
 export function testWithWallet(walletType: TestWalletType) {
   return test.extend<{ mockWalletType: TestWalletType }>({
-    mockWalletType: [walletType, { option: true }],
+    mockWalletType: [walletType, { option: true }] as [TestWalletType, { option: true }],
   });
 }
 

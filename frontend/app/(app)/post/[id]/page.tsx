@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { use, useState } from "react";
 import { toast } from "sonner";
 
 import { CommentSection } from "@/components/CommentSection";
@@ -14,19 +14,20 @@ import { useVerifyNftAccess, useVerifyTokenAccess } from "@/hooks/useAccessActio
 import { useAccessVerification } from "@/hooks/useAccessVerification";
 
 type PostPageProps = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 
 export default function PostPage({ params }: PostPageProps) {
-  const { data, isLoading, isError } = useAccessVerification(params.id);
+  const { id } = use(params);
+  const { data, isLoading, isError } = useAccessVerification(id);
   const hasAccess = data?.hasAccess;
   const requirements = data?.requirements;
   const { mutateAsync: verifyToken, isPending: isVerifyingToken } =
-    useVerifyTokenAccess(params.id);
+    useVerifyTokenAccess(id);
   const { mutateAsync: verifyNft, isPending: isVerifyingNft } =
-    useVerifyNftAccess(params.id);
+    useVerifyNftAccess(id);
   const [nftMint, setNftMint] = useState("");
 
   const handleVerifyToken = async () => {
@@ -59,7 +60,7 @@ export default function PostPage({ params }: PostPageProps) {
             Post
           </p>
           <h1 className="text-2xl font-semibold text-foreground">
-            Post {params.id}
+            Post {id}
           </h1>
         </div>
         <Badge variant="secondary">
@@ -138,7 +139,7 @@ export default function PostPage({ params }: PostPageProps) {
           </div>
         </CardContent>
       </Card>
-      {hasAccess ? <CommentSection postId={params.id} /> : null}
+      {hasAccess ? <CommentSection postId={id} /> : null}
     </div>
   );
 }
