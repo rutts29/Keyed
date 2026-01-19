@@ -1,5 +1,6 @@
 "use client";
 
+import { use } from "react";
 import { PostCard } from "@/components/PostCard";
 import { FollowButton } from "@/components/FollowButton";
 import { Badge } from "@/components/ui/badge";
@@ -10,14 +11,15 @@ import { useUIStore } from "@/store/uiStore";
 import { posts } from "@/lib/mock-data";
 
 type ProfilePageProps = {
-  params: {
+  params: Promise<{
     wallet: string;
-  };
+  }>;
 };
 
 export default function ProfilePage({ params }: ProfilePageProps) {
+  const { wallet } = use(params);
   const openSubscribeModal = useUIStore((state) => state.openSubscribeModal);
-  const isSelf = params.wallet === "me";
+  const isSelf = wallet === "me";
 
   return (
     <div className="space-y-6">
@@ -29,7 +31,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
                 Profile
               </p>
               <h1 className="text-2xl font-semibold text-foreground">
-                {params.wallet === "me" ? "Your profile" : params.wallet}
+                {wallet === "me" ? "Your profile" : wallet}
               </h1>
             </div>
             <div className="flex items-center gap-2">
@@ -40,11 +42,11 @@ export default function ProfilePage({ params }: ProfilePageProps) {
                 </Button>
               ) : (
                 <>
-                  <FollowButton wallet={params.wallet} />
+                  <FollowButton wallet={wallet} />
                   <Button
                     variant="secondary"
                     className="h-9"
-                    onClick={() => openSubscribeModal(params.wallet)}
+                    onClick={() => openSubscribeModal(wallet)}
                   >
                     Subscribe
                   </Button>

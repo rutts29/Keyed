@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { Suspense, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { PostCard } from "@/components/PostCard";
@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { useSemanticSearch } from "@/hooks/useSearch";
 import { posts } from "@/lib/mock-data";
 
-export default function SearchPage() {
+function SearchContent() {
   const searchParams = useSearchParams();
   const query = searchParams.get("q")?.trim() ?? "";
   const { data, isLoading, isError } = useSemanticSearch(query);
@@ -109,5 +109,36 @@ export default function SearchPage() {
         )}
       </div>
     </div>
+  );
+}
+
+function SearchFallback() {
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="space-y-1">
+          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+            Search
+          </p>
+          <h1 className="text-2xl font-semibold text-foreground">
+            Search SolShare
+          </h1>
+        </div>
+        <Badge variant="secondary">Semantic search</Badge>
+      </div>
+      <Card className="border-border/70 bg-card/70">
+        <CardContent className="space-y-2 p-6 text-sm text-muted-foreground">
+          <p className="font-semibold text-foreground">Loading...</p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={<SearchFallback />}>
+      <SearchContent />
+    </Suspense>
   );
 }
