@@ -6,7 +6,7 @@ import { PostCard } from "@/components/PostCard"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useInfiniteFeed } from "@/hooks/useInfiniteFeed"
-import { feedItems } from "@/lib/mock-data"
+import { feedItems as mockFeedItems } from "@/lib/mock-data"
 import { useAuthStore } from "@/store/authStore"
 
 type FeedType = "personalized" | "following" | "explore" | "trending"
@@ -37,7 +37,7 @@ export function PostFeed({
     isError,
   } = useInfiniteFeed(feedType)
 
-  const feedItems = useMemo(
+  const apiFeedItems = useMemo(
     () => data?.pages.flatMap((page) => page.posts) ?? [],
     [data]
   )
@@ -78,14 +78,14 @@ export function PostFeed({
             </CardContent>
           </Card>
         ) : null}
-        {feedItems.map((post) => (
+        {mockFeedItems.map((post) => (
           <PostCard key={post.id} post={post} />
         ))}
       </>
     )
   }
 
-  if (feedItems.length === 0) {
+  if (apiFeedItems.length === 0) {
     return (
       <Card className="border-border/70 bg-card/70">
         <CardContent className="space-y-2 p-6 text-sm text-muted-foreground">
@@ -98,7 +98,7 @@ export function PostFeed({
 
   return (
     <>
-      {feedItems.map((post) => (
+      {apiFeedItems.map((post) => (
         <PostCard key={post.id} post={post} />
       ))}
       <div ref={loadMoreRef} />
@@ -116,7 +116,7 @@ export function PostFeed({
           </CardContent>
         </Card>
       ) : null}
-      {!hasNextPage && feedItems.length > 0 ? (
+      {!hasNextPage && apiFeedItems.length > 0 ? (
         <Card className="border-border/70 bg-card/70">
           <CardContent className="p-4 text-sm text-muted-foreground">
             You&apos;re all caught up.
