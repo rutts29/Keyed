@@ -1,3 +1,5 @@
+"use client"
+
 import { useState } from "react"
 import { useDynamicContext } from "@dynamic-labs/sdk-react-core"
 import { toast } from "sonner"
@@ -82,10 +84,12 @@ export function ShieldModal() {
             />
           </div>
           <div className="rounded-lg border border-border/70 bg-muted/40 p-3 text-xs">
-            <p>Available balance: {data?.available ?? 0} SOL</p>
+            <p>
+              Available balance: {typeof data?.available === "number" ? data.available : 0} SOL
+            </p>
             <p className="mt-1">Shielding is reversible via withdrawal.</p>
           </div>
-          {status === "shielding" ? <Progress value={60} /> : null}
+          {status === "shielding" && <Progress value={60} />}
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={handleClose}>
               Cancel

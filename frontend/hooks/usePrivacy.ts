@@ -19,20 +19,23 @@ export function usePrivacyBalance() {
   const setLoading = usePrivacyStore((state) => state.setLoadingBalance)
   const token = useAuthStore((state) => state.token)
 
-  return useQuery({
+  return useQuery<PrivacyBalance>({
     queryKey: queryKeys.privacyBalance(),
     queryFn: async () => {
       setLoading(true)
-      const { data } = await api.get<ApiResponse<PrivacyBalance>>(
-        "/privacy/balance"
-      )
-      if (!data.data) {
-        throw new Error("Balance unavailable")
+      try {
+        const { data } = await api.get<ApiResponse<PrivacyBalance>>(
+          "/privacy/balance"
+        )
+        if (!data.data) {
+          throw new Error("Balance unavailable")
+        }
+        setBalance(data.data)
+        return data.data
+      } finally {
+        setLoading(false)
       }
-      setBalance(data.data)
-      return data.data
     },
-    onSettled: () => setLoading(false),
     enabled: Boolean(token),
   })
 }

@@ -7,8 +7,12 @@ const connection = new Connection(rpcUrl, "confirmed");
 
 export async function signAndSubmitTransaction(
   serializedTx: string,
-  wallet: { signTransaction: (tx: Transaction) => Promise<Transaction> }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  wallet: any
 ): Promise<string> {
+  if (!wallet?.signTransaction) {
+    throw new Error("Wallet does not support signing transactions");
+  }
   const txBuffer = Buffer.from(serializedTx, "base64");
   const transaction = Transaction.from(txBuffer);
   const signedTx = await wallet.signTransaction(transaction);
