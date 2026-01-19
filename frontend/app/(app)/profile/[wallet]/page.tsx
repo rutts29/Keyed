@@ -3,12 +3,13 @@
 import { use } from "react";
 import { PostCard } from "@/components/PostCard";
 import { FollowButton } from "@/components/FollowButton";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useUIStore } from "@/store/uiStore";
-import { posts } from "@/lib/mock-data";
+import { feedItems } from "@/lib/mock-data";
 
 type ProfilePageProps = {
   params: Promise<{
@@ -19,20 +20,32 @@ type ProfilePageProps = {
 export default function ProfilePage({ params }: ProfilePageProps) {
   const { wallet } = use(params);
   const openSubscribeModal = useUIStore((state) => state.openSubscribeModal);
+  const openTipModal = useUIStore((state) => state.openTipModal);
   const isSelf = wallet === "me";
+
+  // Get initials from wallet address for avatar
+  const getInitials = (address: string) => {
+    if (address === "me") return "ME";
+    return address.slice(0, 2).toUpperCase();
+  };
 
   return (
     <div className="space-y-6">
       <Card className="border-border/70 bg-card/70">
         <CardContent className="space-y-4 p-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                Profile
-              </p>
-              <h1 className="text-2xl font-semibold text-foreground">
-                {wallet === "me" ? "Your profile" : wallet}
-              </h1>
+            <div className="flex items-center gap-4">
+              <Avatar className="h-16 w-16">
+                <AvatarFallback className="text-lg">{getInitials(wallet)}</AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                  Profile
+                </p>
+                <h1 className="text-2xl font-semibold text-foreground">
+                  {wallet === "me" ? "Your profile" : wallet}
+                </h1>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="secondary">Creator</Badge>
@@ -43,6 +56,13 @@ export default function ProfilePage({ params }: ProfilePageProps) {
               ) : (
                 <>
                   <FollowButton wallet={wallet} />
+                  <Button
+                    variant="secondary"
+                    className="h-9"
+                    onClick={() => openTipModal(wallet)}
+                  >
+                    Tip
+                  </Button>
                   <Button
                     variant="secondary"
                     className="h-9"
@@ -73,7 +93,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
       </Card>
 
       <div className="space-y-4">
-        {posts.map((post) => (
+        {feedItems.map((post) => (
           <PostCard key={post.id} post={post} />
         ))}
       </div>

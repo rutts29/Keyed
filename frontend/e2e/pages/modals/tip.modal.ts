@@ -17,9 +17,10 @@ export class TipModal {
 
   constructor(page: Page) {
     this.page = page;
-    this.dialog = page.locator('[role="dialog"]');
+    // Use a more specific selector to target only the Tip modal
+    this.dialog = page.getByRole("dialog", { name: /send a tip/i });
     this.title = this.dialog.locator('h2, [class*="DialogTitle"]');
-    this.amountInput = page.getByLabel(/amount/i);
+    this.amountInput = this.dialog.getByLabel(/amount/i);
     this.presetButtons = this.dialog.locator("button").filter({ hasText: /\d+\.?\d*\s*SOL/i });
     this.privateTipToggle = this.dialog.locator('[role="switch"]');
     this.shieldedBalance = this.dialog.getByText(/shielded balance/i);
