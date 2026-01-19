@@ -9,6 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@dynamic-labs/ethereum": "^4.55.0",
+    "@dynamic-labs/ethers-v6": "^4.55.0",
     "@dynamic-labs/sdk-react-core": "^4.55.0",
     "@dynamic-labs/solana": "^4.55.0",
     "@radix-ui/react-avatar": "^1.1.11",
@@ -27,6 +29,7 @@
     "axios": "^1.13.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dotenv": "^17.2.3",
     "lucide-react": "^0.562.0",
     "next": "16.1.1",
     "react": "19.2.3",
@@ -34,6 +37,7 @@
     "react-intersection-observer": "^10.0.2",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
+    "viem": "^2.44.4",
     "zustand": "^5.0.10"
   },
   "devDependencies": {
