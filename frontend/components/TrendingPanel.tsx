@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RightRailCard } from "@/components/RightRailCard";
 import type { Trend } from "@/lib/mock-data";
@@ -12,9 +12,9 @@ export function TrendingPanel({ trends }: TrendingPanelProps) {
     <RightRailCard
       title="Trending"
       action={
-        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
-          View all
-        </Button>
+        <Badge variant="outline" className="text-[9px]">
+          Preview
+        </Badge>
       }
     >
       {trends.length === 0
