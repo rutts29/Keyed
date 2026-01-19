@@ -16,9 +16,10 @@ export class ShieldModal {
 
   constructor(page: Page) {
     this.page = page;
-    this.dialog = page.locator('[role="dialog"]');
+    // Use a more specific selector to target only the Shield modal
+    this.dialog = page.getByRole("dialog", { name: /shield sol/i });
     this.title = this.dialog.locator('h2, [class*="DialogTitle"]');
-    this.amountInput = page.getByLabel(/amount/i);
+    this.amountInput = this.dialog.getByLabel(/amount/i);
     this.availableBalance = this.dialog.getByText(/available balance/i);
     this.progressBar = this.dialog.locator('[role="progressbar"]');
     this.shieldButton = this.dialog.getByRole("button", { name: /^shield$/i });
