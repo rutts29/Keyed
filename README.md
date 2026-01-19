@@ -365,6 +365,91 @@ SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 ```
 
+## API Versioning Strategy
+
+The API currently uses **implicit versioning** (v1 by default). Future versions will use URL path versioning.
+
+### Current Approach
+```
+/api/auth/challenge    # Implicitly v1
+/api/posts/create      # Implicitly v1
+```
+
+### Future Versioning (when breaking changes are needed)
+```
+/api/v1/posts/create   # Legacy support
+/api/v2/posts/create   # New version with breaking changes
+```
+
+### Deprecation Policy
+1. **Announcement**: Breaking changes announced 30 days in advance via API response headers
+2. **Dual Support**: Old and new versions run in parallel for 90 days
+3. **Sunset**: Old version returns `410 Gone` after sunset date
+
+### Version Detection Headers
+```
+X-API-Version: 1.0.0           # Current API version
+X-API-Deprecated: true         # If endpoint is deprecated
+X-API-Sunset-Date: 2026-06-01  # When deprecated endpoint will be removed
+```
+
+---
+
+## Deployment Runbook
+
+### Pre-Deployment Checklist
+
+- [ ] All environment variables configured
+- [ ] Database migrations run successfully
+- [ ] Qdrant collection initialized
+- [ ] Solana programs deployed and IDs updated
+- [ ] Health checks passing locally
+
+### Deployment Steps
+
+1. **Database**: Run migrations in order (001-006)
+2. **AI Service**: Deploy first (backend depends on it)
+3. **Backend API**: Deploy with health check verification
+4. **Backend Worker**: Deploy after API is healthy
+5. **Frontend**: Deploy last (depends on backend URL)
+
+### Health Check Endpoints
+
+| Service | Endpoint | Expected Response |
+|---------|----------|-------------------|
+| Backend | `GET /health` | `{"status":"healthy","services":{...}}` |
+| AI Service | `GET /health` | `{"status":"healthy"}` |
+
+### Rollback Procedure
+
+```bash
+# Railway rollback
+railway rollback --service solshare-api
+
+# Or redeploy specific commit
+railway up --detach --ref <commit-sha>
+```
+
+### Common Issues & Solutions
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| `ECONNREFUSED` to AI service | AI service not ready | Wait for health check, check internal URL |
+| `Invalid JWT` | Secret mismatch | Verify `JWT_SECRET` matches across services |
+| Redis connection failed | Wrong URL format | Use `rediss://` (with double s) for TLS |
+| IDL file not found | Missing IDL export | Run `anchor build` and copy IDL files |
+| Qdrant 404 | Collection not created | Run `setup_qdrant.py` script |
+
+### Monitoring Checklist
+
+- [ ] Check `/health` endpoint returns 200
+- [ ] Verify Redis connection in logs
+- [ ] Confirm AI service is reachable
+- [ ] Test auth flow end-to-end
+- [ ] Verify Solana RPC connectivity
+
+---
+
 ## Security Considerations
 
 - All API endpoints are rate-limited
