@@ -5,6 +5,7 @@ type Idl = anchor.Idl;
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { env } from './env.js';
+import { logger } from '../utils/logger.js';
 
 export const connection = new Connection(
   env.SOLANA_RPC_URL || clusterApiUrl('devnet'),
@@ -37,7 +38,7 @@ function loadIdl(filename: string): Idl | null {
     }
   }
   
-  console.warn(`IDL file not found: ${filename}`);
+  logger.warn({ filename }, 'IDL file not found');
   return null;
 }
 
