@@ -20,8 +20,9 @@ export class SearchPage extends BasePage {
     this.suggestionsDropdown = page.locator('[class*="absolute"][class*="rounded"]').filter({ hasText: /(suggestions|recent)/i });
     this.suggestionItems = this.suggestionsDropdown.locator("button");
     this.recentSearchesLabel = page.getByText(/recent searches/i);
-    this.searchResults = page.locator('[class*="Card"]').filter({ hasText: /@/ });
-    this.noResultsMessage = page.getByText(/no results|nothing found/i);
+    // Use data-slot attribute from Card component
+    this.searchResults = page.locator('[data-slot="card"]').filter({ hasText: /@/ });
+    this.noResultsMessage = page.getByText(/no results|nothing found|no matches/i);
     this.loadingIndicator = page.locator('[class*="animate-spin"], [class*="loading"]');
     this.filters = page.locator('[role="tablist"], [class*="filter"]');
   }

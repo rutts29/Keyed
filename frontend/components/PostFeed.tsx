@@ -6,7 +6,7 @@ import { PostCard } from "@/components/PostCard"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useInfiniteFeed } from "@/hooks/useInfiniteFeed"
-import { posts } from "@/lib/mock-data"
+import { feedItems } from "@/lib/mock-data"
 import { useAuthStore } from "@/store/authStore"
 
 type FeedType = "personalized" | "following" | "explore" | "trending"
@@ -78,7 +78,7 @@ export function PostFeed({
             </CardContent>
           </Card>
         ) : null}
-        {posts.map((post) => (
+        {feedItems.map((post) => (
           <PostCard key={post.id} post={post} />
         ))}
       </>
