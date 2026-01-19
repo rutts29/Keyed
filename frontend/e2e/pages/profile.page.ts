@@ -20,7 +20,8 @@ export class ProfilePage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.avatar = page.locator('[class*="Avatar"]').first();
+    // Use data-slot attribute for Avatar component
+    this.avatar = page.locator('[data-slot="avatar"], [class*="Avatar"]').first();
     this.username = page.locator("h1, h2").first();
     this.bio = page.locator("p").filter({ hasText: /.{20,}/ }).first();
     this.followButton = page.getByRole("button", { name: /follow/i });
@@ -29,9 +30,10 @@ export class ProfilePage extends BasePage {
     this.postCount = page.getByText(/posts/i);
     this.postsTab = page.getByRole("tab", { name: /posts/i });
     this.likesTab = page.getByRole("tab", { name: /likes/i });
-    this.posts = page.locator('[class*="Card"]').filter({ hasText: /@/ });
+    // Use data-slot attribute from Card component
+    this.posts = page.locator('[data-slot="card"]').filter({ hasText: /@/ });
     this.verifiedBadge = page.locator('[class*="verified"], [aria-label*="verified"]');
-    this.tipButton = page.getByRole("button", { name: /tip/i }).first();
+    this.tipButton = page.getByRole("button", { name: /tip|subscribe/i }).first();
   }
 
   /**

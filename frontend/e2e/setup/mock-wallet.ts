@@ -82,25 +82,29 @@ export async function injectMockWallet(
       };
 
       // Mock localStorage for auth persistence
-      const mockAuthSession = {
-        token: "mock-jwt-token-for-testing",
-        wallet: address,
-        user: {
+      // Only set if not already present to preserve across reloads
+      const existingSession = localStorage.getItem("solshare-auth");
+      if (!existingSession) {
+        const mockAuthSession = {
+          token: "mock-jwt-token-for-testing",
           wallet: address,
-          username: "testuser",
-          bio: "Test user for E2E testing",
-          profileImageUri: null,
-          followerCount: 100,
-          followingCount: 50,
-          postCount: 25,
-          createdAt: new Date().toISOString(),
-          isVerified: true,
-        },
-        expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
-      };
+          user: {
+            wallet: address,
+            username: "testuser",
+            bio: "Test user for E2E testing",
+            profileImageUri: null,
+            followerCount: 100,
+            followingCount: 50,
+            postCount: 25,
+            createdAt: "2024-01-01T00:00:00.000Z", // Fixed timestamp for consistency
+            isVerified: true,
+          },
+          expiresAt: 9999999999999, // Far future for testing
+        };
 
-      // Store mock session
-      localStorage.setItem("solshare-auth", JSON.stringify(mockAuthSession));
+        // Store mock session
+        localStorage.setItem("solshare-auth", JSON.stringify(mockAuthSession));
+      }
 
       console.log("[MockWallet] Initialized with address:", address);
     },

@@ -12,8 +12,8 @@ test.describe("Profile Page", () => {
       await profilePage.goto(TEST_WALLETS.creator.address);
       await profilePage.page.waitForLoadState("networkidle");
 
-      // Avatar should be visible (or fallback)
-      const avatar = profilePage.page.locator('[class*="Avatar"], [class*="avatar"]').first();
+      // Avatar should be visible (use data-slot attribute)
+      const avatar = profilePage.page.locator('[data-slot="avatar"]').first();
       await expect(avatar).toBeVisible({ timeout: 10000 });
     });
   });

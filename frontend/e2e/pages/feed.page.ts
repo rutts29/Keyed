@@ -14,11 +14,12 @@ export class FeedPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.postCards = page.locator('[class*="Card"]').filter({ hasText: /@/ });
-    this.createPostButton = page.getByRole("button", { name: /create|post/i });
+    // Use data-slot attribute from Card component, filter for posts with @ handles
+    this.postCards = page.locator('[data-slot="card"]').filter({ hasText: /@/ });
+    this.createPostButton = page.getByRole("button", { name: /create|post|publish/i });
     this.refreshButton = page.getByRole("button", { name: /refresh/i });
     this.loadingSpinner = page.locator('[class*="animate-spin"]');
-    this.emptyState = page.getByText(/no posts|empty/i);
+    this.emptyState = page.getByText(/no posts|empty|nothing/i);
     this.sidebar = page.locator("aside, [class*='Sidebar']");
   }
 
