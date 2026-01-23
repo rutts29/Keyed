@@ -65,10 +65,3 @@ export function requestLogger(req: Request, res: Response, next: NextFunction): 
 
   next();
 }
-
-/**
- * Skip logging for health checks and static assets
- */
-export function shouldSkipLogging(req: Request): boolean {
-  return req.path === '/health' || req.path.startsWith('/static/');
-}
