@@ -1,90 +1,19 @@
-# SolShare
+# SolShare Technical Documentation
 
-A decentralized social media platform built on Solana with AI-powered content discovery and creator monetization.
+Comprehensive technical documentation for deploying, configuring, and operating SolShare.
 
-## What is SolShare?
+## Table of Contents
 
-SolShare reimagines social media for Web3 — combining the best of decentralized technology with modern AI capabilities to create a platform where **creators own their content and monetize directly**.
+- [Prerequisites](#prerequisites)
+- [Local Development](#local-development)
+- [Deployment Guide](#deployment-guide)
+- [API Reference](#api-reference)
+- [Environment Variables](#environment-variables)
+- [Testing](#testing)
+- [Deployment Runbook](#deployment-runbook)
+- [Troubleshooting](#troubleshooting)
 
-## Key Features
-
-| Feature | Description |
-|---------|-------------|
-| **Wallet-Based Identity** | No passwords. Sign in with Phantom, Solflare, or any Solana wallet |
-| **AI-Powered Discovery** | Semantic search finds content by meaning, not just keywords |
-| **Creator Monetization** | Native tips, subscriptions, and withdrawals via Solana — no middlemen |
-| **Anonymous Tipping** | Privacy-preserving tips using zero-knowledge proofs — support creators without revealing your identity |
-| **Token-Gated Content** | Restrict access by token or NFT ownership for exclusive content |
-| **Decentralized Storage** | Content stored on IPFS, ensuring permanence and censorship resistance |
-| **Smart Moderation** | AI-driven content safety without centralized control |
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         SolShare Platform                           │
-├─────────────────┬─────────────────┬─────────────────┬───────────────┤
-│   Frontend      │   Backend API   │   AI Service    │    Solana     │
-│   (Next.js)     │   (Express.js)  │   (FastAPI)     │   Programs    │
-└────────┬────────┴────────┬────────┴────────┬────────┴───────┬───────┘
-         │                 │                 │                │
-    ┌────▼────┐      ┌─────▼─────┐     ┌─────▼─────┐    ┌─────▼─────┐
-    │ Supabase│      │Cloudflare │     │  Qdrant   │    │  Devnet   │
-    │PostgreSQL      │  R2/IPFS  │     │ (Vectors) │    │ (Anchor)  │
-    └─────────┘      └───────────┘     └───────────┘    └───────────┘
-```
-
-## Tech Stack
-
-| Layer | Technologies |
-|-------|--------------|
-| **Blockchain** | Solana, Anchor (Rust), SPL Tokens |
-| **Backend** | Express.js, TypeScript, BullMQ |
-| **AI/ML** | FastAPI, OpenAI GPT-5.2, Voyage AI Embeddings |
-| **Database** | Supabase (PostgreSQL), Qdrant (Vector DB), Upstash Redis |
-| **Storage** | Cloudflare R2, IPFS (Pinata) |
-| **Infrastructure** | Railway, Docker |
-
-## Solana Programs
-
-Three on-chain programs power SolShare's Web3 functionality:
-
-| Program | Purpose |
-|---------|---------|
-| **Social** | Profiles, posts, follows, likes — the social graph on-chain |
-| **Payment** | Creator vaults, tips, subscriptions, withdrawals |
-| **Token Gate** | Access control via token/NFT ownership verification |
-
-## Quick Start
-
-```bash
-# Clone the repository
-git clone https://github.com/your-org/solshare.git
-cd solshare
-
-# Install dependencies
-cd backend && npm install
-cd ../ai-service && pip install -r requirements.txt
-
-# Configure environment
-cp backend/.env.example backend/.env
-cp ai-service/.env.example ai-service/.env
-
-# Start services
-cd backend && npm run dev          # API server
-cd ai-service && uvicorn app.main:app --reload  # AI service
-```
-
-## Project Structure
-
-```
-solshare/
-├── frontend/          # Next.js web application
-├── backend/           # Express.js API + BullMQ workers
-├── ai-service/        # FastAPI AI/ML microservice
-├── solshare/          # Anchor programs (Rust)
-└── scripts/           # Deployment & integration tests
-```
+---
 
 ## Prerequisites
 
@@ -94,7 +23,9 @@ solshare/
 - Solana CLI
 - Docker (optional)
 
-## Quick Start
+---
+
+## Local Development
 
 ### 1. Clone and Install
 
@@ -134,6 +65,8 @@ cd backend && npm run dev:worker
 cd ai-service && uvicorn app.main:app --reload --port 8000
 ```
 
+---
+
 ## Deployment Guide
 
 ### Phase 1: External Services Setup
@@ -161,6 +94,7 @@ Run migrations in Supabase SQL Editor (in order):
 -- 3. backend/migrations/003_moderation_tables.sql
 -- 4. backend/migrations/004_functions.sql
 -- 5. backend/migrations/005_realtime.sql
+-- 6. backend/migrations/006_privacy_tables.sql
 ```
 
 Enable Realtime for tables: `posts`, `likes`, `comments`, `follows`
@@ -227,9 +161,12 @@ railway up
 
 Set internal URL: `http://solshare-ai.railway.internal:8000`
 
+---
+
 ## API Reference
 
 ### Authentication
+
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/auth/challenge` | POST | Get signing challenge |
@@ -237,6 +174,7 @@ Set internal URL: `http://solshare-ai.railway.internal:8000`
 | `/api/auth/refresh` | POST | Refresh JWT token |
 
 ### Posts
+
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/posts/upload` | POST | Upload media file |
@@ -246,6 +184,7 @@ Set internal URL: `http://solshare-ai.railway.internal:8000`
 | `/api/posts/:id/comments` | GET/POST | Get/add comments |
 
 ### Search
+
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/search/semantic` | POST | AI semantic search |
@@ -254,6 +193,7 @@ Set internal URL: `http://solshare-ai.railway.internal:8000`
 | `/api/search/suggest` | GET | Autocomplete |
 
 ### Payments
+
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/payments/vault/initialize` | POST | Initialize creator vault |
@@ -263,6 +203,7 @@ Set internal URL: `http://solshare-ai.railway.internal:8000`
 | `/api/payments/withdraw` | POST | Withdraw funds |
 
 ### Access Control
+
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/access/verify` | GET | Check access to post |
@@ -270,38 +211,7 @@ Set internal URL: `http://solshare-ai.railway.internal:8000`
 | `/api/access/verify-token` | POST | Verify token access |
 | `/api/access/verify-nft` | POST | Verify NFT access |
 
-## Testing
-
-### Unit Tests
-
-```bash
-# Backend
-cd backend && npm test
-
-# AI Service
-cd ai-service && pytest
-
-# Solana programs
-cd solshare && anchor test
-```
-
-### Integration Tests
-
-```bash
-cd scripts/integration-tests
-npm install
-cp .env.example .env  # Configure test environment
-
-# Run all tests
-npm test
-
-# Run specific suite
-npm run test:auth
-npm run test:posts
-npm run test:search
-npm run test:payments
-npm run test:access
-```
+---
 
 ## Environment Variables
 
@@ -367,6 +277,102 @@ SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 ```
 
+---
+
+## Testing
+
+### Unit Tests
+
+```bash
+# Backend
+cd backend && npm test
+
+# AI Service
+cd ai-service && pytest
+
+# Solana programs
+cd solshare && anchor test
+```
+
+### Integration Tests
+
+```bash
+cd scripts/integration-tests
+npm install
+cp .env.example .env  # Configure test environment
+
+# Run all tests
+npm test
+
+# Run specific suite
+npm run test:auth
+npm run test:posts
+npm run test:search
+npm run test:payments
+npm run test:access
+```
+
+---
+
+## Deployment Runbook
+
+### Pre-Deployment Checklist
+
+- [ ] All environment variables configured
+- [ ] Database migrations run successfully
+- [ ] Qdrant collection initialized
+- [ ] Solana programs deployed and IDs updated
+- [ ] Health checks passing locally
+
+### Deployment Order
+
+1. **Database**: Run migrations in order (001-006)
+2. **AI Service**: Deploy first (backend depends on it)
+3. **Backend API**: Deploy with health check verification
+4. **Backend Worker**: Deploy after API is healthy
+5. **Frontend**: Deploy last (depends on backend URL)
+
+### Health Check Endpoints
+
+| Service | Endpoint | Expected Response |
+|---------|----------|-------------------|
+| Backend | `GET /health` | `{"status":"healthy","services":{...}}` |
+| AI Service | `GET /health` | `{"status":"healthy"}` |
+
+### Rollback Procedure
+
+```bash
+# Railway rollback
+railway rollback --service solshare-api
+
+# Or redeploy specific commit
+railway up --detach --ref <commit-sha>
+```
+
+---
+
+## Troubleshooting
+
+### Common Issues & Solutions
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| `ECONNREFUSED` to AI service | AI service not ready | Wait for health check, check internal URL |
+| `Invalid JWT` | Secret mismatch | Verify `JWT_SECRET` matches across services |
+| Redis connection failed | Wrong URL format | Use `rediss://` (with double s) for TLS |
+| IDL file not found | Missing IDL export | Run `anchor build` and copy IDL files |
+| Qdrant 404 | Collection not created | Run `setup_qdrant.py` script |
+
+### Monitoring Checklist
+
+- [ ] Check `/health` endpoint returns 200
+- [ ] Verify Redis connection in logs
+- [ ] Confirm AI service is reachable
+- [ ] Test auth flow end-to-end
+- [ ] Verify Solana RPC connectivity
+
+---
+
 ## API Versioning Strategy
 
 The API currently uses **implicit versioning** (v1 by default). Future versions will use URL path versioning.
@@ -397,61 +403,6 @@ X-API-Sunset-Date: 2026-06-01  # When deprecated endpoint will be removed
 
 ---
 
-## Deployment Runbook
-
-### Pre-Deployment Checklist
-
-- [ ] All environment variables configured
-- [ ] Database migrations run successfully
-- [ ] Qdrant collection initialized
-- [ ] Solana programs deployed and IDs updated
-- [ ] Health checks passing locally
-
-### Deployment Steps
-
-1. **Database**: Run migrations in order (001-006)
-2. **AI Service**: Deploy first (backend depends on it)
-3. **Backend API**: Deploy with health check verification
-4. **Backend Worker**: Deploy after API is healthy
-5. **Frontend**: Deploy last (depends on backend URL)
-
-### Health Check Endpoints
-
-| Service | Endpoint | Expected Response |
-|---------|----------|-------------------|
-| Backend | `GET /health` | `{"status":"healthy","services":{...}}` |
-| AI Service | `GET /health` | `{"status":"healthy"}` |
-
-### Rollback Procedure
-
-```bash
-# Railway rollback
-railway rollback --service solshare-api
-
-# Or redeploy specific commit
-railway up --detach --ref <commit-sha>
-```
-
-### Common Issues & Solutions
-
-| Issue | Cause | Solution |
-|-------|-------|----------|
-| `ECONNREFUSED` to AI service | AI service not ready | Wait for health check, check internal URL |
-| `Invalid JWT` | Secret mismatch | Verify `JWT_SECRET` matches across services |
-| Redis connection failed | Wrong URL format | Use `rediss://` (with double s) for TLS |
-| IDL file not found | Missing IDL export | Run `anchor build` and copy IDL files |
-| Qdrant 404 | Collection not created | Run `setup_qdrant.py` script |
-
-### Monitoring Checklist
-
-- [ ] Check `/health` endpoint returns 200
-- [ ] Verify Redis connection in logs
-- [ ] Confirm AI service is reachable
-- [ ] Test auth flow end-to-end
-- [ ] Verify Solana RPC connectivity
-
----
-
 ## Security Considerations
 
 - All API endpoints are rate-limited
@@ -461,29 +412,17 @@ railway up --detach --ref <commit-sha>
 - CORS restricted to frontend origin
 - AI service only accessible from backend
 
-## Documentation
-
-- **[Technical Documentation](docs/TECHNICAL_DOCS.md)** — Deployment guides, API reference, environment setup
-- **[Privacy Integration](docs/PRIVACY_INTEGRATION_STATUS.md)** — Anonymous tipping architecture and ZK implementation
-- **[Frontend Spec](docs/FRONTEND_TECHNICAL_SPEC.md)** — Frontend architecture and components
-- **[AI Service Docs](ai-service/docs/AI_SERVICE_IMPLEMENTATION.md)** — ML pipeline details
-- **[Security Audit](docs/SECURITY_AUDIT_REPORT.md)** — Security considerations and audit findings
-
-## Status
-
-Currently deployed on **Solana Devnet** with full functionality:
-- ✅ Wallet authentication
-- ✅ Content creation & AI analysis
-- ✅ Semantic search
-- ✅ Creator payments (tips & subscriptions)
-- ✅ Token-gated content
-- ✅ Real-time notifications
-- ✅ Privacy-preserving anonymous tipping (ZK proofs)
-
-## License
-
-MIT License — see [LICENSE](LICENSE) for details.
-
 ---
 
-*Built for the decentralized future of social media.*
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests
+5. Submit a pull request
+
+## Support
+
+- [GitHub Issues](https://github.com/your-org/solshare/issues)
+- [Discord Community](https://discord.gg/solshare)
