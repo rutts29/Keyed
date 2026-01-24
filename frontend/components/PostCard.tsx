@@ -124,7 +124,7 @@ export function PostCard({ post }: PostCardProps) {
               {stats.replies}
             </Link>
           </Button>
-          <Button variant="ghost" size="sm" className="gap-2 text-xs">
+          <Button variant="ghost" size="sm" className="gap-2 text-xs" disabled title="Coming soon">
             <Repeat2 className="h-3.5 w-3.5" />
             {stats.reposts}
           </Button>

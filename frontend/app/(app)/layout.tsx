@@ -11,6 +11,7 @@ import { TipModal } from "@/components/TipModal";
 import { SuggestedUsers } from "@/components/SuggestedUsers";
 import { TopNav } from "@/components/TopNav";
 import { TrendingPanel } from "@/components/TrendingPanel";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { trends, suggestedUsers } from "@/lib/mock-data";
 import { Sparkles } from "lucide-react";
@@ -37,7 +38,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
           <div className="flex-1 space-y-5 px-4 py-6">{children}</div>
         </div>
         <aside className="sticky top-0 hidden h-screen w-80 flex-col gap-4 py-6 xl:flex">
-          <RightRailCard title="Quick actions">
+          <RightRailCard
+            title="Quick actions"
+            action={
+              <Badge variant="outline" className="text-[9px]">
+                Soon
+              </Badge>
+            }
+          >
             <div className="space-y-2 text-xs">
               <p className="text-sm font-semibold text-foreground">
                 Launch a gated drop
@@ -45,7 +53,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <p className="text-muted-foreground">
                 Set access rules, preview the post, and publish in minutes.
               </p>
-              <Button className="h-8 w-full text-xs">Create drop</Button>
+              <Button className="h-8 w-full text-xs" disabled>
+                Create drop
+              </Button>
             </div>
             <div className="rounded-xl border border-border/70 bg-muted/40 p-3 text-xs text-muted-foreground">
               <div className="flex items-center gap-2 text-foreground">
@@ -55,7 +65,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <p className="mt-1">
                 Apply to be featured in next week&apos;s community spotlight.
               </p>
-              <Button variant="secondary" className="mt-3 h-8 w-full text-xs">
+              <Button variant="secondary" className="mt-3 h-8 w-full text-xs" disabled>
                 Apply now
               </Button>
             </div>
