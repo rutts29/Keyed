@@ -49,21 +49,23 @@ export default function SettingsPage() {
       </div>
       <Card className="border-border/70 bg-card/70">
         <CardContent className="space-y-4 p-6">
-          <div className="space-y-2">
-            <p className="text-sm font-semibold text-foreground">Username</p>
-            <Input placeholder="Enter a handle" />
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-foreground">Profile details</p>
+            <Badge variant="outline" className="text-[9px]">
+              Coming soon
+            </Badge>
           </div>
-          <div className="space-y-2">
-            <p className="text-sm font-semibold text-foreground">Bio</p>
-            <Textarea placeholder="Share a short bio" className="min-h-[96px]" />
+          <div className="space-y-2 opacity-60">
+            <p className="text-sm text-muted-foreground">Username</p>
+            <Input placeholder="Enter a handle" disabled />
           </div>
-          <Separator className="bg-border/70" />
-          <div className="flex flex-wrap items-center gap-2">
-            <Button className="h-9">Save settings</Button>
-            <Button variant="secondary" className="h-9">
-              Manage privacy
-            </Button>
+          <div className="space-y-2 opacity-60">
+            <p className="text-sm text-muted-foreground">Bio</p>
+            <Textarea placeholder="Share a short bio" className="min-h-[96px]" disabled />
           </div>
+          <p className="text-xs text-muted-foreground">
+            Profile customization will be available in a future update.
+          </p>
         </CardContent>
       </Card>
       <Card className="border-border/70 bg-card/70">
