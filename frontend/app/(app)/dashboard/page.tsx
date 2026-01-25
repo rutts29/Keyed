@@ -278,8 +278,9 @@ function AnalyticsBreakdown({
   isLoading: boolean;
 }) {
   const total = publicTips + privateTips;
-  const publicPercent = total > 0 ? (publicTips / total) * 100 : 50;
-  const privatePercent = total > 0 ? (privateTips / total) * 100 : 50;
+  const publicPercent = total > 0 ? (publicTips / total) * 100 : 0;
+  const privatePercent = total > 0 ? (privateTips / total) * 100 : 0;
+  const hasData = total > 0;
 
   return (
     <Card className="border-border/70 bg-card/70">
@@ -289,6 +290,11 @@ function AnalyticsBreakdown({
       <CardContent className="space-y-4">
         {isLoading ? (
           <Skeleton className="h-20 w-full" />
+        ) : !hasData ? (
+          <div className="py-6 text-center text-sm text-muted-foreground">
+            <p>No tips received yet</p>
+            <p className="text-xs mt-1">Analytics will appear here once you receive tips</p>
+          </div>
         ) : (
           <>
             {/* Ratio Bar */}
@@ -328,7 +334,7 @@ function AnalyticsBreakdown({
               </div>
               <div>
                 <p className="text-2xl font-semibold text-foreground">
-                  {total > 0 ? Math.round((privateTips / total) * 100) : 0}%
+                  {Math.round((privateTips / total) * 100)}%
                 </p>
                 <p className="text-xs text-muted-foreground">Privacy Rate</p>
               </div>

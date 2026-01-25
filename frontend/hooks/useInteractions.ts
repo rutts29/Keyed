@@ -1,16 +1,61 @@
 "use client"
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query"
 import { useDynamicContext } from "@dynamic-labs/sdk-react-core"
 
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/queryClient"
 import { signAndSubmitTransaction } from "@/lib/solana"
-import type { ApiResponse, Comment, TransactionResponse } from "@/types"
+import type { ApiResponse, Comment, FeedItem, TransactionResponse } from "@/types"
 
 type CommentsResponse = {
   comments: Comment[]
   nextCursor: string | null
+}
+
+export function usePost(postId: string) {
+  const hasApi = Boolean(process.env.NEXT_PUBLIC_API_URL)
+
+  return useQuery({
+    queryKey: queryKeys.post(postId),
+    queryFn: async () => {
+      const { data } = await api.get<ApiResponse<FeedItem>>(
+        `/posts/${postId}`
+      )
+      if (!data.data) {
+        throw new Error("Post not found")
+      }
+      return data.data
+    },
+    enabled: hasApi && Boolean(postId),
+    retry: (failureCount, error) => {
+      if (error instanceof Error && error.message === "Post not found") {
+        return false
+      }
+      return failureCount < 3
+    },
+  })
+}
+
+export function useInfiniteComments(postId: string, limit = 10) {
+  const hasApi = Boolean(process.env.NEXT_PUBLIC_API_URL)
+
+  return useInfiniteQuery({
+    queryKey: [...queryKeys.comments(postId), "infinite"],
+    queryFn: async ({ pageParam }) => {
+      const { data } = await api.get<ApiResponse<CommentsResponse>>(
+        `/posts/${postId}/comments`,
+        { params: { limit, cursor: pageParam } }
+      )
+      if (!data.data) {
+        throw new Error("Comments unavailable")
+      }
+      return data.data
+    },
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    enabled: hasApi && Boolean(postId),
+  })
 }
 
 export function usePostComments(postId: string) {
