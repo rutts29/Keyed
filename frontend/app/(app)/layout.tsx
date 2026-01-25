@@ -13,7 +13,6 @@ import { TopNav } from "@/components/TopNav";
 import { TrendingPanel } from "@/components/TrendingPanel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { trends, suggestedUsers } from "@/lib/mock-data";
 import { Sparkles } from "lucide-react";
 
 type AppLayoutProps = {
@@ -70,8 +69,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
               </Button>
             </div>
           </RightRailCard>
-          <TrendingPanel trends={trends} />
-          <SuggestedUsers users={suggestedUsers} />
+          <TrendingPanel />
+          <SuggestedUsers />
         </aside>
       </div>
     </div>
