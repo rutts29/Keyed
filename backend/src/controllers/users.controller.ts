@@ -12,26 +12,54 @@ import { logger } from '../utils/logger.js';
 export const usersController = {
   async getProfile(req: AuthenticatedRequest, res: Response) {
     const { wallet } = req.params;
+    const viewerWallet = req.wallet;
 
-    const cached = await cacheService.getUser(wallet);
-    if (cached) {
-      res.json({ success: true, data: cached });
-      return;
+    // Get base user data (cacheable)
+    let user = await cacheService.getUser(wallet);
+
+    if (!user) {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('wallet', wallet)
+        .single();
+
+      if (error || !data) {
+        throw new AppError(404, 'NOT_FOUND', 'User not found');
+      }
+
+      user = data;
+      await cacheService.setUser(wallet, user);
     }
 
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('wallet', wallet)
-      .single();
+    // Determine isFollowing status (not cached - user-specific)
+    let isFollowing = false;
+    if (viewerWallet && viewerWallet !== wallet) {
+      // Try to use cached following list first
+      const cachedFollowing = await cacheService.getFollowing(viewerWallet);
 
-    if (error || !user) {
-      throw new AppError(404, 'NOT_FOUND', 'User not found');
+      if (cachedFollowing) {
+        isFollowing = cachedFollowing.includes(wallet);
+      } else {
+        // Query database directly
+        const { data: followRecord } = await supabase
+          .from('follows')
+          .select('follower_wallet')
+          .eq('follower_wallet', viewerWallet)
+          .eq('following_wallet', wallet)
+          .single();
+
+        isFollowing = followRecord !== null;
+      }
     }
 
-    await cacheService.setUser(wallet, user);
-
-    res.json({ success: true, data: user });
+    res.json({
+      success: true,
+      data: {
+        ...user,
+        isFollowing,
+      },
+    });
   },
 
   async createOrUpdateProfile(req: AuthenticatedRequest, res: Response) {
@@ -299,6 +327,54 @@ export const usersController = {
       data: {
         exists: profile !== null,
         onChain: profile !== null,
+      },
+    });
+  },
+
+  async getSuggestedUsers(req: AuthenticatedRequest, res: Response) {
+    const wallet = req.wallet!;
+    const limit = Math.min(parseInt(req.query.limit as string) || 5, 20);
+
+    // Get the user's following list (from cache or DB)
+    let followingWallets = await cacheService.getFollowing(wallet);
+
+    if (!followingWallets) {
+      const { data: follows, error: followError } = await supabase
+        .from('follows')
+        .select('following_wallet')
+        .eq('follower_wallet', wallet);
+
+      if (followError) {
+        logger.error({ error: followError, wallet }, 'Failed to fetch following list for suggestions');
+        throw new AppError(500, 'DB_ERROR', 'Failed to fetch following list');
+      }
+
+      followingWallets = follows?.map(f => f.following_wallet) || [];
+      await cacheService.setFollowing(wallet, followingWallets);
+    }
+
+    // Build exclusion list: users already followed + current user
+    const excludeWallets = [...followingWallets, wallet];
+
+    // Query for suggested users: not in exclusion list, ordered by follower_count
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('wallet, username, bio, profile_image_uri, follower_count, is_verified')
+      .not('wallet', 'in', `(${excludeWallets.join(',')})`)
+      .order('follower_count', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      logger.error({ error, wallet }, 'Failed to fetch suggested users');
+      throw new AppError(500, 'DB_ERROR', 'Failed to fetch suggested users');
+    }
+
+    logger.debug({ wallet, suggestedCount: users?.length || 0 }, 'Fetched suggested users');
+
+    res.json({
+      success: true,
+      data: {
+        users: users || [],
       },
     });
   },
