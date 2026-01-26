@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { useDynamicContext } from "@dynamic-labs/sdk-react-core"
+import { useSafeDynamicContext } from "@/hooks/useSafeDynamicContext"
 import { useMutation } from "@tanstack/react-query"
 import { toast } from "sonner"
 
@@ -28,7 +28,7 @@ type UploadResponse = {
 type Stage = "idle" | "uploading" | "blocked" | "preview" | "posting" | "success"
 
 export function CreatePostModal() {
-  const { primaryWallet } = useDynamicContext()
+  const { primaryWallet } = useSafeDynamicContext()
   const token = useAuthStore((state) => state.token)
   const isOpen = useUIStore((state) => state.isCreatePostOpen)
   const closeCreatePost = useUIStore((state) => state.closeCreatePost)

@@ -1,14 +1,15 @@
 "use client";
 
 import { useCallback } from "react";
-import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
+
+import { useSafeDynamicContext } from "./useSafeDynamicContext";
 
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import type { ApiResponse, AuthChallenge, AuthSession } from "@/types";
 
 export function useAuth() {
-  const { primaryWallet, handleLogOut } = useDynamicContext();
+  const { primaryWallet, handleLogOut } = useSafeDynamicContext();
   const { token, setAuth, clearAuth } = useAuthStore();
 
   const login = useCallback(async () => {

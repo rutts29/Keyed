@@ -1,7 +1,8 @@
 "use client"
 
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { useDynamicContext } from "@dynamic-labs/sdk-react-core"
+
+import { useSafeDynamicContext } from "./useSafeDynamicContext"
 
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/queryClient"
@@ -10,7 +11,7 @@ import type { ApiResponse, TransactionResponse } from "@/types"
 
 export function useVerifyTokenAccess(postId: string) {
   const queryClient = useQueryClient()
-  const { primaryWallet } = useDynamicContext()
+  const { primaryWallet } = useSafeDynamicContext()
 
   return useMutation({
     mutationFn: async () => {
@@ -35,7 +36,7 @@ export function useVerifyTokenAccess(postId: string) {
 
 export function useVerifyNftAccess(postId: string) {
   const queryClient = useQueryClient()
-  const { primaryWallet } = useDynamicContext()
+  const { primaryWallet } = useSafeDynamicContext()
 
   return useMutation({
     mutationFn: async (nftMint: string) => {

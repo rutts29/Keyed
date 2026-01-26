@@ -11,7 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { useUIStore } from "@/store/uiStore";
 import type { Post as MockPost } from "@/lib/mock-data";
 import type { FeedItem } from "@/types";
-import { MessageCircle, Repeat2, Share2 } from "lucide-react";
+import { MessageCircle, Share2 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 type PostCardPost = FeedItem | MockPost;
@@ -123,10 +123,6 @@ export function PostCard({ post }: PostCardProps) {
               <MessageCircle className="h-3.5 w-3.5" />
               {stats.replies}
             </Link>
-          </Button>
-          <Button variant="ghost" size="sm" className="gap-2 text-xs" disabled title="Coming soon">
-            <Repeat2 className="h-3.5 w-3.5" />
-            {stats.reposts}
           </Button>
           <LikeButton
             postId={post.id}

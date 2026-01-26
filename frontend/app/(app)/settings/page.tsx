@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
+import { useSafeDynamicContext } from "@/hooks/useSafeDynamicContext";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -20,7 +20,7 @@ import {
 } from "@/hooks/usePrivacy";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { api } from "@/lib/api";
-import { lamportsToSol } from "@/lib/solana";
+import { lamportsToSol, signAndSubmitTransaction } from "@/lib/solana";
 import { useAuthStore } from "@/store/authStore";
 import type { ApiResponse, TransactionResponse } from "@/types";
 
@@ -38,7 +38,7 @@ function validateUsername(value: string): string | null {
 }
 
 export default function SettingsPage() {
-  const { primaryWallet } = useDynamicContext();
+  const { primaryWallet } = useSafeDynamicContext();
   const wallet = primaryWallet?.address ?? null;
   const { user, setUser } = useAuthStore();
 
@@ -145,10 +145,15 @@ export default function SettingsPage() {
       if (data.data.transaction && primaryWallet) {
         toast.info("Please sign the transaction to update your profile");
         try {
-          await primaryWallet.signMessage(data.data.transaction);
-          toast.success("Profile updated successfully");
-        } catch {
-          toast.error("Transaction signing was cancelled");
+          await signAndSubmitTransaction(data.data.transaction, primaryWallet);
+          toast.success("Profile updated on-chain");
+        } catch (txError) {
+          const message = txError instanceof Error ? txError.message : "Transaction failed";
+          if (message.includes("cancelled") || message.includes("rejected")) {
+            toast.error("Transaction signing was cancelled");
+          } else {
+            toast.error(`Transaction failed: ${message}`);
+          }
           return;
         }
       } else {

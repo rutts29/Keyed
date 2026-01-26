@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { AppSidebar } from "@/components/AppSidebar";
 import { AuthSync } from "@/components/AuthSync";
+import { ClientOnly } from "@/components/ClientOnly";
 import { RealtimeSync } from "@/components/RealtimeSync";
 import { CreatePostModal } from "@/components/CreatePostModal";
 import { RightRailCard } from "@/components/RightRailCard";
@@ -22,18 +23,24 @@ type AppLayoutProps = {
 export default function AppLayout({ children }: AppLayoutProps) {
   return (
     <div className="min-h-screen bg-background">
-      <AuthSync />
-      <RealtimeSync />
-      <CreatePostModal />
-      <ShieldModal />
-      <TipModal />
-      <SubscribeModal />
+      <ClientOnly>
+        <AuthSync />
+        <RealtimeSync />
+        <CreatePostModal />
+        <ShieldModal />
+        <TipModal />
+        <SubscribeModal />
+      </ClientOnly>
       <div className="mx-auto flex w-full max-w-6xl gap-6 px-4">
         <aside className="sticky top-0 hidden h-screen w-60 flex-col py-6 lg:flex">
-          <AppSidebar />
+          <ClientOnly>
+            <AppSidebar />
+          </ClientOnly>
         </aside>
         <div className="flex min-h-screen flex-1 flex-col border-x border-border/70">
-          <TopNav />
+          <ClientOnly>
+            <TopNav />
+          </ClientOnly>
           <div className="flex-1 space-y-5 px-4 py-6">{children}</div>
         </div>
         <aside className="sticky top-0 hidden h-screen w-80 flex-col gap-4 py-6 xl:flex">

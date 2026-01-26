@@ -1,7 +1,8 @@
 "use client"
 
 import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query"
-import { useDynamicContext } from "@dynamic-labs/sdk-react-core"
+
+import { useSafeDynamicContext } from "./useSafeDynamicContext"
 
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/queryClient"
@@ -78,7 +79,7 @@ export function usePostComments(postId: string) {
 
 export function useAddComment(postId: string) {
   const queryClient = useQueryClient()
-  const { primaryWallet } = useDynamicContext()
+  const { primaryWallet } = useSafeDynamicContext()
 
   return useMutation({
     mutationFn: async (text: string) => {
@@ -103,7 +104,7 @@ export function useAddComment(postId: string) {
 
 export function useLikePost(postId: string) {
   const queryClient = useQueryClient()
-  const { primaryWallet } = useDynamicContext()
+  const { primaryWallet } = useSafeDynamicContext()
 
   return useMutation({
     mutationFn: async () => {
@@ -130,7 +131,7 @@ export function useLikePost(postId: string) {
 
 export function useUnlikePost(postId: string) {
   const queryClient = useQueryClient()
-  const { primaryWallet } = useDynamicContext()
+  const { primaryWallet } = useSafeDynamicContext()
 
   return useMutation({
     mutationFn: async () => {
@@ -157,7 +158,7 @@ export function useUnlikePost(postId: string) {
 
 export function useFollowUser(wallet: string) {
   const queryClient = useQueryClient()
-  const { primaryWallet } = useDynamicContext()
+  const { primaryWallet } = useSafeDynamicContext()
 
   return useMutation({
     mutationFn: async () => {
@@ -181,7 +182,7 @@ export function useFollowUser(wallet: string) {
 
 export function useUnfollowUser(wallet: string) {
   const queryClient = useQueryClient()
-  const { primaryWallet } = useDynamicContext()
+  const { primaryWallet } = useSafeDynamicContext()
 
   return useMutation({
     mutationFn: async () => {

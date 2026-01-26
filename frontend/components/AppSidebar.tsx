@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
+import { useSafeDynamicContext } from "@/hooks/useSafeDynamicContext";
 
 import { PrivacyBalance } from "@/components/PrivacyBalance";
 import { Badge } from "@/components/ui/badge";
@@ -46,7 +46,7 @@ const navItems = [
 export function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { handleLogOut } = useDynamicContext();
+  const { handleLogOut } = useSafeDynamicContext();
   const wallet = useAuthStore((state) => state.wallet);
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const profileHref = wallet ? `/profile/${wallet}` : "/profile/me";

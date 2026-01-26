@@ -1,7 +1,8 @@
 "use client"
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useDynamicContext } from "@dynamic-labs/sdk-react-core"
+
+import { useSafeDynamicContext } from "./useSafeDynamicContext"
 
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/queryClient"
@@ -18,7 +19,7 @@ type EarningsResponse = {
 
 export function useTip() {
   const queryClient = useQueryClient()
-  const { primaryWallet } = useDynamicContext()
+  const { primaryWallet } = useSafeDynamicContext()
 
   return useMutation({
     mutationFn: async ({
@@ -55,7 +56,7 @@ export function useTip() {
 
 export function useSubscribe() {
   const queryClient = useQueryClient()
-  const { primaryWallet } = useDynamicContext()
+  const { primaryWallet } = useSafeDynamicContext()
 
   return useMutation({
     mutationFn: async ({
@@ -89,7 +90,7 @@ export function useSubscribe() {
 
 export function useCancelSubscription(creatorWallet: string) {
   const queryClient = useQueryClient()
-  const { primaryWallet } = useDynamicContext()
+  const { primaryWallet } = useSafeDynamicContext()
 
   return useMutation({
     mutationFn: async () => {
@@ -113,7 +114,7 @@ export function useCancelSubscription(creatorWallet: string) {
 
 export function useWithdrawEarnings() {
   const queryClient = useQueryClient()
-  const { primaryWallet } = useDynamicContext()
+  const { primaryWallet } = useSafeDynamicContext()
 
   return useMutation({
     mutationFn: async (amountInSol: number) => {

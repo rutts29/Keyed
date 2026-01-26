@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
+import { useSafeDynamicContext } from "@/hooks/useSafeDynamicContext";
 import { toast } from "sonner";
 
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthStore } from "@/store/authStore";
 
 export function AuthSync() {
-  const { primaryWallet } = useDynamicContext();
+  const { primaryWallet } = useSafeDynamicContext();
   const token = useAuthStore((state) => state.token);
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const { login } = useAuth();

@@ -2,7 +2,9 @@
 
 import { useMemo } from "react"
 
+import { Eye } from "lucide-react"
 import { PostCard } from "@/components/PostCard"
+import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useInfiniteFeed } from "@/hooks/useInfiniteFeed"
@@ -70,14 +72,24 @@ export function PostFeed({
   if (showMock) {
     return (
       <>
-        {mockNotice ? (
-          <Card className="border-border/70 bg-card/70">
-            <CardContent className="space-y-2 p-6 text-sm text-muted-foreground">
-              <p className="font-semibold text-foreground">Mock feed.</p>
-              <p>{mockNotice}</p>
-            </CardContent>
-          </Card>
-        ) : null}
+        <Card className="border-amber-500/30 bg-amber-500/5">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <Eye className="h-4 w-4 text-amber-500" />
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-foreground">Preview Mode</span>
+                  <Badge variant="outline" className="text-[10px] border-amber-500/50 text-amber-500">
+                    Demo
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {mockNotice || "Showing sample content. Connect to backend for live data."}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
         {mockFeedItems.map((post) => (
           <PostCard key={post.id} post={post} />
         ))}

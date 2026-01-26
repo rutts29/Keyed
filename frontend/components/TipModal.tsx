@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { useDynamicContext } from "@dynamic-labs/sdk-react-core"
+import { useSafeDynamicContext } from "@/hooks/useSafeDynamicContext"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -18,7 +18,7 @@ import { useUIStore } from "@/store/uiStore"
 const presets = [0.1, 0.5, 1]
 
 export function TipModal() {
-  const { primaryWallet } = useDynamicContext()
+  const { primaryWallet } = useSafeDynamicContext()
   const { data: privacySettings } = usePrivacySettings()
   const { data: privacyBalance } = usePrivacyBalance()
   const openShieldModal = usePrivacyStore((state) => state.openShieldModal)

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useDynamicContext } from "@dynamic-labs/sdk-react-core"
+import { useSafeDynamicContext } from "@/hooks/useSafeDynamicContext"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -14,7 +14,7 @@ import { usePrivacyBalance, useShieldSol } from "@/hooks/usePrivacy"
 import { usePrivacyStore } from "@/store/privacyStore"
 
 export function ShieldModal() {
-  const { primaryWallet } = useDynamicContext()
+  const { primaryWallet } = useSafeDynamicContext()
   const { data } = usePrivacyBalance()
   const { mutateAsync, isPending } = useShieldSol()
   const isOpen = usePrivacyStore((state) => state.isShieldModalOpen)
