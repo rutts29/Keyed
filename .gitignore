@@ -71,4 +71,4 @@ tmp/
 temp/
 backend/node_modules/.vite/vitest/results.json
 frontend/playwright-report
-cursor transcripts/
+cursor transcripts/.worktrees/
