@@ -200,7 +200,12 @@ export const postsController = {
       await supabase.rpc('increment_post_likes', { post_id: postId });
       
       await cacheService.invalidatePost(postId);
-      await realtimeService.notifyLike(postId, wallet, post.creator_wallet);
+      await addJob('notification', {
+        type: 'like',
+        postId,
+        targetWallet: post.creator_wallet,
+        fromWallet: wallet,
+      });
     }
     
     res.json({ success: true, data: txResponse });
@@ -291,7 +296,12 @@ export const postsController = {
     await supabase.rpc('increment_post_comments', { post_id: postId });
     
     await cacheService.invalidatePost(postId);
-    await realtimeService.notifyComment(postId, comment, post.creator_wallet);
+    await addJob('notification', {
+      type: 'comment',
+      postId,
+      targetWallet: post.creator_wallet,
+      fromWallet: wallet,
+    });
     
     res.json({
       success: true,

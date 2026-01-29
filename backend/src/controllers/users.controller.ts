@@ -5,6 +5,7 @@ import { supabase } from '../config/supabase.js';
 import { cacheService } from '../services/cache.service.js';
 import { solanaService } from '../services/solana.service.js';
 import { realtimeService } from '../services/realtime.service.js';
+import { addJob } from '../jobs/queues.js';
 import { fetchUserProfile } from '../config/solana.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { logger } from '../utils/logger.js';
@@ -246,7 +247,11 @@ export const usersController = {
     await cacheService.invalidateUser(wallet);
     await cacheService.invalidateUser(targetWallet);
 
-    await realtimeService.notifyFollow(wallet, targetWallet);
+    await addJob('notification', {
+      type: 'follow',
+      targetWallet,
+      fromWallet: wallet,
+    });
 
     logger.info({ wallet, targetWallet }, 'Built follow transaction');
 
