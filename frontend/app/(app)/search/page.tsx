@@ -22,7 +22,6 @@ import { SearchFilters, type SearchFilter } from "@/components/SearchFilters";
 import { useSemanticSearch } from "@/hooks/useSearch";
 import { useTrendingTopics } from "@/hooks/useTrendingTopics";
 import { useSuggestedUsers } from "@/hooks/useSuggestedUsers";
-import { posts, feedItems } from "@/lib/mock-data";
 import type { UserProfile } from "@/types";
 
 // Helper to get initials from name or wallet
@@ -165,12 +164,7 @@ function SearchResultCard({
   description?: string;
   creatorWallet?: string;
 }) {
-  // Try to find matching post in feedItems for more details
-  const matchingPost = feedItems.find((p) => p.id === postId);
-  const imageUrl = matchingPost ? resolveImageUrl(matchingPost.contentUri) : null;
-  const creator = matchingPost?.creator;
-  const caption = matchingPost?.caption ?? description ?? "Matching post";
-  const tags = matchingPost?.autoTags ?? [];
+  const caption = description ?? "Matching post";
 
   // Format relevance score as percentage
   const relevancePercent = Math.round(score * 100);
@@ -184,21 +178,11 @@ function SearchResultCard({
     <Card className="border-border/70 bg-card/70 transition-colors hover:bg-muted/60 hover:border-border hover:shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
       <CardContent className="p-4">
         <div className="flex gap-4">
-          {/* Thumbnail */}
+          {/* Thumbnail placeholder */}
           <div className="shrink-0">
-            {imageUrl ? (
-              <div className="h-24 w-24 overflow-hidden rounded-lg border border-border/70 bg-muted/30">
-                <img
-                  src={imageUrl}
-                  alt=""
-                  className="h-full w-full object-cover"
-                />
-              </div>
-            ) : (
-              <div className="flex h-24 w-24 items-center justify-center rounded-lg border border-border/70 bg-muted/30">
-                <Search className="h-8 w-8 text-muted-foreground/50" />
-              </div>
-            )}
+            <div className="flex h-24 w-24 items-center justify-center rounded-lg border border-border/70 bg-muted/30">
+              <Search className="h-8 w-8 text-muted-foreground/50" />
+            </div>
           </div>
 
           {/* Content */}
@@ -207,29 +191,14 @@ function SearchResultCard({
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
-                  {creator?.profileImageUri && (
-                    <AvatarImage
-                      src={resolveImageUrl(creator.profileImageUri) ?? ""}
-                      alt={creator.username ?? ""}
-                    />
-                  )}
                   <AvatarFallback className="text-xs">
-                    {creator
-                      ? getInitials(creator.username ?? creator.wallet)
-                      : creatorWallet
-                        ? getInitials(creatorWallet)
-                        : "?"}
+                    {creatorWallet ? getInitials(creatorWallet) : "?"}
                   </AvatarFallback>
                 </Avatar>
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">
-                    {creator?.username ?? (creatorWallet ? formatWallet(creatorWallet) : "Unknown")}
+                    {creatorWallet ? formatWallet(creatorWallet) : "Unknown"}
                   </p>
-                  {creator?.username && (
-                    <p className="text-xs text-muted-foreground">
-                      @{creator.username}
-                    </p>
-                  )}
                 </div>
               </div>
               {/* Relevance indicator */}
@@ -244,21 +213,6 @@ function SearchResultCard({
 
             {/* Description */}
             <p className="text-sm text-foreground line-clamp-2">{caption}</p>
-
-            {/* Tags */}
-            {tags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {tags.slice(0, 4).map((tag) => (
-                  <Badge
-                    key={tag}
-                    variant="outline"
-                    className="text-[10px] px-1.5 py-0"
-                  >
-                    #{tag}
-                  </Badge>
-                ))}
-              </div>
-            )}
 
             {/* Quick actions */}
             <div className="flex items-center gap-2 pt-1">
@@ -382,44 +336,7 @@ function SearchContent() {
   const { data, isLoading, isError } = useSemanticSearch(query);
   const { users: suggestedUsers } = useSuggestedUsers();
   const { topics: trendingTopics } = useTrendingTopics();
-  const hasApi = Boolean(process.env.NEXT_PUBLIC_API_URL);
 
-  // Mock search results for fallback
-  const mockResults = useMemo(() => {
-    if (!query) return [];
-    const lower = query.toLowerCase();
-    return posts.filter(
-      (post) =>
-        post.content.toLowerCase().includes(lower) ||
-        post.author.name.toLowerCase().includes(lower) ||
-        post.author.handle.toLowerCase().includes(lower)
-    );
-  }, [query]);
-
-  // Mock creator search
-  const mockCreators = useMemo(() => {
-    if (!query) return [];
-    const lower = query.toLowerCase();
-    return feedItems
-      .map((item) => item.creator)
-      .filter(
-        (creator, index, self) =>
-          self.findIndex((c) => c.wallet === creator.wallet) === index &&
-          ((creator.username?.toLowerCase().includes(lower) ?? false) ||
-            (creator.bio?.toLowerCase().includes(lower) ?? false))
-      );
-  }, [query]);
-
-  // Mock tag search
-  const mockTags = useMemo(() => {
-    if (!query) return [];
-    const lower = query.toLowerCase();
-    const allTags = feedItems.flatMap((item) => item.autoTags ?? []);
-    const uniqueTags = [...new Set(allTags)];
-    return uniqueTags.filter((tag) => tag.toLowerCase().includes(lower));
-  }, [query]);
-
-  const showMock = !hasApi || isError;
   const searchResults = useMemo(() => data?.results ?? [], [data?.results]);
   const expandedQuery = data?.expandedQuery;
 
@@ -429,9 +346,9 @@ function SearchContent() {
       case "posts":
         return searchResults;
       case "creators":
-        return []; // Creators shown separately
+        return []; // Creators shown separately via suggestedUsers
       case "tags":
-        return []; // Tags shown separately
+        return []; // Tags shown separately via trendingTopics
       default:
         return searchResults;
     }
@@ -442,11 +359,11 @@ function SearchContent() {
     switch (activeFilter) {
       case "posts":
       case "all":
-        return showMock ? mockResults.length : searchResults.length;
+        return searchResults.length;
       case "creators":
-        return mockCreators.length;
+        return suggestedUsers.length;
       case "tags":
-        return mockTags.length;
+        return trendingTopics.length;
       default:
         return 0;
     }
@@ -490,10 +407,10 @@ function SearchContent() {
             suggestedUsers={suggestedUsers}
             trendingTopics={trendingTopics}
           />
-        ) : isLoading && !showMock ? (
+        ) : isLoading ? (
           // Loading state
           <LoadingState />
-        ) : !hasResults ? (
+        ) : !hasResults || isError ? (
           // No results found
           <EmptyState
             query={query}
@@ -526,29 +443,19 @@ function SearchContent() {
 
             {/* Results based on filter */}
             {activeFilter === "creators" ? (
-              // Creator results
+              // Creator results from API
               <div className="grid gap-3 sm:grid-cols-2">
-                {mockCreators.map((creator) => (
+                {suggestedUsers.map((creator) => (
                   <CreatorCard key={creator.wallet} user={creator} />
                 ))}
               </div>
             ) : activeFilter === "tags" ? (
-              // Tag results
+              // Tag results from API
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {mockTags.map((tag) => (
-                  <TagCard key={tag} tag={tag} />
+                {trendingTopics.map((topic) => (
+                  <TagCard key={topic.name} tag={topic.name} postCount={topic.postCount} />
                 ))}
               </div>
-            ) : showMock ? (
-              // Mock post results (fallback)
-              mockResults.map((post) => (
-                <SearchResultCard
-                  key={post.id}
-                  postId={post.id}
-                  score={0.85}
-                  description={post.content}
-                />
-              ))
             ) : (
               // API search results
               filteredResults.map((result) => (

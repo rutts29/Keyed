@@ -27,7 +27,6 @@ export function useInfiniteFeed(feedType: FeedType, limit = 20) {
   const token = useAuthStore((state) => state.token);
   const { ref, inView } = useInView({ rootMargin: "300px" });
   const requiresAuth = feedType === "personalized" || feedType === "following";
-  const hasApi = Boolean(process.env.NEXT_PUBLIC_API_URL);
 
   const query = useInfiniteQuery({
     queryKey: queryKeys.feed(feedType),
@@ -43,7 +42,7 @@ export function useInfiniteFeed(feedType: FeedType, limit = 20) {
     },
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-    enabled: hasApi && (!requiresAuth || Boolean(token)),
+    enabled: !requiresAuth || Boolean(token),
   });
 
   useEffect(() => {
@@ -52,5 +51,5 @@ export function useInfiniteFeed(feedType: FeedType, limit = 20) {
     }
   }, [inView, query]);
 
-  return { ...query, loadMoreRef: ref, hasApi };
+  return { ...query, loadMoreRef: ref };
 }

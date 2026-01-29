@@ -14,13 +14,6 @@ export default function AppFeedPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-end">
-        <div className="flex items-center gap-2 rounded-full border border-border/70 bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
-          <span className="h-2 w-2 rounded-full bg-primary shadow-[0_0_8px_rgba(227,106,29,0.35)] animate-[pulse_2s_ease-in-out_infinite]" />
-          Live · 32 creators
-        </div>
-      </div>
-
       <FeedComposer />
 
       <Tabs
@@ -42,7 +35,6 @@ export default function AppFeedPage() {
         <PostFeed
           feedType={feedType}
           showAuthNotice
-          mockNotice="Set NEXT_PUBLIC_API_URL to load live data."
           emptyTitle="No posts yet."
           emptyDescription="Follow creators or publish your first update."
         />

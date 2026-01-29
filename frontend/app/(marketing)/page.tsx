@@ -81,7 +81,7 @@ const activity = [
 ];
 
 export default function MarketingPage() {
-  const { setShowAuthFlow, primaryWallet } = useSafeDynamicContext();
+  const { setShowAuthFlow, primaryWallet, sdkHasLoaded } = useSafeDynamicContext();
   const [activeTab, setActiveTab] = useState<"creators" | "fans">("creators");
   const router = useRouter();
 
@@ -93,12 +93,12 @@ export default function MarketingPage() {
     }
   };
 
-  // Redirect to app once wallet is connected
+  // Redirect to app once wallet is connected (only after SDK has loaded)
   useEffect(() => {
-    if (primaryWallet?.address) {
+    if (sdkHasLoaded && primaryWallet?.address) {
       router.push("/app");
     }
-  }, [primaryWallet, router]);
+  }, [primaryWallet, router, sdkHasLoaded]);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background">

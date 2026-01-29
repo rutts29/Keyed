@@ -15,8 +15,6 @@ type CommentsResponse = {
 }
 
 export function usePost(postId: string) {
-  const hasApi = Boolean(process.env.NEXT_PUBLIC_API_URL)
-
   return useQuery({
     queryKey: queryKeys.post(postId),
     queryFn: async () => {
@@ -28,7 +26,7 @@ export function usePost(postId: string) {
       }
       return data.data
     },
-    enabled: hasApi && Boolean(postId),
+    enabled: Boolean(postId),
     retry: (failureCount, error) => {
       if (error instanceof Error && error.message === "Post not found") {
         return false
@@ -39,8 +37,6 @@ export function usePost(postId: string) {
 }
 
 export function useInfiniteComments(postId: string, limit = 10) {
-  const hasApi = Boolean(process.env.NEXT_PUBLIC_API_URL)
-
   return useInfiniteQuery({
     queryKey: [...queryKeys.comments(postId), "infinite"],
     queryFn: async ({ pageParam }) => {
@@ -55,13 +51,11 @@ export function useInfiniteComments(postId: string, limit = 10) {
     },
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-    enabled: hasApi && Boolean(postId),
+    enabled: Boolean(postId),
   })
 }
 
 export function usePostComments(postId: string) {
-  const hasApi = Boolean(process.env.NEXT_PUBLIC_API_URL)
-
   return useQuery({
     queryKey: queryKeys.comments(postId),
     queryFn: async () => {
@@ -73,7 +67,7 @@ export function usePostComments(postId: string) {
       }
       return data.data
     },
-    enabled: hasApi && Boolean(postId),
+    enabled: Boolean(postId),
   })
 }
 

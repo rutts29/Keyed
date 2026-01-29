@@ -5,32 +5,30 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
 
 import { api } from "@/lib/api";
-import { queryKeys } from "@/lib/queryClient";
-import type { ApiResponse, FeedItem } from "@/types";
+import type { ApiResponse, UserProfile } from "@/types";
 
-type UserPostsResponse = {
-  posts: FeedItem[];
+type ExploreCreatorsResponse = {
+  users: UserProfile[];
   nextCursor: string | null;
 };
 
-export function useUserPosts(wallet: string, limit = 20) {
+export function useExploreCreators(limit = 20) {
   const { ref, inView } = useInView({ rootMargin: "300px" });
 
   const query = useInfiniteQuery({
-    queryKey: queryKeys.userPosts(wallet),
+    queryKey: ["users", "explore"],
     queryFn: async ({ pageParam }) => {
-      const { data } = await api.get<ApiResponse<UserPostsResponse>>(
-        `/users/${wallet}/posts`,
+      const { data } = await api.get<ApiResponse<ExploreCreatorsResponse>>(
+        "/users/explore",
         { params: { limit, cursor: pageParam } }
       );
       if (!data.data) {
-        throw new Error("Posts unavailable");
+        throw new Error("Creators unavailable");
       }
       return data.data;
     },
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-    enabled: Boolean(wallet) && wallet !== "me",
   });
 
   useEffect(() => {

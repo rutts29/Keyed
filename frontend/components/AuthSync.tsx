@@ -2,13 +2,12 @@
 
 import { useEffect, useRef } from "react";
 import { useSafeDynamicContext } from "@/hooks/useSafeDynamicContext";
-import { toast } from "sonner";
 
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthStore } from "@/store/authStore";
 
 export function AuthSync() {
-  const { primaryWallet } = useSafeDynamicContext();
+  const { primaryWallet, sdkHasLoaded } = useSafeDynamicContext();
   const token = useAuthStore((state) => state.token);
   const wallet = useAuthStore((state) => state.wallet);
   const setWallet = useAuthStore((state) => state.setWallet);
@@ -25,6 +24,10 @@ export function AuthSync() {
   }, [primaryWallet, wallet, setWallet]);
 
   useEffect(() => {
+    // Wait for Dynamic Labs SDK to fully initialise before making
+    // any auth decisions. Before that, primaryWallet is unreliable.
+    if (!sdkHasLoaded) return;
+
     if (!primaryWallet?.address) {
       if (token) {
         clearAuth();
@@ -49,7 +52,7 @@ export function AuthSync() {
     }).finally(() => {
       isAuthenticating.current = false;
     });
-  }, [clearAuth, login, primaryWallet, token]);
+  }, [clearAuth, login, primaryWallet, sdkHasLoaded, token]);
 
   return null;
 }

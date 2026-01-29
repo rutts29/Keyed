@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { TrendingUp, TrendingDown, Minus, Hash } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RightRailCard } from "@/components/RightRailCard";
 import { useTrendingTopics } from "@/hooks/useTrendingTopics";
@@ -35,11 +34,7 @@ export function TrendingPanel() {
   return (
     <RightRailCard
       title="Trending"
-      action={
-        <Badge variant="outline" className="text-[9px]">
-          Preview
-        </Badge>
-      }
+      action={null}
     >
       {isLoading ? (
         Array.from({ length: 3 }).map((_, index) => (

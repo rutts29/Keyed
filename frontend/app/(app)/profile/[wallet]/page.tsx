@@ -49,7 +49,6 @@ export default function ProfilePage({ params }: ProfilePageProps) {
     hasNextPage,
     isFetchingNextPage,
     loadMoreRef,
-    hasApi,
   } = useUserPosts(resolvedWallet ?? "");
 
   // Get initials from wallet address or username for avatar
@@ -207,11 +206,6 @@ export default function ProfilePage({ params }: ProfilePageProps) {
             </div>
           </div>
 
-          {!hasApi && (
-            <p className="text-xs text-muted-foreground">
-              Connect to the backend to see real profile stats.
-            </p>
-          )}
         </CardContent>
       </Card>
 

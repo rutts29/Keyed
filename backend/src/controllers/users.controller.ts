@@ -336,6 +336,38 @@ export const usersController = {
     });
   },
 
+  async listCreators(req: AuthenticatedRequest, res: Response) {
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
+    const cursor = req.query.cursor as string;
+
+    // Use created_at as a stable, unique cursor for pagination
+    let query = supabase
+      .from('users')
+      .select('wallet, username, bio, profile_image_uri, follower_count, following_count, post_count, created_at, is_verified')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (cursor) {
+      query = query.lt('created_at', cursor);
+    }
+
+    const { data: users, error } = await query;
+
+    if (error) {
+      logger.error({ error }, 'Failed to fetch creators');
+      throw new AppError(500, 'DB_ERROR', 'Failed to fetch creators');
+    }
+
+    const nextCursor = users && users.length === limit
+      ? users[users.length - 1].created_at
+      : null;
+
+    res.json({
+      success: true,
+      data: { users: users || [], nextCursor },
+    });
+  },
+
   async getSuggestedUsers(req: AuthenticatedRequest, res: Response) {
     const wallet = req.wallet!;
     const limit = Math.min(parseInt(req.query.limit as string) || 5, 20);

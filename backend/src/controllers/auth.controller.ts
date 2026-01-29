@@ -43,10 +43,17 @@ export const authController = {
         created_at: new Date().toISOString(),
       });
     }
-    
+
+    // Fetch user profile to return with token
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('wallet, username, bio, profile_image_uri, follower_count, following_count, post_count, created_at, is_verified')
+      .eq('wallet', wallet)
+      .single();
+
     res.json({
       success: true,
-      data: { token: result.token, wallet },
+      data: { token: result.token, wallet, user: userProfile },
     });
   },
 
