@@ -10,10 +10,19 @@ import { useAuthStore } from "@/store/authStore";
 export function AuthSync() {
   const { primaryWallet } = useSafeDynamicContext();
   const token = useAuthStore((state) => state.token);
+  const wallet = useAuthStore((state) => state.wallet);
+  const setWallet = useAuthStore((state) => state.setWallet);
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const { login } = useAuth();
   const lastWalletRef = useRef<string | null>(null);
   const isAuthenticating = useRef(false);
+
+  // Always sync wallet address from Dynamic context
+  useEffect(() => {
+    if (primaryWallet?.address && primaryWallet.address !== wallet) {
+      setWallet(primaryWallet.address);
+    }
+  }, [primaryWallet, wallet, setWallet]);
 
   useEffect(() => {
     if (!primaryWallet?.address) {
@@ -35,11 +44,8 @@ export function AuthSync() {
     lastWalletRef.current = primaryWallet.address;
     isAuthenticating.current = true;
 
-    login().catch((error) => {
-      clearAuth();
-      toast.error(
-        error instanceof Error ? error.message : "Wallet authentication failed"
-      );
+    login().catch(() => {
+      // Backend unavailable — wallet address is already stored above
     }).finally(() => {
       isAuthenticating.current = false;
     });

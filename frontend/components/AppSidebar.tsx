@@ -11,17 +11,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import {
-  Bell,
-  Bookmark,
   Gem,
   Home,
-  Mail,
   MoreHorizontal,
   Search,
   Settings,
@@ -35,9 +30,6 @@ const navItems = [
   { label: "Home", icon: Home, href: "/app" },
   { label: "Discover", icon: Zap, href: "/explore" },
   { label: "Search", icon: Search, href: "/search" },
-  { label: "Notifications", icon: Bell, disabled: true, badge: "Soon" },
-  { label: "Messages", icon: Mail, disabled: true, badge: "Soon" },
-  { label: "Bookmarks", icon: Bookmark, disabled: true, badge: "Soon" },
   { label: "Creator Hub", icon: Gem, href: "/dashboard", badge: "New" },
   { label: "Profile", icon: User, href: "/profile/me", match: "/profile" },
   { label: "Settings", icon: Settings, href: "/settings" },
@@ -82,11 +74,9 @@ export function AppSidebar() {
                 ? pathname.startsWith(item.match)
                 : pathname === href
               : false;
-            const isDisabled = Boolean(item.disabled);
             const navClasses = cn(
               "w-full justify-start gap-3 rounded-xl px-3 text-sm font-medium transition-colors hover:bg-muted/80 hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-0",
-              isActive && "bg-muted text-foreground",
-              isDisabled && "cursor-not-allowed opacity-60 hover:bg-transparent"
+              isActive && "bg-muted text-foreground"
             );
             const content = (
               <>
@@ -105,10 +95,9 @@ export function AppSidebar() {
                 key={item.label}
                 variant="ghost"
                 className={navClasses}
-                asChild={Boolean(href && !isDisabled)}
-                disabled={isDisabled}
+                asChild={Boolean(href)}
               >
-                {href && !isDisabled ? <Link href={href}>{content}</Link> : content}
+                {href ? <Link href={href}>{content}</Link> : content}
               </Button>
             );
           })}
@@ -117,23 +106,6 @@ export function AppSidebar() {
         <Button className="h-11 w-full rounded-xl text-sm font-semibold" asChild>
           <Link href="/create">Post update</Link>
         </Button>
-        <Separator className="bg-border/70" />
-        <div className="rounded-xl border border-border/70 bg-card/60 p-3 text-xs text-muted-foreground">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-foreground">
-              Weekly creator digest
-            </p>
-            <Badge variant="outline" className="text-[9px]">
-              Soon
-            </Badge>
-          </div>
-          <p className="mt-1 leading-5">
-            Curated threads, drop calendars, and top creators.
-          </p>
-          <Button variant="secondary" className="mt-3 h-8 w-full text-xs" disabled>
-            Subscribe
-          </Button>
-        </div>
       </div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -160,13 +132,6 @@ export function AppSidebar() {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-44">
-          <DropdownMenuItem asChild>
-            <Link href={profileHref}>View profile</Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href="/settings">Settings</Link>
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleSignOut}>
             Sign out
           </DropdownMenuItem>

@@ -40,7 +40,7 @@ function validateUsername(value: string): string | null {
 export default function SettingsPage() {
   const { primaryWallet } = useSafeDynamicContext();
   const wallet = primaryWallet?.address ?? null;
-  const { user, setUser } = useAuthStore();
+  const { user, setUser, connectedAt } = useAuthStore();
 
   // Profile form state
   const { data: profileData, isLoading: isLoadingProfile } = useUserProfile(
@@ -452,7 +452,7 @@ export default function SettingsPage() {
                   Account Created
                 </p>
                 <p className="text-sm text-foreground">
-                  {formatDate(profileData?.createdAt ?? user?.createdAt ?? null)}
+                  {formatDate(profileData?.createdAt ?? user?.createdAt ?? connectedAt)}
                 </p>
               </div>
             </div>
