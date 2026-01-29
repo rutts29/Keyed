@@ -128,6 +128,17 @@ export const schemas = {
     rerank: z.boolean().default(true),
   }),
   
+  notificationId: z.object({
+    id: z.string().uuid(),
+  }),
+
+  notificationList: z.object({
+    limit: z.string().transform(Number).pipe(z.number().min(1).max(50)).default('20'),
+    cursor: z.string().optional(),
+    type: z.enum(['like', 'comment', 'follow', 'tip', 'new_post']).optional(),
+    unread: z.string().transform(v => v === 'true').optional(),
+  }),
+
   report: z.object({
     reason: z.enum(['nsfw', 'spam', 'harassment', 'other']),
     description: z.string().max(500).optional(),

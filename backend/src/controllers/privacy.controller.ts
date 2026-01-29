@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../types/index.js';
 import { supabase } from '../config/supabase.js';
 import { privacyService } from '../services/privacy.service.js';
+import { addJob } from '../jobs/queues.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { logger } from '../utils/logger.js';
 
@@ -108,11 +109,11 @@ export const privacyController = {
       post_id: postId || null,
     });
 
-    // Also track in transactions table (for tipper's history)
+    // Track in transactions table -- omit from_wallet to preserve tipper privacy
     await supabase.from('transactions').insert({
       signature,
       type: 'tip',
-      from_wallet: wallet,
+      from_wallet: null,
       to_wallet: creatorWallet,
       amount: lamports,
       post_id: postId || null,
@@ -126,6 +127,14 @@ export const privacyController = {
         .update({ tips_received: supabase.rpc('increment_bigint', { x: lamports }) })
         .eq('id', postId);
     }
+
+    await addJob('notification', {
+      type: 'tip',
+      targetWallet: creatorWallet,
+      fromWallet: 'anonymous',
+      amount,
+      postId,
+    });
 
     logger.info(
       { creatorWallet, amount, postId, isPrivate: true },

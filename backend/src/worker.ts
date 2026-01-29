@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { Worker, Job } from 'bullmq';
 import { env } from './config/env.js';
 import { logger } from './utils/logger.js';

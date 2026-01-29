@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from '../types/index.js';
 import { supabase } from '../config/supabase.js';
 import { solanaService } from '../services/solana.service.js';
 import { realtimeService } from '../services/realtime.service.js';
+import { addJob } from '../jobs/queues.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { logger } from '../utils/logger.js';
 
@@ -65,7 +66,13 @@ export const paymentsController = {
         .eq('id', postId);
     }
 
-    await realtimeService.notifyTip(wallet, creatorWallet, amount, postId);
+    await addJob('notification', {
+      type: 'tip',
+      targetWallet: creatorWallet,
+      fromWallet: wallet,
+      amount,
+      postId,
+    });
 
     logger.info({ wallet, creatorWallet, amount, postId }, 'Built tip transaction');
 

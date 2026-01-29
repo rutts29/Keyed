@@ -141,6 +141,20 @@ export interface RecommendationResult {
   tasteProfile: string | null;
 }
 
+export type NotificationType = 'like' | 'comment' | 'follow' | 'tip' | 'new_post';
+
+export interface Notification {
+  id: string;
+  recipient: string;
+  type: NotificationType;
+  fromWallet: string | null;
+  postId: string | null;
+  commentId: string | null;
+  amount: number | null;
+  read: boolean;
+  createdAt: Date;
+}
+
 export interface PaginationParams {
   limit: number;
   cursor?: string;
