@@ -89,8 +89,8 @@ function CreatorCard({ user }: { user: UserProfile }) {
   return (
     <Card className="border-border/70 bg-card/70 transition-colors hover:bg-muted/60 hover:border-border">
       <CardContent className="p-4">
-        <div className="flex items-center gap-4">
-          <Avatar className="h-12 w-12">
+        <div className="flex items-center gap-3">
+          <Avatar className="h-10 w-10 shrink-0">
             {imageUrl ? (
               <AvatarImage src={imageUrl} alt={user.username ?? ""} />
             ) : null}
@@ -98,9 +98,9 @@ function CreatorCard({ user }: { user: UserProfile }) {
               {getInitials(user.username ?? user.wallet)}
             </AvatarFallback>
           </Avatar>
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-foreground truncate">
+              <span className="font-semibold text-foreground truncate text-sm">
                 {user.username ?? formatWallet(user.wallet)}
               </span>
               {user.isVerified && (
@@ -109,17 +109,11 @@ function CreatorCard({ user }: { user: UserProfile }) {
                 </Badge>
               )}
             </div>
-            {user.bio && (
-              <p className="text-sm text-muted-foreground truncate">
-                {user.bio}
-              </p>
-            )}
-            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-              <span>{user.followerCount.toLocaleString()} followers</span>
-              <span>{user.postCount} posts</span>
-            </div>
+            <p className="text-xs text-muted-foreground truncate">
+              {user.followerCount.toLocaleString()} followers · {user.postCount} posts
+            </p>
           </div>
-          <Button variant="secondary" size="sm" asChild>
+          <Button variant="secondary" size="sm" className="shrink-0" asChild>
             <Link href={`/profile/${user.wallet}`}>View</Link>
           </Button>
         </div>
@@ -141,11 +135,11 @@ function TagCard({
       <Card className="border-border/70 bg-card/70 transition-colors hover:bg-muted/60 hover:border-border">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
               <Hash className="h-5 w-5 text-primary" />
             </div>
-            <div className="flex-1">
-              <span className="font-semibold text-foreground">#{tag}</span>
+            <div className="min-w-0 flex-1">
+              <span className="block truncate font-semibold text-foreground">#{tag}</span>
               {postCount !== undefined && (
                 <p className="text-xs text-muted-foreground">
                   {postCount.toLocaleString()} posts
@@ -330,8 +324,8 @@ function EmptyState({
               Creators to follow
             </h4>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {suggestedUsers.slice(0, 3).map((user) => (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {suggestedUsers.slice(0, 4).map((user) => (
               <CreatorCard key={user.wallet} user={user} />
             ))}
           </div>
@@ -347,8 +341,8 @@ function EmptyState({
               Trending topics
             </h4>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {trendingTopics.slice(0, 4).map((topic) => (
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
+            {trendingTopics.slice(0, 6).map((topic) => (
               <TagCard
                 key={topic.name}
                 tag={topic.name}

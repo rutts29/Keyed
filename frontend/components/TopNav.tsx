@@ -1,12 +1,8 @@
-"use client";
-
 import Link from "next/link";
 
-import { NotificationBell } from "@/components/NotificationBell";
-import { SearchBar } from "@/components/SearchBar";
-import { WalletButton } from "@/components/WalletButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 
 export function TopNav() {
   return (
@@ -23,14 +19,12 @@ export function TopNav() {
             </Badge>
           </div>
         </div>
-        <SearchBar className="flex-1" />
-        <div className="hidden items-center gap-2 md:flex">
-          <Button variant="secondary" className="h-9" asChild>
-            <Link href="/create">Create post</Link>
-          </Button>
-          <NotificationBell />
-          <WalletButton />
-        </div>
+        <div className="flex-1" />
+        <Button variant="secondary" size="icon" className="h-9 w-9" asChild>
+          <Link href="/create">
+            <Plus className="h-4 w-4" />
+          </Link>
+        </Button>
       </div>
     </div>
   );

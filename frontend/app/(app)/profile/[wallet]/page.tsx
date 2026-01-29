@@ -14,7 +14,6 @@ import { useUIStore } from "@/store/uiStore";
 import { useAuthStore } from "@/store/authStore";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useUserPosts } from "@/hooks/useUserPosts";
-import { feedItems } from "@/lib/mock-data";
 import { FileText, Settings } from "lucide-react";
 
 type ProfilePageProps = {
@@ -93,8 +92,6 @@ export default function ProfilePage({ params }: ProfilePageProps) {
   // Flatten paginated posts
   const posts = postsData?.pages.flatMap((page) => page.posts) ?? [];
 
-  // Show mock data when API is unavailable
-  const showMockPosts = !hasApi || (!isLoadingPosts && posts.length === 0 && !profileError);
 
   return (
     <div className="space-y-6">
@@ -257,7 +254,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
         ))}
 
         {/* Empty state when no posts */}
-        {!isLoadingPosts && posts.length === 0 && hasApi && !showMockPosts && !profileError && (
+        {!isLoadingPosts && posts.length === 0 && !profileError && (
           <Card className="border-border/70 bg-card/70">
             <CardContent className="flex flex-col items-center justify-center py-12 text-center">
               <div className="rounded-full bg-muted p-3 mb-4">
@@ -280,10 +277,6 @@ export default function ProfilePage({ params }: ProfilePageProps) {
           </Card>
         )}
 
-        {/* Mock posts fallback when no API */}
-        {showMockPosts && !profileError && feedItems.map((post) => (
-          <PostCard key={post.id} post={post} />
-        ))}
 
         {/* Infinite scroll trigger */}
         {hasNextPage && (
