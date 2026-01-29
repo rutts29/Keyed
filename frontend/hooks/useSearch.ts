@@ -7,8 +7,6 @@ import { queryKeys } from "@/lib/queryClient";
 import type { ApiResponse, SemanticSearchResponse } from "@/types";
 
 export function useSemanticSearch(query: string) {
-  const hasApi = Boolean(process.env.NEXT_PUBLIC_API_URL);
-
   return useQuery({
     queryKey: queryKeys.search(query),
     queryFn: async () => {
@@ -21,6 +19,6 @@ export function useSemanticSearch(query: string) {
       }
       return data.data;
     },
-    enabled: hasApi && Boolean(query.trim()),
+    enabled: Boolean(query.trim()),
   });
 }

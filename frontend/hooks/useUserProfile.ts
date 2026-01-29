@@ -7,8 +7,6 @@ import { queryKeys } from "@/lib/queryClient";
 import type { ApiResponse, UserWithRelation } from "@/types";
 
 export function useUserProfile(wallet: string) {
-  const hasApi = Boolean(process.env.NEXT_PUBLIC_API_URL);
-
   return useQuery({
     queryKey: queryKeys.user(wallet),
     queryFn: async () => {
@@ -20,6 +18,6 @@ export function useUserProfile(wallet: string) {
       }
       return data.data;
     },
-    enabled: hasApi && Boolean(wallet) && wallet !== "me",
+    enabled: Boolean(wallet) && wallet !== "me",
   });
 }

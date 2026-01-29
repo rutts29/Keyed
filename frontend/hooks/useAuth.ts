@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import bs58 from "bs58";
 
 import { useSafeDynamicContext } from "./useSafeDynamicContext";
 
@@ -25,9 +26,16 @@ export function useAuth() {
       throw new Error("Challenge unavailable");
     }
 
-    const signature = await primaryWallet.signMessage(
+    const rawSignature = await primaryWallet.signMessage(
       challengeResponse.data.message
     );
+    if (!rawSignature) {
+      throw new Error("Signing cancelled");
+    }
+
+    // Dynamic Labs returns base64-encoded signatures;
+    // backend expects base58.
+    const signature = bs58.encode(Buffer.from(rawSignature, "base64"));
 
     const { data: verifyResponse } = await api.post<ApiResponse<AuthSession>>(
       "/auth/verify",

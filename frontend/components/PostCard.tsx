@@ -9,19 +9,13 @@ import { TokenGateBadge } from "@/components/TokenGateBadge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useUIStore } from "@/store/uiStore";
-import type { Post as MockPost } from "@/lib/mock-data";
 import type { FeedItem } from "@/types";
 import { MessageCircle, Share2 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-type PostCardPost = FeedItem | MockPost;
-
 type PostCardProps = {
-  post: PostCardPost;
+  post: FeedItem;
 };
-
-const isFeedItem = (post: PostCardPost): post is FeedItem =>
-  "creator" in post;
 
 const getInitials = (value: string) =>
   value
@@ -51,29 +45,17 @@ const resolveImageUrl = (uri?: string | null) => {
 
 export function PostCard({ post }: PostCardProps) {
   const openTipModal = useUIStore((state) => state.openTipModal);
-  const isFeed = isFeedItem(post);
-  const authorName = isFeed
-    ? post.creator.username ?? post.creator.wallet
-    : post.author.name;
-  const authorHandle = isFeed
-    ? post.creator.username
-      ? `@${post.creator.username}`
-      : post.creator.wallet
-    : post.author.handle;
-  const initials = isFeed
-    ? getInitials(authorName)
-    : post.author.initials;
-  const createdAt = isFeed ? formatTimestamp(post.timestamp) : post.createdAt;
-  const content = isFeed
-    ? post.caption ?? post.llmDescription ?? "New post"
-    : post.content;
-  const tags = isFeed ? post.autoTags ?? [] : [];
-  const tokenGated = isFeed ? post.isTokenGated : false;
-  const topic = !isFeed ? post.topic : null;
-  const stats = isFeed
-    ? { replies: post.comments, reposts: 0, likes: post.likes }
-    : post.stats;
-  const imageUrl = isFeed ? resolveImageUrl(post.contentUri) : null;
+  const authorName = post.creator.username ?? post.creator.wallet;
+  const authorHandle = post.creator.username
+    ? `@${post.creator.username}`
+    : post.creator.wallet;
+  const initials = getInitials(authorName);
+  const createdAt = formatTimestamp(post.timestamp);
+  const content = post.caption ?? post.llmDescription ?? "New post";
+  const tags = post.autoTags ?? [];
+  const tokenGated = post.isTokenGated;
+  const stats = { replies: post.comments, reposts: 0, likes: post.likes };
+  const imageUrl = resolveImageUrl(post.contentUri);
 
   return (
     <Card className="border-border/70 bg-card/70 transition-colors hover:bg-muted/60 hover:border-border hover:shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
@@ -89,13 +71,7 @@ export function PostCard({ post }: PostCardProps) {
               </span>
               <span className="text-muted-foreground">{authorHandle}</span>
               <span className="text-muted-foreground">• {createdAt}</span>
-              {tokenGated ? (
-                <TokenGateBadge />
-              ) : topic ? (
-                <Badge variant="secondary" className="text-[10px]">
-                  {topic}
-                </Badge>
-              ) : null}
+              {tokenGated ? <TokenGateBadge /> : null}
             </div>
             <p className="text-sm leading-6 text-foreground">{content}</p>
             {tags.length > 0 ? (
@@ -126,17 +102,14 @@ export function PostCard({ post }: PostCardProps) {
           </Button>
           <LikeButton
             postId={post.id}
-            initialLiked={isFeed ? post.isLiked ?? false : false}
+            initialLiked={post.isLiked ?? false}
             initialLikes={stats.likes}
           />
           <Button
             variant="ghost"
             size="sm"
             className="gap-2 text-xs"
-            onClick={() =>
-              isFeed ? openTipModal(post.creatorWallet, post.id) : null
-            }
-            disabled={!isFeed}
+            onClick={() => openTipModal(post.creatorWallet, post.id)}
           >
             <Share2 className="h-3.5 w-3.5" />
             Tip

@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { BadgeCheck, Users } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { FollowButton } from "@/components/FollowButton";
 import { RightRailCard } from "@/components/RightRailCard";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -37,17 +36,17 @@ function truncateText(text: string, maxLength: number): string {
   return text.slice(0, maxLength).trim() + "...";
 }
 
+function formatWallet(wallet: string): string {
+  return `${wallet.slice(0, 4)}...${wallet.slice(-4)}`;
+}
+
 export function SuggestedUsers() {
   const { users, isLoading } = useSuggestedUsers();
 
   return (
     <RightRailCard
       title="Suggested creators"
-      action={
-        <Badge variant="outline" className="text-[9px]">
-          Preview
-        </Badge>
-      }
+      action={null}
     >
       {isLoading ? (
         // Loading skeleton state
@@ -99,7 +98,7 @@ export function SuggestedUsers() {
                 <span className="truncate text-sm font-semibold text-foreground">
                   {user.username
                     ? truncateText(user.username, 16)
-                    : truncateText(user.wallet, 12)}
+                    : formatWallet(user.wallet)}
                 </span>
                 {user.isVerified && (
                   <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-primary" />

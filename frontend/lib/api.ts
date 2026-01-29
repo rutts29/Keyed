@@ -21,9 +21,15 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      useAuthStore.getState().clearAuth();
-      if (typeof window !== "undefined") {
-        window.location.href = "/";
+      const store = useAuthStore.getState();
+      // Only redirect if user had a valid session that expired.
+      // If there's no token, the user is mid-login or unauthenticated —
+      // redirecting would cause a loop with the marketing page.
+      if (store.token) {
+        store.clearAuth();
+        if (typeof window !== "undefined") {
+          window.location.href = "/";
+        }
       }
     }
     return Promise.reject(error);

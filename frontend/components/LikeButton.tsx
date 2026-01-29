@@ -22,16 +22,10 @@ export function LikeButton({
   const [likes, setLikes] = useState(initialLikes)
   const { mutateAsync: likePost } = useLikePost(postId)
   const { mutateAsync: unlikePost } = useUnlikePost(postId)
-  const hasApi = Boolean(process.env.NEXT_PUBLIC_API_URL)
 
   const handleClick = async () => {
     const previousLiked = isLiked
     const previousLikes = likes
-    if (!hasApi) {
-      setIsLiked((prev) => !prev)
-      setLikes((prev) => (isLiked ? Math.max(0, prev - 1) : prev + 1))
-      return
-    }
 
     const nextLiked = !isLiked
     setIsLiked(nextLiked)

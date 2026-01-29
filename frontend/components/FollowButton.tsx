@@ -18,15 +18,9 @@ export function FollowButton({
   const [isFollowing, setIsFollowing] = useState(initialFollowing)
   const { mutateAsync: followUser } = useFollowUser(wallet)
   const { mutateAsync: unfollowUser } = useUnfollowUser(wallet)
-  const hasApi = Boolean(process.env.NEXT_PUBLIC_API_URL)
 
   const handleClick = async () => {
     const previous = isFollowing
-    if (!hasApi) {
-      setIsFollowing((prev) => !prev)
-      return
-    }
-
     const next = !isFollowing
     setIsFollowing(next)
 

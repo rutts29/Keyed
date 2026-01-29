@@ -7,8 +7,6 @@ import { queryKeys } from "@/lib/queryClient";
 import type { AccessVerification, ApiResponse } from "@/types";
 
 export function useAccessVerification(postId: string) {
-  const hasApi = Boolean(process.env.NEXT_PUBLIC_API_URL);
-
   return useQuery({
     queryKey: queryKeys.access(postId),
     queryFn: async () => {
@@ -21,6 +19,6 @@ export function useAccessVerification(postId: string) {
       }
       return data.data;
     },
-    enabled: hasApi && Boolean(postId),
+    enabled: Boolean(postId),
   });
 }

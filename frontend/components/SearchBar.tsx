@@ -41,7 +41,6 @@ export function SearchBar({ className }: { className?: string }) {
   const blurTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const suggestionsTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const hasApi = Boolean(process.env.NEXT_PUBLIC_API_URL);
   const { topics: trendingTopics } = useTrendingTopics();
 
   useEffect(() => {
@@ -141,10 +140,6 @@ export function SearchBar({ className }: { className?: string }) {
     (value: string) => {
       setQuery(value);
       setHighlightedIndex(-1); // Reset highlighted index when query changes
-      if (!hasApi) {
-        setSuggestions([]);
-        return;
-      }
       const trimmed = value.trim();
       if (!trimmed) {
         setSuggestions([]);
@@ -166,7 +161,7 @@ export function SearchBar({ className }: { className?: string }) {
         }
       }, 300);
     },
-    [hasApi]
+    []
   );
 
   const handleKeyDown = useCallback(
