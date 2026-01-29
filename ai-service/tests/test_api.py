@@ -2,7 +2,7 @@ import os
 import pytest
 from unittest.mock import patch, AsyncMock
 
-os.environ.setdefault("OPENAI_API_KEY", "test-key")
+os.environ.setdefault("GEMINI_API_KEY", "test-key")
 os.environ.setdefault("VOYAGE_API_KEY", "test-key")
 os.environ.setdefault("QDRANT_URL", "http://localhost:6333")
 os.environ.setdefault("QDRANT_API_KEY", "test-key")
@@ -44,7 +44,7 @@ def test_moderate_check():
 
 
 def test_check_hash():
-    response = client.post("/api/moderate/check-hash", json={"image_hash": "test_hash"})
+    response = client.post("/api/moderate/check-hash", json={"image_hash": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"})
     assert response.status_code == 200
     assert response.json()["knownBad"] is False
 

@@ -1,4 +1,4 @@
-import { Connection, PublicKey, clusterApiUrl } from '@solana/web3.js';
+import { Connection, PublicKey } from '@solana/web3.js';
 import anchor from '@coral-xyz/anchor';
 const { AnchorProvider, Program } = anchor;
 type Idl = anchor.Idl;
@@ -8,7 +8,7 @@ import { env } from './env.js';
 import { logger } from '../utils/logger.js';
 
 export const connection = new Connection(
-  env.SOLANA_RPC_URL || clusterApiUrl('devnet'),
+  env.SOLANA_RPC_URL,
   'confirmed'
 );
 
@@ -236,75 +236,48 @@ export interface AccessVerificationData {
   bump: number;
 }
 
-// Fetch on-chain account data with proper typing
-export async function fetchUserProfile(wallet: PublicKey): Promise<UserProfileData | null> {
-  if (!programs.social) return null;
+// Generic helper to fetch an on-chain account by name and PDA
+async function fetchAccount<T>(
+  program: InstanceType<typeof Program> | null | undefined,
+  accountName: string,
+  pda: PublicKey
+): Promise<T | null> {
+  if (!program) return null;
   try {
-    const [profilePda] = pdaDerivation.userProfile(wallet);
-    // Use type assertion for the dynamic account fetch
-    const account = await (programs.social.account as Record<string, { fetch: (key: PublicKey) => Promise<unknown> }>)
-      .userProfile.fetch(profilePda);
-    return account as UserProfileData;
+    const account = await (program.account as Record<string, { fetch: (key: PublicKey) => Promise<unknown> }>)
+      [accountName].fetch(pda);
+    return account as T;
   } catch {
     return null;
   }
+}
+
+// Fetch on-chain account data with proper typing
+export async function fetchUserProfile(wallet: PublicKey): Promise<UserProfileData | null> {
+  const [pda] = pdaDerivation.userProfile(wallet);
+  return fetchAccount<UserProfileData>(programs.social, 'userProfile', pda);
 }
 
 export async function fetchPost(postPda: PublicKey): Promise<PostData | null> {
-  if (!programs.social) return null;
-  try {
-    const account = await (programs.social.account as Record<string, { fetch: (key: PublicKey) => Promise<unknown> }>)
-      .post.fetch(postPda);
-    return account as PostData;
-  } catch {
-    return null;
-  }
+  return fetchAccount<PostData>(programs.social, 'post', postPda);
 }
 
 export async function fetchCreatorVault(creator: PublicKey): Promise<CreatorVaultData | null> {
-  if (!programs.payment) return null;
-  try {
-    const [vaultPda] = pdaDerivation.creatorVault(creator);
-    const account = await (programs.payment.account as Record<string, { fetch: (key: PublicKey) => Promise<unknown> }>)
-      .creatorVault.fetch(vaultPda);
-    return account as CreatorVaultData;
-  } catch {
-    return null;
-  }
+  const [vaultPda] = pdaDerivation.creatorVault(creator);
+  return fetchAccount<CreatorVaultData>(programs.payment, 'creatorVault', vaultPda);
 }
 
 export async function fetchPlatformConfig(): Promise<PlatformConfigData | null> {
-  if (!programs.payment) return null;
-  try {
-    const [configPda] = pdaDerivation.platformConfig();
-    const account = await (programs.payment.account as Record<string, { fetch: (key: PublicKey) => Promise<unknown> }>)
-      .platformConfig.fetch(configPda);
-    return account as PlatformConfigData;
-  } catch {
-    return null;
-  }
+  const [configPda] = pdaDerivation.platformConfig();
+  return fetchAccount<PlatformConfigData>(programs.payment, 'platformConfig', configPda);
 }
 
 export async function fetchAccessControl(postPda: PublicKey): Promise<AccessControlData | null> {
-  if (!programs.tokenGate) return null;
-  try {
-    const [accessControlPda] = pdaDerivation.accessControl(postPda);
-    const account = await (programs.tokenGate.account as Record<string, { fetch: (key: PublicKey) => Promise<unknown> }>)
-      .accessControl.fetch(accessControlPda);
-    return account as AccessControlData;
-  } catch {
-    return null;
-  }
+  const [accessControlPda] = pdaDerivation.accessControl(postPda);
+  return fetchAccount<AccessControlData>(programs.tokenGate, 'accessControl', accessControlPda);
 }
 
 export async function fetchAccessVerification(user: PublicKey, post: PublicKey): Promise<AccessVerificationData | null> {
-  if (!programs.tokenGate) return null;
-  try {
-    const [verificationPda] = pdaDerivation.accessVerification(user, post);
-    const account = await (programs.tokenGate.account as Record<string, { fetch: (key: PublicKey) => Promise<unknown> }>)
-      .accessVerification.fetch(verificationPda);
-    return account as AccessVerificationData;
-  } catch {
-    return null;
-  }
+  const [verificationPda] = pdaDerivation.accessVerification(user, post);
+  return fetchAccount<AccessVerificationData>(programs.tokenGate, 'accessVerification', verificationPda);
 }

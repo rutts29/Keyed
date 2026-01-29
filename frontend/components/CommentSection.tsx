@@ -11,49 +11,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import { useAddComment, useInfiniteComments } from "@/hooks/useInteractions"
+import { getInitials, formatTimestamp, resolveImageUrl } from "@/lib/format"
 
 type CommentSectionProps = {
   postId: string
-}
-
-const getInitials = (value: string) =>
-  value
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("")
-
-const formatTimestamp = (timestamp: string) => {
-  const date = new Date(timestamp)
-  if (Number.isNaN(date.getTime())) return timestamp
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / (1000 * 60))
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-
-  if (diffMins < 1) return "Just now"
-  if (diffMins < 60) return `${diffMins}m ago`
-  if (diffHours < 24) return `${diffHours}h ago`
-  if (diffDays < 7) return `${diffDays}d ago`
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
-  })
-}
-
-const resolveImageUrl = (uri?: string | null) => {
-  if (!uri) return null
-  if (uri.startsWith("ipfs://")) {
-    const cid = uri.replace("ipfs://", "")
-    const gateway =
-      process.env.NEXT_PUBLIC_R2_PUBLIC_URL ??
-      process.env.NEXT_PUBLIC_IPFS_GATEWAY
-    return gateway ? `${gateway}/${cid}` : uri
-  }
-  return uri
 }
 
 function CommentSkeleton() {
@@ -170,7 +131,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
                 const commenterHandle = comment.commenter?.username
                   ? `@${comment.commenter.username}`
                   : comment.commenterWallet.slice(0, 8) + "..."
-                const initials = getInitials(commenterName)
+                const initials = getInitials(comment.commenter?.username, comment.commenterWallet)
                 const avatarUrl = resolveImageUrl(
                   comment.commenter?.profileImageUri
                 )

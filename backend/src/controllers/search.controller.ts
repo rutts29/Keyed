@@ -5,6 +5,7 @@ import { aiService } from '../services/ai.service.js';
 import { cacheService } from '../services/cache.service.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { logger } from '../utils/logger.js';
+import { enrichPostsWithLikeStatus } from '../utils/helpers.js';
 
 export const searchController = {
   /**
@@ -62,17 +63,7 @@ export const searchController = {
     // Add like status if user is authenticated
     let enrichedPosts = sortedPosts;
     if (req.wallet) {
-      const { data: likes } = await supabase
-        .from('likes')
-        .select('post_id')
-        .eq('user_wallet', req.wallet)
-        .in('post_id', postIds);
-      
-      const likedSet = new Set(likes?.map(l => l.post_id) || []);
-      enrichedPosts = sortedPosts.map(post => ({
-        ...post,
-        isLiked: likedSet.has(post.id),
-      }));
+      enrichedPosts = await enrichPostsWithLikeStatus(sortedPosts, req.wallet);
     }
     
     res.json({
@@ -202,18 +193,7 @@ export const searchController = {
     
     let enrichedPosts = posts;
     if (req.wallet) {
-      const postIds = posts.map(p => p.id);
-      const { data: likes } = await supabase
-        .from('likes')
-        .select('post_id')
-        .eq('user_wallet', req.wallet)
-        .in('post_id', postIds);
-      
-      const likedSet = new Set(likes?.map(l => l.post_id) || []);
-      enrichedPosts = posts.map(post => ({
-        ...post,
-        isLiked: likedSet.has(post.id),
-      }));
+      enrichedPosts = await enrichPostsWithLikeStatus(posts, req.wallet);
     }
     
     const nextCursor = posts.length === limit ? posts[posts.length - 1].timestamp : null;

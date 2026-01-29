@@ -91,7 +91,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         # Check if this endpoint has rate limiting
         path = request.url.path
-        limit = RATE_LIMITS.get(path)
+        limit = next((v for k, v in RATE_LIMITS.items() if path.startswith(k)), None)
 
         if limit is not None:
             if rate_limiter.is_rate_limited(client_ip, path, limit):

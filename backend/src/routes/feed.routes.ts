@@ -11,7 +11,7 @@ const router = Router();
 router.get('/', authMiddleware, rateLimitGet, validateQuery(schemas.pagination), asyncHandler<AuthenticatedRequest>(feedController.getPersonalizedFeed));
 router.get('/explore', optionalAuthMiddleware, rateLimitGet, validateQuery(schemas.pagination), asyncHandler<AuthenticatedRequest>(feedController.getExploreFeed));
 router.get('/following', authMiddleware, rateLimitGet, validateQuery(schemas.pagination), asyncHandler<AuthenticatedRequest>(feedController.getFollowingFeed));
-router.get('/trending', rateLimitGet, asyncHandler<AuthenticatedRequest>(feedController.getTrending));
-router.get('/trending-topics', rateLimitGet, asyncHandler<AuthenticatedRequest>(feedController.getTrendingTopics));
+router.get('/trending', optionalAuthMiddleware, rateLimitGet, asyncHandler<AuthenticatedRequest>(feedController.getTrending));
+router.get('/trending-topics', optionalAuthMiddleware, rateLimitGet, asyncHandler<AuthenticatedRequest>(feedController.getTrendingTopics));
 
 export default router;

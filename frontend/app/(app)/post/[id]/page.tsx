@@ -31,51 +31,12 @@ import { useVerifyNftAccess, useVerifyTokenAccess } from "@/hooks/useAccessActio
 import { useAccessVerification } from "@/hooks/useAccessVerification";
 import { usePost } from "@/hooks/useInteractions";
 import { useUIStore } from "@/store/uiStore";
+import { getInitials, formatTimestamp, resolveImageUrl } from "@/lib/format";
 
 type PostPageProps = {
   params: Promise<{
     id: string;
   }>;
-};
-
-const getInitials = (value: string) =>
-  value
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("");
-
-const formatTimestamp = (timestamp: string) => {
-  const date = new Date(timestamp);
-  if (Number.isNaN(date.getTime())) return timestamp;
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / (1000 * 60));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffMins < 1) return "Just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
-  });
-};
-
-const resolveImageUrl = (uri?: string | null) => {
-  if (!uri) return null;
-  if (uri.startsWith("ipfs://")) {
-    const cid = uri.replace("ipfs://", "");
-    const gateway =
-      process.env.NEXT_PUBLIC_R2_PUBLIC_URL ??
-      process.env.NEXT_PUBLIC_IPFS_GATEWAY;
-    return gateway ? `${gateway}/${cid}` : uri;
-  }
-  return uri;
 };
 
 function PostSkeleton() {
@@ -247,7 +208,7 @@ export default function PostPage({ params }: PostPageProps) {
   const authorHandle = post.creator.username
     ? `@${post.creator.username}`
     : post.creator.wallet.slice(0, 8) + "...";
-  const initials = getInitials(authorName);
+  const initials = getInitials(post.creator.username, post.creator.wallet);
   const avatarUrl = resolveImageUrl(post.creator.profileImageUri);
 
   // Determine if content should be hidden

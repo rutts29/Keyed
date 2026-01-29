@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSafeDynamicContext } from "@/hooks/useSafeDynamicContext";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -23,9 +23,19 @@ import { api } from "@/lib/api";
 import { lamportsToSol, signAndSubmitTransaction } from "@/lib/solana";
 import { useAuthStore } from "@/store/authStore";
 import type { ApiResponse, TransactionResponse } from "@/types";
+import { formatWallet } from "@/lib/format";
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,20}$/;
 const BIO_MAX_LENGTH = 160;
+
+function formatDate(dateString: string | null): string {
+  if (!dateString) return "Unknown";
+  return new Date(dateString).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
 
 function validateUsername(value: string): string | null {
   if (!value) return null;
@@ -94,23 +104,19 @@ export default function SettingsPage() {
   }, [privacySettingsData, defaultPrivateTips]);
 
   // Handle username change with validation
-  const handleUsernameChange = useCallback((value: string) => {
+  const handleUsernameChange = (value: string) => {
     setUsername(value);
     const error = validateUsername(value);
     setUsernameError(error);
-  }, []);
+  };
 
   // Handle bio change with length validation
-  const handleBioChange = useCallback((value: string) => {
+  const handleBioChange = (value: string) => {
     if (value.length <= BIO_MAX_LENGTH) {
       setBio(value);
     }
-  }, []);
+  };
 
-  // Handle profile image URL change
-  const handleProfileImageChange = useCallback((value: string) => {
-    setProfileImageUri(value);
-  }, []);
 
   // Save profile
   const handleSaveProfile = async () => {
@@ -188,22 +194,6 @@ export default function SettingsPage() {
         error instanceof Error ? error.message : "Update failed"
       );
     }
-  };
-
-  // Format date for display
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return "Unknown";
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
-  // Format wallet address for display
-  const formatWallet = (address: string | null) => {
-    if (!address) return "Not connected";
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
   // Show wallet not connected state
@@ -310,7 +300,7 @@ export default function SettingsPage() {
               id="profileImage"
               placeholder="https://example.com/image.jpg"
               value={profileImageUri}
-              onChange={(e) => handleProfileImageChange(e.target.value)}
+              onChange={(e) => setProfileImageUri(e.target.value)}
               disabled={isLoadingProfile || isSavingProfile}
             />
             <p className="text-xs text-muted-foreground">
@@ -438,7 +428,7 @@ export default function SettingsPage() {
                   Connected Wallet
                 </p>
                 <p className="text-sm font-mono text-foreground">
-                  {formatWallet(wallet)}
+                  {formatWallet(wallet, 6)}
                 </p>
               </div>
               <Badge variant="outline" className="text-[9px]">

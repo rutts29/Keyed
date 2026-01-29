@@ -8,36 +8,11 @@ import { RightRailCard } from "@/components/RightRailCard";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSuggestedUsers } from "@/hooks/useSuggestedUsers";
-
-function formatFollowerCount(count: number): string {
-  if (count >= 1000000) {
-    return `${(count / 1000000).toFixed(1)}M followers`;
-  }
-  if (count >= 1000) {
-    return `${(count / 1000).toFixed(1)}K followers`;
-  }
-  return `${count} followers`;
-}
-
-function getInitials(username: string | null, wallet: string): string {
-  if (username) {
-    return username
-      .split(/[.\-_\s]/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((s) => s[0]?.toUpperCase() ?? "")
-      .join("");
-  }
-  return wallet.slice(0, 2).toUpperCase();
-}
+import { getInitials, formatWallet, formatCompactCount } from "@/lib/format";
 
 function truncateText(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
   return text.slice(0, maxLength).trim() + "...";
-}
-
-function formatWallet(wallet: string): string {
-  return `${wallet.slice(0, 4)}...${wallet.slice(-4)}`;
 }
 
 export function SuggestedUsers() {
@@ -105,7 +80,7 @@ export function SuggestedUsers() {
                 )}
               </Link>
               <p className="text-xs text-muted-foreground">
-                {formatFollowerCount(user.followerCount)}
+                {`${formatCompactCount(user.followerCount)} followers`}
               </p>
               {user.bio && (
                 <p className="line-clamp-2 text-xs text-muted-foreground">

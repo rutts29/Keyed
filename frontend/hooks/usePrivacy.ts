@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/queryClient"
 import { useAuthStore } from "@/store/authStore"
-import { usePrivacyStore } from "@/store/privacyStore"
 import type {
   ApiResponse,
   PrivateTipReceived,
@@ -15,26 +14,18 @@ import type {
 } from "@/types"
 
 export function usePrivacyBalance() {
-  const setBalance = usePrivacyStore((state) => state.setBalance)
-  const setLoading = usePrivacyStore((state) => state.setLoadingBalance)
   const token = useAuthStore((state) => state.token)
 
   return useQuery<PrivacyBalance>({
     queryKey: queryKeys.privacyBalance(),
     queryFn: async () => {
-      setLoading(true)
-      try {
-        const { data } = await api.get<ApiResponse<PrivacyBalance>>(
-          "/privacy/balance"
-        )
-        if (!data.data) {
-          throw new Error("Balance unavailable")
-        }
-        setBalance(data.data)
-        return data.data
-      } finally {
-        setLoading(false)
+      const { data } = await api.get<ApiResponse<PrivacyBalance>>(
+        "/privacy/balance"
+      )
+      if (!data.data) {
+        throw new Error("Balance unavailable")
       }
+      return data.data
     },
     enabled: Boolean(token),
   })
@@ -90,7 +81,6 @@ export function usePrivateTip() {
 }
 
 export function usePrivacySettings() {
-  const setSettings = usePrivacyStore((state) => state.setSettings)
   const token = useAuthStore((state) => state.token)
 
   return useQuery({
@@ -102,7 +92,6 @@ export function usePrivacySettings() {
       if (!data.data) {
         throw new Error("Settings unavailable")
       }
-      setSettings(data.data)
       return data.data
     },
     enabled: Boolean(token),

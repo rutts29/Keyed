@@ -3,6 +3,7 @@
 import { use } from "react";
 import Link from "next/link";
 import { PostCard } from "@/components/PostCard";
+import { PostCardSkeleton } from "@/components/PostFeed";
 import { FollowButton } from "@/components/FollowButton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +16,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useUserPosts } from "@/hooks/useUserPosts";
 import { FileText, Settings } from "lucide-react";
+import { getInitials, formatWallet, resolveImageUrl } from "@/lib/format";
 
 type ProfilePageProps = {
   params: Promise<{
@@ -51,39 +53,6 @@ export default function ProfilePage({ params }: ProfilePageProps) {
     loadMoreRef,
   } = useUserPosts(resolvedWallet ?? "");
 
-  // Get initials from wallet address or username for avatar
-  const getInitials = (name: string | null | undefined, address: string) => {
-    if (name) {
-      return name
-        .split(" ")
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((part) => part[0]?.toUpperCase())
-        .join("");
-    }
-    if (address === "me") return "ME";
-    return address.slice(0, 2).toUpperCase();
-  };
-
-  // Truncate wallet address for display
-  const truncateWallet = (address: string) => {
-    if (address.length <= 12) return address;
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
-  };
-
-  // Resolve image URL (handle IPFS)
-  const resolveImageUrl = (uri: string | null | undefined) => {
-    if (!uri) return null;
-    if (uri.startsWith("ipfs://")) {
-      const cid = uri.replace("ipfs://", "");
-      const gateway =
-        process.env.NEXT_PUBLIC_R2_PUBLIC_URL ??
-        process.env.NEXT_PUBLIC_IPFS_GATEWAY;
-      return gateway ? `${gateway}/${cid}` : uri;
-    }
-    return uri;
-  };
-
   // Use fetched user data or fall back to auth user for own profile
   const displayUser = user ?? (isOwnProfile ? authUser : null);
   const displayWallet = resolvedWallet ?? walletParam;
@@ -117,12 +86,12 @@ export default function ProfilePage({ params }: ProfilePageProps) {
                   <Skeleton className="mt-1 h-8 w-48" />
                 ) : (
                   <h1 className="text-2xl font-semibold text-foreground">
-                    {displayUser?.username ?? truncateWallet(displayWallet)}
+                    {displayUser?.username ?? formatWallet(displayWallet, 6)}
                   </h1>
                 )}
                 {displayUser?.username && (
                   <p className="text-sm text-muted-foreground">
-                    {truncateWallet(displayWallet)}
+                    {formatWallet(displayWallet, 6)}
                   </p>
                 )}
               </div>
@@ -215,18 +184,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
         {isLoadingPosts && posts.length === 0 && (
           <>
             {[1, 2, 3].map((i) => (
-              <Card key={i} className="border-border/70 bg-card/70">
-                <CardContent className="space-y-3 p-4">
-                  <div className="flex items-start gap-3">
-                    <Skeleton className="h-10 w-10 rounded-full" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-4 w-48" />
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-4 w-3/4" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <PostCardSkeleton key={i} />
             ))}
           </>
         )}

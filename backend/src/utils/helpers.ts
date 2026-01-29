@@ -1,6 +1,8 @@
 import { createHash, randomBytes } from 'crypto';
 import imageHash from 'imghash';
 import { logger } from './logger.js';
+import { supabase } from '../config/supabase.js';
+import { cacheService } from '../services/cache.service.js';
 
 /**
  * Generate a cryptographically secure random nonce for authentication challenges.
@@ -41,42 +43,35 @@ export async function hashImage(buffer: Buffer): Promise<string> {
 }
 
 /**
- * Compute SHA-256 hash for exact duplicate detection.
- * Use this when you need to detect exact byte-for-byte duplicates.
+ * Fetch the list of wallets a user is following, using cache when available.
  */
-export function hashImageExact(buffer: Buffer): string {
-  return createHash('sha256').update(buffer).digest('hex');
-}
-
-export function extractIpfsHash(uri: string): string | null {
-  const match = uri.match(/ipfs:\/\/(\w+)/);
-  return match ? match[1] : null;
-}
-
-export function ipfsToGatewayUrl(ipfsUri: string, gateway: string): string {
-  const hash = extractIpfsHash(ipfsUri);
-  if (!hash) return ipfsUri;
-  return `${gateway}/ipfs/${hash}`;
-}
-
-export function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-export function snakeToCamel<T extends Record<string, unknown>>(obj: T): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  for (const key in obj) {
-    const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-    result[camelKey] = obj[key];
+export async function getFollowingWallets(wallet: string): Promise<string[]> {
+  let following = await cacheService.getFollowing(wallet);
+  if (!following) {
+    const { data } = await supabase
+      .from('follows')
+      .select('following_wallet')
+      .eq('follower_wallet', wallet);
+    following = data?.map(f => f.following_wallet) || [];
+    await cacheService.setFollowing(wallet, following);
   }
-  return result;
+  return following;
 }
 
-export function camelToSnake<T extends Record<string, unknown>>(obj: T): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  for (const key in obj) {
-    const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-    result[snakeKey] = obj[key];
-  }
-  return result;
+/**
+ * Enrich an array of posts with `isLiked` status for a given wallet.
+ */
+export async function enrichPostsWithLikeStatus<T extends { id: string }>(
+  posts: T[],
+  wallet: string
+): Promise<(T & { isLiked: boolean })[]> {
+  const postIds = posts.map(p => p.id);
+  if (postIds.length === 0) return posts.map(p => ({ ...p, isLiked: false }));
+  const { data: likes } = await supabase
+    .from('likes')
+    .select('post_id')
+    .eq('user_wallet', wallet)
+    .in('post_id', postIds);
+  const likedSet = new Set(likes?.map(l => l.post_id) || []);
+  return posts.map(post => ({ ...post, isLiked: likedSet.has(post.id) }));
 }

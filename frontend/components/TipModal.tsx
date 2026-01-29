@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useState } from "react"
 import { useSafeDynamicContext } from "@/hooks/useSafeDynamicContext"
 import { toast } from "sonner"
 
@@ -53,11 +53,7 @@ export function TipModal() {
   const { mutateAsync: sendPublicTip, isPending: isPublicPending } = useTip()
   const isPending = isPublicPending || isPrivatePending
 
-  const recipient = useMemo(
-    () => tipTarget?.wallet ?? "creator",
-    [tipTarget]
-  )
-
+  const recipient = tipTarget?.wallet ?? "creator"
   const hasTarget = Boolean(tipTarget)
 
   const handleSubmit = async () => {

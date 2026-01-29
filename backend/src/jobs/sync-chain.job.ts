@@ -11,40 +11,17 @@ interface SyncChainData {
 
 export async function processSyncChain(job: Job<SyncChainData>) {
   const { type, signature, wallet, postId } = job.data;
-  
+
   logger.info({ type, signature, wallet, postId }, 'Syncing on-chain data');
-  
-  // TODO: Implement actual on-chain data sync when Solana programs are deployed
-  // This would fetch account data from Solana and update the database
-  
-  switch (type) {
-    case 'transaction': {
-      if (!signature) break;
-      
-      // Verify transaction on-chain and update status
-      await supabase
-        .from('transactions')
-        .update({ status: 'confirmed' })
-        .eq('signature', signature);
-      break;
-    }
-    
-    case 'profile': {
-      if (!wallet) break;
-      
-      // Fetch profile from on-chain and update cache
-      logger.info({ wallet }, 'Would sync profile from chain');
-      break;
-    }
-    
-    case 'post': {
-      if (!postId) break;
-      
-      // Fetch post data from on-chain
-      logger.info({ postId }, 'Would sync post from chain');
-      break;
-    }
+
+  // Only transaction sync is currently implemented.
+  // Profile and post sync are no-ops until Solana programs are deployed.
+  if (type === 'transaction' && signature) {
+    await supabase
+      .from('transactions')
+      .update({ status: 'confirmed' })
+      .eq('signature', signature);
   }
-  
+
   return { success: true, type };
 }

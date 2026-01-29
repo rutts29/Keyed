@@ -27,6 +27,23 @@ function serializeTransaction(tx: Transaction): string {
   return tx.serialize({ requireAllSignatures: false }).toString('base64');
 }
 
+async function createTxShell(feePayer: string) {
+  const { blockhash, lastValidBlockHeight } = await getRecentBlockhash();
+  const payerPubkey = new PublicKey(feePayer);
+  const tx = new Transaction();
+  tx.recentBlockhash = blockhash;
+  tx.feePayer = payerPubkey;
+  return { tx, payerPubkey, blockhash, lastValidBlockHeight };
+}
+
+function finalizeTx(tx: Transaction, blockhash: string, lastValidBlockHeight: number): TransactionResponse {
+  return {
+    transaction: serializeTransaction(tx),
+    blockhash,
+    lastValidBlockHeight,
+  };
+}
+
 // Content type enum matching the Solana program
 const ContentType = {
   Image: { image: {} },
@@ -55,21 +72,16 @@ export const solanaService = {
     bio: string,
     profileImageUri: string
   ): Promise<TransactionResponse> {
-    const { blockhash, lastValidBlockHeight } = await getRecentBlockhash();
-    const userPubkey = new PublicKey(wallet);
-
-    const tx = new Transaction();
-    tx.recentBlockhash = blockhash;
-    tx.feePayer = userPubkey;
+    const { tx, payerPubkey, blockhash, lastValidBlockHeight } = await createTxShell(wallet);
 
     if (programs.social) {
-      const [profilePda] = pdaDerivation.userProfile(userPubkey);
+      const [profilePda] = pdaDerivation.userProfile(payerPubkey);
 
       const ix = await programs.social.methods
         .createProfile(username, bio, profileImageUri)
         .accounts({
           profile: profilePda,
-          authority: userPubkey,
+          authority: payerPubkey,
           systemProgram: SystemProgram.programId,
         })
         .instruction();
@@ -80,11 +92,7 @@ export const solanaService = {
       logger.warn('Social program not available, returning empty transaction');
     }
 
-    return {
-      transaction: serializeTransaction(tx),
-      blockhash,
-      lastValidBlockHeight,
-    };
+    return finalizeTx(tx, blockhash, lastValidBlockHeight);
   },
 
   async buildUpdateProfileTx(
@@ -92,32 +100,23 @@ export const solanaService = {
     bio?: string,
     profileImageUri?: string
   ): Promise<TransactionResponse> {
-    const { blockhash, lastValidBlockHeight } = await getRecentBlockhash();
-    const userPubkey = new PublicKey(wallet);
-
-    const tx = new Transaction();
-    tx.recentBlockhash = blockhash;
-    tx.feePayer = userPubkey;
+    const { tx, payerPubkey, blockhash, lastValidBlockHeight } = await createTxShell(wallet);
 
     if (programs.social) {
-      const [profilePda] = pdaDerivation.userProfile(userPubkey);
+      const [profilePda] = pdaDerivation.userProfile(payerPubkey);
 
       const ix = await programs.social.methods
         .updateProfile(bio ?? null, profileImageUri ?? null)
         .accounts({
           profile: profilePda,
-          authority: userPubkey,
+          authority: payerPubkey,
         })
         .instruction();
 
       tx.add(ix);
     }
 
-    return {
-      transaction: serializeTransaction(tx),
-      blockhash,
-      lastValidBlockHeight,
-    };
+    return finalizeTx(tx, blockhash, lastValidBlockHeight);
   },
 
   async buildCreatePostTx(
@@ -128,20 +127,15 @@ export const solanaService = {
     isTokenGated: boolean,
     requiredToken?: string
   ): Promise<TransactionResponse> {
-    const { blockhash, lastValidBlockHeight } = await getRecentBlockhash();
-    const userPubkey = new PublicKey(wallet);
-
-    const tx = new Transaction();
-    tx.recentBlockhash = blockhash;
-    tx.feePayer = userPubkey;
+    const { tx, payerPubkey, blockhash, lastValidBlockHeight } = await createTxShell(wallet);
 
     if (programs.social) {
       // Get user profile to determine post index
-      const profile = await fetchUserProfile(userPubkey);
+      const profile = await fetchUserProfile(payerPubkey);
       const postCount = profile?.postCount ? BigInt(profile.postCount.toString()) : BigInt(0);
-      
-      const [profilePda] = pdaDerivation.userProfile(userPubkey);
-      const [postPda] = pdaDerivation.post(userPubkey, postCount);
+
+      const [profilePda] = pdaDerivation.userProfile(payerPubkey);
+      const [postPda] = pdaDerivation.post(payerPubkey, postCount);
 
       const tokenPubkey = requiredToken ? new PublicKey(requiredToken) : null;
 
@@ -156,7 +150,7 @@ export const solanaService = {
         .accounts({
           post: postPda,
           profile: profilePda,
-          authority: userPubkey,
+          authority: payerPubkey,
           systemProgram: SystemProgram.programId,
         })
         .instruction();
@@ -167,31 +161,22 @@ export const solanaService = {
       logger.warn('Social program not available, returning empty transaction');
     }
 
-    return {
-      transaction: serializeTransaction(tx),
-      blockhash,
-      lastValidBlockHeight,
-    };
+    return finalizeTx(tx, blockhash, lastValidBlockHeight);
   },
 
   async buildLikeTx(wallet: string, postId: string): Promise<TransactionResponse> {
-    const { blockhash, lastValidBlockHeight } = await getRecentBlockhash();
-    const userPubkey = new PublicKey(wallet);
+    const { tx, payerPubkey, blockhash, lastValidBlockHeight } = await createTxShell(wallet);
     const postPubkey = new PublicKey(postId);
 
-    const tx = new Transaction();
-    tx.recentBlockhash = blockhash;
-    tx.feePayer = userPubkey;
-
     if (programs.social) {
-      const [likePda] = pdaDerivation.like(postPubkey, userPubkey);
+      const [likePda] = pdaDerivation.like(postPubkey, payerPubkey);
 
       const ix = await programs.social.methods
         .likePost()
         .accounts({
           post: postPubkey,
           like: likePda,
-          user: userPubkey,
+          user: payerPubkey,
           systemProgram: SystemProgram.programId,
         })
         .instruction();
@@ -200,52 +185,34 @@ export const solanaService = {
       logger.debug({ wallet, postId, likePda: likePda.toBase58() }, 'Built like tx');
     }
 
-    return {
-      transaction: serializeTransaction(tx),
-      blockhash,
-      lastValidBlockHeight,
-    };
+    return finalizeTx(tx, blockhash, lastValidBlockHeight);
   },
 
   async buildUnlikeTx(wallet: string, postId: string): Promise<TransactionResponse> {
-    const { blockhash, lastValidBlockHeight } = await getRecentBlockhash();
-    const userPubkey = new PublicKey(wallet);
+    const { tx, payerPubkey, blockhash, lastValidBlockHeight } = await createTxShell(wallet);
     const postPubkey = new PublicKey(postId);
 
-    const tx = new Transaction();
-    tx.recentBlockhash = blockhash;
-    tx.feePayer = userPubkey;
-
     if (programs.social) {
-      const [likePda] = pdaDerivation.like(postPubkey, userPubkey);
+      const [likePda] = pdaDerivation.like(postPubkey, payerPubkey);
 
       const ix = await programs.social.methods
         .unlikePost()
         .accounts({
           post: postPubkey,
           like: likePda,
-          user: userPubkey,
+          user: payerPubkey,
         })
         .instruction();
 
       tx.add(ix);
     }
 
-    return {
-      transaction: serializeTransaction(tx),
-      blockhash,
-      lastValidBlockHeight,
-    };
+    return finalizeTx(tx, blockhash, lastValidBlockHeight);
   },
 
   async buildFollowTx(wallet: string, targetWallet: string): Promise<TransactionResponse> {
-    const { blockhash, lastValidBlockHeight } = await getRecentBlockhash();
-    const followerPubkey = new PublicKey(wallet);
+    const { tx, payerPubkey: followerPubkey, blockhash, lastValidBlockHeight } = await createTxShell(wallet);
     const followingPubkey = new PublicKey(targetWallet);
-
-    const tx = new Transaction();
-    tx.recentBlockhash = blockhash;
-    tx.feePayer = followerPubkey;
 
     if (programs.social) {
       const [followPda] = pdaDerivation.follow(followerPubkey, followingPubkey);
@@ -268,21 +235,12 @@ export const solanaService = {
       logger.debug({ wallet, targetWallet, followPda: followPda.toBase58() }, 'Built follow tx');
     }
 
-    return {
-      transaction: serializeTransaction(tx),
-      blockhash,
-      lastValidBlockHeight,
-    };
+    return finalizeTx(tx, blockhash, lastValidBlockHeight);
   },
 
   async buildUnfollowTx(wallet: string, targetWallet: string): Promise<TransactionResponse> {
-    const { blockhash, lastValidBlockHeight } = await getRecentBlockhash();
-    const followerPubkey = new PublicKey(wallet);
+    const { tx, payerPubkey: followerPubkey, blockhash, lastValidBlockHeight } = await createTxShell(wallet);
     const followingPubkey = new PublicKey(targetWallet);
-
-    const tx = new Transaction();
-    tx.recentBlockhash = blockhash;
-    tx.feePayer = followerPubkey;
 
     if (programs.social) {
       const [followPda] = pdaDerivation.follow(followerPubkey, followingPubkey);
@@ -303,21 +261,12 @@ export const solanaService = {
       tx.add(ix);
     }
 
-    return {
-      transaction: serializeTransaction(tx),
-      blockhash,
-      lastValidBlockHeight,
-    };
+    return finalizeTx(tx, blockhash, lastValidBlockHeight);
   },
 
   async buildCommentTx(wallet: string, postId: string, text: string): Promise<TransactionResponse> {
-    const { blockhash, lastValidBlockHeight } = await getRecentBlockhash();
-    const userPubkey = new PublicKey(wallet);
+    const { tx, payerPubkey, blockhash, lastValidBlockHeight } = await createTxShell(wallet);
     const postPubkey = new PublicKey(postId);
-
-    const tx = new Transaction();
-    tx.recentBlockhash = blockhash;
-    tx.feePayer = userPubkey;
 
     if (programs.social) {
       // Fetch current comment count from the post
@@ -338,7 +287,7 @@ export const solanaService = {
         .accounts({
           post: postPubkey,
           comment: commentPda,
-          commenter: userPubkey,
+          commenter: payerPubkey,
           systemProgram: SystemProgram.programId,
         })
         .instruction();
@@ -347,20 +296,11 @@ export const solanaService = {
       logger.debug({ wallet, postId, commentPda: commentPda.toBase58() }, 'Built comment tx');
     }
 
-    return {
-      transaction: serializeTransaction(tx),
-      blockhash,
-      lastValidBlockHeight,
-    };
+    return finalizeTx(tx, blockhash, lastValidBlockHeight);
   },
 
   async buildInitializeVaultTx(wallet: string): Promise<TransactionResponse> {
-    const { blockhash, lastValidBlockHeight } = await getRecentBlockhash();
-    const creatorPubkey = new PublicKey(wallet);
-
-    const tx = new Transaction();
-    tx.recentBlockhash = blockhash;
-    tx.feePayer = creatorPubkey;
+    const { tx, payerPubkey: creatorPubkey, blockhash, lastValidBlockHeight } = await createTxShell(wallet);
 
     if (programs.payment) {
       const [vaultPda] = pdaDerivation.creatorVault(creatorPubkey);
@@ -378,11 +318,7 @@ export const solanaService = {
       logger.debug({ wallet, vaultPda: vaultPda.toBase58() }, 'Built initialize vault tx');
     }
 
-    return {
-      transaction: serializeTransaction(tx),
-      blockhash,
-      lastValidBlockHeight,
-    };
+    return finalizeTx(tx, blockhash, lastValidBlockHeight);
   },
 
   async buildTipTx(
@@ -391,23 +327,19 @@ export const solanaService = {
     amount: number,
     postId?: string
   ): Promise<TransactionResponse> {
-    const { blockhash, lastValidBlockHeight } = await getRecentBlockhash();
-    const tipperPubkey = new PublicKey(wallet);
+    const { tx, payerPubkey: tipperPubkey, blockhash, lastValidBlockHeight } = await createTxShell(wallet);
     const creatorPubkey = new PublicKey(creatorWallet);
 
     const lamports = Math.floor(amount * LAMPORTS_PER_SOL);
-    const tx = new Transaction();
-    tx.recentBlockhash = blockhash;
-    tx.feePayer = tipperPubkey;
 
     if (programs.payment && programIds.payment) {
       // Get platform config for fee recipient
       const platformConfig = await fetchPlatformConfig();
-      
+
       if (platformConfig) {
         const [configPda] = pdaDerivation.platformConfig();
         const [vaultPda] = pdaDerivation.creatorVault(creatorPubkey);
-        
+
         // Get next tip index for this tipper (using timestamp as index for uniqueness)
         const tipIndex = BigInt(Date.now());
         const [tipRecordPda] = pdaDerivation.tipRecord(tipperPubkey, tipIndex);
@@ -457,11 +389,7 @@ export const solanaService = {
       );
     }
 
-    return {
-      transaction: serializeTransaction(tx),
-      blockhash,
-      lastValidBlockHeight,
-    };
+    return finalizeTx(tx, blockhash, lastValidBlockHeight);
   },
 
   async buildSubscribeTx(
@@ -469,14 +397,10 @@ export const solanaService = {
     creatorWallet: string,
     amountPerMonth: number
   ): Promise<TransactionResponse> {
-    const { blockhash, lastValidBlockHeight } = await getRecentBlockhash();
-    const subscriberPubkey = new PublicKey(wallet);
+    const { tx, payerPubkey: subscriberPubkey, blockhash, lastValidBlockHeight } = await createTxShell(wallet);
     const creatorPubkey = new PublicKey(creatorWallet);
 
     const lamports = Math.floor(amountPerMonth * LAMPORTS_PER_SOL);
-    const tx = new Transaction();
-    tx.recentBlockhash = blockhash;
-    tx.feePayer = subscriberPubkey;
 
     if (programs.payment && programIds.payment) {
       const platformConfig = await fetchPlatformConfig();
@@ -521,24 +445,15 @@ export const solanaService = {
       );
     }
 
-    return {
-      transaction: serializeTransaction(tx),
-      blockhash,
-      lastValidBlockHeight,
-    };
+    return finalizeTx(tx, blockhash, lastValidBlockHeight);
   },
 
   async buildCancelSubscriptionTx(
     wallet: string,
     creatorWallet: string
   ): Promise<TransactionResponse> {
-    const { blockhash, lastValidBlockHeight } = await getRecentBlockhash();
-    const subscriberPubkey = new PublicKey(wallet);
+    const { tx, payerPubkey: subscriberPubkey, blockhash, lastValidBlockHeight } = await createTxShell(wallet);
     const creatorPubkey = new PublicKey(creatorWallet);
-
-    const tx = new Transaction();
-    tx.recentBlockhash = blockhash;
-    tx.feePayer = subscriberPubkey;
 
     if (programs.payment && programIds.payment) {
       const [vaultPda] = pdaDerivation.creatorVault(creatorPubkey);
@@ -556,21 +471,13 @@ export const solanaService = {
       tx.add(ix);
     }
 
-    return {
-      transaction: serializeTransaction(tx),
-      blockhash,
-      lastValidBlockHeight,
-    };
+    return finalizeTx(tx, blockhash, lastValidBlockHeight);
   },
 
   async buildWithdrawTx(wallet: string, amount: number): Promise<TransactionResponse> {
-    const { blockhash, lastValidBlockHeight } = await getRecentBlockhash();
-    const creatorPubkey = new PublicKey(wallet);
+    const { tx, payerPubkey: creatorPubkey, blockhash, lastValidBlockHeight } = await createTxShell(wallet);
 
     const lamports = Math.floor(amount * LAMPORTS_PER_SOL);
-    const tx = new Transaction();
-    tx.recentBlockhash = blockhash;
-    tx.feePayer = creatorPubkey;
 
     if (programs.payment && programIds.payment) {
       const [vaultPda] = pdaDerivation.creatorVault(creatorPubkey);
@@ -587,11 +494,7 @@ export const solanaService = {
       logger.debug({ wallet, amount, lamports }, 'Built withdraw tx');
     }
 
-    return {
-      transaction: serializeTransaction(tx),
-      blockhash,
-      lastValidBlockHeight,
-    };
+    return finalizeTx(tx, blockhash, lastValidBlockHeight);
   },
 
   // Token gate program transactions
@@ -602,20 +505,15 @@ export const solanaService = {
     minimumBalance: number = 0,
     requiredNftCollection?: string
   ): Promise<TransactionResponse> {
-    const { blockhash, lastValidBlockHeight } = await getRecentBlockhash();
-    const creatorPubkey = new PublicKey(wallet);
+    const { tx, payerPubkey: creatorPubkey, blockhash, lastValidBlockHeight } = await createTxShell(wallet);
     const postPubkey = new PublicKey(postId);
-
-    const tx = new Transaction();
-    tx.recentBlockhash = blockhash;
-    tx.feePayer = creatorPubkey;
 
     if (programs.tokenGate && programIds.tokenGate) {
       const [accessControlPda] = pdaDerivation.accessControl(postPubkey);
 
       const tokenPubkey = requiredToken ? new PublicKey(requiredToken) : null;
-      const nftCollectionPubkey = requiredNftCollection 
-        ? new PublicKey(requiredNftCollection) 
+      const nftCollectionPubkey = requiredNftCollection
+        ? new PublicKey(requiredNftCollection)
         : null;
 
       const ix = await programs.tokenGate.methods
@@ -636,11 +534,7 @@ export const solanaService = {
       logger.debug({ wallet, postId }, 'Built set access requirements tx');
     }
 
-    return {
-      transaction: serializeTransaction(tx),
-      blockhash,
-      lastValidBlockHeight,
-    };
+    return finalizeTx(tx, blockhash, lastValidBlockHeight);
   },
 
   async buildVerifyTokenAccessTx(
@@ -648,18 +542,13 @@ export const solanaService = {
     postId: string,
     userTokenAccount: string
   ): Promise<TransactionResponse> {
-    const { blockhash, lastValidBlockHeight } = await getRecentBlockhash();
-    const userPubkey = new PublicKey(wallet);
+    const { tx, payerPubkey, blockhash, lastValidBlockHeight } = await createTxShell(wallet);
     const postPubkey = new PublicKey(postId);
     const tokenAccountPubkey = new PublicKey(userTokenAccount);
 
-    const tx = new Transaction();
-    tx.recentBlockhash = blockhash;
-    tx.feePayer = userPubkey;
-
     if (programs.tokenGate && programIds.tokenGate) {
       const [accessControlPda] = pdaDerivation.accessControl(postPubkey);
-      const [verificationPda] = pdaDerivation.accessVerification(userPubkey, postPubkey);
+      const [verificationPda] = pdaDerivation.accessVerification(payerPubkey, postPubkey);
 
       const ix = await programs.tokenGate.methods
         .verifyTokenAccess()
@@ -667,7 +556,7 @@ export const solanaService = {
           accessControl: accessControlPda,
           verification: verificationPda,
           userTokenAccount: tokenAccountPubkey,
-          user: userPubkey,
+          user: payerPubkey,
           systemProgram: SystemProgram.programId,
         })
         .instruction();
@@ -675,11 +564,7 @@ export const solanaService = {
       tx.add(ix);
     }
 
-    return {
-      transaction: serializeTransaction(tx),
-      blockhash,
-      lastValidBlockHeight,
-    };
+    return finalizeTx(tx, blockhash, lastValidBlockHeight);
   },
 
   async buildVerifyNftAccessTx(
@@ -688,19 +573,14 @@ export const solanaService = {
     nftTokenAccount: string,
     nftMint: string
   ): Promise<TransactionResponse> {
-    const { blockhash, lastValidBlockHeight } = await getRecentBlockhash();
-    const userPubkey = new PublicKey(wallet);
+    const { tx, payerPubkey, blockhash, lastValidBlockHeight } = await createTxShell(wallet);
     const postPubkey = new PublicKey(postId);
     const nftTokenAccountPubkey = new PublicKey(nftTokenAccount);
     const nftMintPubkey = new PublicKey(nftMint);
 
-    const tx = new Transaction();
-    tx.recentBlockhash = blockhash;
-    tx.feePayer = userPubkey;
-
     if (programs.tokenGate && programIds.tokenGate) {
       const [accessControlPda] = pdaDerivation.accessControl(postPubkey);
-      const [verificationPda] = pdaDerivation.accessVerification(userPubkey, postPubkey);
+      const [verificationPda] = pdaDerivation.accessVerification(payerPubkey, postPubkey);
 
       const ix = await programs.tokenGate.methods
         .verifyNftAccess()
@@ -709,7 +589,7 @@ export const solanaService = {
           verification: verificationPda,
           nftTokenAccount: nftTokenAccountPubkey,
           nftMint: nftMintPubkey,
-          user: userPubkey,
+          user: payerPubkey,
           systemProgram: SystemProgram.programId,
         })
         .instruction();
@@ -717,11 +597,7 @@ export const solanaService = {
       tx.add(ix);
     }
 
-    return {
-      transaction: serializeTransaction(tx),
-      blockhash,
-      lastValidBlockHeight,
-    };
+    return finalizeTx(tx, blockhash, lastValidBlockHeight);
   },
 
   async submitTransaction(signedTx: string): Promise<string> {

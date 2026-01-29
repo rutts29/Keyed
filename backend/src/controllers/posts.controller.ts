@@ -6,7 +6,6 @@ import { cacheService } from '../services/cache.service.js';
 import { ipfsService } from '../services/ipfs.service.js';
 import { aiService } from '../services/ai.service.js';
 import { solanaService } from '../services/solana.service.js';
-import { realtimeService } from '../services/realtime.service.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { hashImage } from '../utils/helpers.js';
 import { addJob } from '../jobs/queues.js';

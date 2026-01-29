@@ -58,31 +58,21 @@ export const accessController = {
 
         // Try to fetch verification account
         const verification = await fetchAccessVerification(userPubkey, postPubkey);
-        
+
         if (verification && verification.verified) {
-          // Check if verification has expired
-          if (verification.expiresAt) {
-            const expiresAt = new Date(Number(verification.expiresAt) * 1000);
-            if (expiresAt > new Date()) {
-              res.json({
-                success: true,
-                data: { 
-                  hasAccess: true, 
-                  reason: 'verified',
-                  verifiedAt: new Date(Number(verification.verifiedAt) * 1000),
-                  expiresAt,
-                },
-              });
-              return;
-            }
-          } else {
-            // No expiration - access is permanent
+          const expiresAt = verification.expiresAt
+            ? new Date(Number(verification.expiresAt) * 1000)
+            : null;
+
+          // Grant access if no expiration or not yet expired
+          if (!expiresAt || expiresAt > new Date()) {
             res.json({
               success: true,
-              data: { 
-                hasAccess: true, 
+              data: {
+                hasAccess: true,
                 reason: 'verified',
                 verifiedAt: new Date(Number(verification.verifiedAt) * 1000),
+                ...(expiresAt && { expiresAt }),
               },
             });
             return;

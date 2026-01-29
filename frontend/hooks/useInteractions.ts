@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query"
 
 import { useSafeDynamicContext } from "./useSafeDynamicContext"
+import { useSignedMutation } from "./useSignedMutation"
 
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/queryClient"
@@ -55,22 +56,6 @@ export function useInfiniteComments(postId: string, limit = 10) {
   })
 }
 
-export function usePostComments(postId: string) {
-  return useQuery({
-    queryKey: queryKeys.comments(postId),
-    queryFn: async () => {
-      const { data } = await api.get<ApiResponse<CommentsResponse>>(
-        `/posts/${postId}/comments`
-      )
-      if (!data.data) {
-        throw new Error("Comments unavailable")
-      }
-      return data.data
-    },
-    enabled: Boolean(postId),
-  })
-}
-
 export function useAddComment(postId: string) {
   const queryClient = useQueryClient()
   const { primaryWallet } = useSafeDynamicContext()
@@ -96,104 +81,40 @@ export function useAddComment(postId: string) {
   })
 }
 
-export function useLikePost(postId: string) {
-  const queryClient = useQueryClient()
-  const { primaryWallet } = useSafeDynamicContext()
+const feedInvalidateKeys = [
+  queryKeys.feed("explore"),
+  queryKeys.feed("personalized"),
+  queryKeys.feed("following"),
+] as const
 
-  return useMutation({
-    mutationFn: async () => {
-      if (!primaryWallet) {
-        throw new Error("Connect your wallet")
-      }
-      const { data } = await api.post<ApiResponse<TransactionResponse>>(
-        `/posts/${postId}/like`
-      )
-      if (!data.data) {
-        throw new Error("Like failed")
-      }
-      await signAndSubmitTransaction(data.data.transaction, primaryWallet)
-      return data.data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.post(postId) })
-      queryClient.invalidateQueries({ queryKey: queryKeys.feed("explore") })
-      queryClient.invalidateQueries({ queryKey: queryKeys.feed("personalized") })
-      queryClient.invalidateQueries({ queryKey: queryKeys.feed("following") })
-    },
+export function useLikePost(postId: string) {
+  return useSignedMutation({
+    mutationFn: () =>
+      api.post<ApiResponse<TransactionResponse>>(`/posts/${postId}/like`),
+    invalidateKeys: [queryKeys.post(postId), ...feedInvalidateKeys],
   })
 }
 
 export function useUnlikePost(postId: string) {
-  const queryClient = useQueryClient()
-  const { primaryWallet } = useSafeDynamicContext()
-
-  return useMutation({
-    mutationFn: async () => {
-      if (!primaryWallet) {
-        throw new Error("Connect your wallet")
-      }
-      const { data } = await api.delete<ApiResponse<TransactionResponse>>(
-        `/posts/${postId}/like`
-      )
-      if (!data.data) {
-        throw new Error("Unlike failed")
-      }
-      await signAndSubmitTransaction(data.data.transaction, primaryWallet)
-      return data.data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.post(postId) })
-      queryClient.invalidateQueries({ queryKey: queryKeys.feed("explore") })
-      queryClient.invalidateQueries({ queryKey: queryKeys.feed("personalized") })
-      queryClient.invalidateQueries({ queryKey: queryKeys.feed("following") })
-    },
+  return useSignedMutation({
+    mutationFn: () =>
+      api.delete<ApiResponse<TransactionResponse>>(`/posts/${postId}/like`),
+    invalidateKeys: [queryKeys.post(postId), ...feedInvalidateKeys],
   })
 }
 
 export function useFollowUser(wallet: string) {
-  const queryClient = useQueryClient()
-  const { primaryWallet } = useSafeDynamicContext()
-
-  return useMutation({
-    mutationFn: async () => {
-      if (!primaryWallet) {
-        throw new Error("Connect your wallet")
-      }
-      const { data } = await api.post<ApiResponse<TransactionResponse>>(
-        `/users/${wallet}/follow`
-      )
-      if (!data.data) {
-        throw new Error("Follow failed")
-      }
-      await signAndSubmitTransaction(data.data.transaction, primaryWallet)
-      return data.data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.user(wallet) })
-    },
+  return useSignedMutation({
+    mutationFn: () =>
+      api.post<ApiResponse<TransactionResponse>>(`/users/${wallet}/follow`),
+    invalidateKeys: [queryKeys.user(wallet)],
   })
 }
 
 export function useUnfollowUser(wallet: string) {
-  const queryClient = useQueryClient()
-  const { primaryWallet } = useSafeDynamicContext()
-
-  return useMutation({
-    mutationFn: async () => {
-      if (!primaryWallet) {
-        throw new Error("Connect your wallet")
-      }
-      const { data } = await api.delete<ApiResponse<TransactionResponse>>(
-        `/users/${wallet}/follow`
-      )
-      if (!data.data) {
-        throw new Error("Unfollow failed")
-      }
-      await signAndSubmitTransaction(data.data.transaction, primaryWallet)
-      return data.data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.user(wallet) })
-    },
+  return useSignedMutation({
+    mutationFn: () =>
+      api.delete<ApiResponse<TransactionResponse>>(`/users/${wallet}/follow`),
+    invalidateKeys: [queryKeys.user(wallet)],
   })
 }

@@ -5,6 +5,7 @@ import { cacheService } from '../services/cache.service.js';
 import { aiService } from '../services/ai.service.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { logger } from '../utils/logger.js';
+import { getFollowingWallets, enrichPostsWithLikeStatus } from '../utils/helpers.js';
 
 export const feedController = {
   /**
@@ -24,14 +25,14 @@ export const feedController = {
     }
     
     // Get user's liked posts for AI recommendations
-    const { data: likedPosts } = await supabase
+    const { data: userLikes } = await supabase
       .from('likes')
       .select('post_id')
       .eq('user_wallet', wallet)
       .order('timestamp', { ascending: false })
       .limit(50);
-    
-    const likedPostIds = likedPosts?.map(l => l.post_id) || [];
+
+    const likedPostIds = userLikes?.map(l => l.post_id) || [];
     
     // Get already seen posts to exclude
     const { data: interactions } = await supabase
@@ -86,16 +87,8 @@ export const feedController = {
         .slice(0, limit);
     } else {
       // Fallback: Get posts from following + own posts
-      let following = await cacheService.getFollowing(wallet);
-      if (!following) {
-        const { data: followsData } = await supabase
-          .from('follows')
-          .select('following_wallet')
-          .eq('follower_wallet', wallet);
-        following = followsData?.map(f => f.following_wallet) || [];
-        await cacheService.setFollowing(wallet, following);
-      }
-      
+      const following = await getFollowingWallets(wallet);
+
       const feedWallets = [...following, wallet];
       
       let query = supabase
@@ -118,30 +111,15 @@ export const feedController = {
       posts = data;
     }
     
-    // Get user's likes for these posts
-    const postIds = posts.map(p => p.id);
-    const { data: likes } = await supabase
-      .from('likes')
-      .select('post_id')
-      .eq('user_wallet', wallet)
-      .in('post_id', postIds);
-    
-    const likedSet = new Set(likes?.map(l => l.post_id) || []);
-    
+    // Enrich with like status
+    const likedPosts = await enrichPostsWithLikeStatus(posts, wallet);
+
     // Get following status
-    let following = await cacheService.getFollowing(wallet);
-    if (!following) {
-      const { data: followsData } = await supabase
-        .from('follows')
-        .select('following_wallet')
-        .eq('follower_wallet', wallet);
-      following = followsData?.map(f => f.following_wallet) || [];
-    }
-    const followingSet = new Set(following);
-    
-    const feedItems = posts.map(post => ({
+    const followingList = await getFollowingWallets(wallet);
+    const followingSet = new Set(followingList);
+
+    const feedItems = likedPosts.map(post => ({
       ...post,
-      isLiked: likedSet.has(post.id),
       isFollowing: followingSet.has(post.creator_wallet),
     }));
     
@@ -186,18 +164,7 @@ export const feedController = {
     
     let feedItems = posts;
     if (req.wallet) {
-      const postIds = posts.map(p => p.id);
-      const { data: likes } = await supabase
-        .from('likes')
-        .select('post_id')
-        .eq('user_wallet', req.wallet)
-        .in('post_id', postIds);
-      
-      const likedPostIds = new Set(likes?.map(l => l.post_id) || []);
-      feedItems = posts.map(post => ({
-        ...post,
-        isLiked: likedPostIds.has(post.id),
-      }));
+      feedItems = await enrichPostsWithLikeStatus(posts, req.wallet);
     }
     
     const nextCursor = posts.length === limit ? posts[posts.length - 1].timestamp : null;
@@ -216,16 +183,8 @@ export const feedController = {
     const limit = parseInt(req.query.limit as string) || 20;
     const cursor = req.query.cursor as string;
     
-    let following = await cacheService.getFollowing(wallet);
-    if (!following) {
-      const { data: followsData } = await supabase
-        .from('follows')
-        .select('following_wallet')
-        .eq('follower_wallet', wallet);
-      following = followsData?.map(f => f.following_wallet) || [];
-      await cacheService.setFollowing(wallet, following);
-    }
-    
+    const following = await getFollowingWallets(wallet);
+
     if (following.length === 0) {
       res.json({
         success: true,
@@ -251,18 +210,10 @@ export const feedController = {
       throw new AppError(500, 'DB_ERROR', 'Failed to fetch following feed');
     }
     
-    const postIds = posts.map(p => p.id);
-    const { data: likes } = await supabase
-      .from('likes')
-      .select('post_id')
-      .eq('user_wallet', wallet)
-      .in('post_id', postIds);
-    
-    const likedPostIds = new Set(likes?.map(l => l.post_id) || []);
-    
-    const feedItems = posts.map(post => ({
+    const likedPosts = await enrichPostsWithLikeStatus(posts, wallet);
+
+    const feedItems = likedPosts.map(post => ({
       ...post,
-      isLiked: likedPostIds.has(post.id),
       isFollowing: true,
     }));
     
@@ -311,18 +262,7 @@ export const feedController = {
     }
 
     // Add like status for authenticated users
-    const postIds = posts.map(p => p.id);
-    const { data: likes } = await supabase
-      .from('likes')
-      .select('post_id')
-      .eq('user_wallet', req.wallet)
-      .in('post_id', postIds);
-
-    const likedPostIds = new Set(likes?.map(l => l.post_id) || []);
-    const feedItems = posts.map(post => ({
-      ...post,
-      isLiked: likedPostIds.has(post.id),
-    }));
+    const feedItems = await enrichPostsWithLikeStatus(posts, req.wallet);
 
     res.json({
       success: true,

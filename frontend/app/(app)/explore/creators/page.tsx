@@ -11,40 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { FollowButton } from "@/components/FollowButton";
 import { useExploreCreators } from "@/hooks/useExploreCreators";
 import type { UserProfile } from "@/types";
-
-function getInitials(username: string | null, wallet: string): string {
-  if (username) {
-    return username
-      .split(/[.\-_\s]/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((s) => s[0]?.toUpperCase() ?? "")
-      .join("");
-  }
-  return wallet.slice(0, 2).toUpperCase();
-}
-
-function formatWallet(wallet: string): string {
-  return `${wallet.slice(0, 4)}...${wallet.slice(-4)}`;
-}
-
-function formatCount(count: number): string {
-  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
-  if (count >= 1_000) return `${(count / 1_000).toFixed(1)}K`;
-  return String(count);
-}
-
-function resolveImageUrl(uri: string | null): string | null {
-  if (!uri) return null;
-  if (uri.startsWith("ipfs://")) {
-    const cid = uri.replace("ipfs://", "");
-    const gateway =
-      process.env.NEXT_PUBLIC_R2_PUBLIC_URL ??
-      process.env.NEXT_PUBLIC_IPFS_GATEWAY;
-    return gateway ? `${gateway}/${cid}` : uri;
-  }
-  return uri;
-}
+import { getInitials, formatWallet, formatCompactCount, resolveImageUrl } from "@/lib/format";
 
 function CreatorCard({ user }: { user: UserProfile }) {
   const imageUrl = resolveImageUrl(user.profileImageUri);
@@ -91,13 +58,13 @@ function CreatorCard({ user }: { user: UserProfile }) {
             <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
               <span>
                 <span className="font-semibold text-foreground">
-                  {formatCount(user.followerCount)}
+                  {formatCompactCount(user.followerCount)}
                 </span>{" "}
                 followers
               </span>
               <span>
                 <span className="font-semibold text-foreground">
-                  {formatCount(user.postCount)}
+                  {formatCompactCount(user.postCount)}
                 </span>{" "}
                 posts
               </span>

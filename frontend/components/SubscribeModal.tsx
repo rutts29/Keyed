@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useState } from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -19,16 +19,7 @@ export function SubscribeModal() {
   const [amount, setAmount] = useState("1")
   const { mutateAsync, isPending } = useSubscribe()
 
-  useEffect(() => {
-    if (isOpen && !subscribeTarget) {
-      closeSubscribeModal()
-    }
-  }, [closeSubscribeModal, isOpen, subscribeTarget])
-
-  const recipient = useMemo(
-    () => subscribeTarget?.wallet ?? "creator",
-    [subscribeTarget]
-  )
+  const recipient = subscribeTarget?.wallet ?? "creator"
 
   const handleSubmit = async () => {
     const value = Number.parseFloat(amount)

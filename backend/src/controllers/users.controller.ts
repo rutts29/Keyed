@@ -1,14 +1,14 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { PublicKey } from '@solana/web3.js';
 import { AuthenticatedRequest } from '../types/index.js';
 import { supabase } from '../config/supabase.js';
 import { cacheService } from '../services/cache.service.js';
 import { solanaService } from '../services/solana.service.js';
-import { realtimeService } from '../services/realtime.service.js';
 import { addJob } from '../jobs/queues.js';
 import { fetchUserProfile } from '../config/solana.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { logger } from '../utils/logger.js';
+import { getFollowingWallets } from '../utils/helpers.js';
 
 export const usersController = {
   async getProfile(req: AuthenticatedRequest, res: Response) {
@@ -336,7 +336,7 @@ export const usersController = {
     });
   },
 
-  async listCreators(req: AuthenticatedRequest, res: Response) {
+  async listCreators(req: Request, res: Response) {
     const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
     const cursor = req.query.cursor as string;
 
@@ -373,22 +373,7 @@ export const usersController = {
     const limit = Math.min(parseInt(req.query.limit as string) || 5, 20);
 
     // Get the user's following list (from cache or DB)
-    let followingWallets = await cacheService.getFollowing(wallet);
-
-    if (!followingWallets) {
-      const { data: follows, error: followError } = await supabase
-        .from('follows')
-        .select('following_wallet')
-        .eq('follower_wallet', wallet);
-
-      if (followError) {
-        logger.error({ error: followError, wallet }, 'Failed to fetch following list for suggestions');
-        throw new AppError(500, 'DB_ERROR', 'Failed to fetch following list');
-      }
-
-      followingWallets = follows?.map(f => f.following_wallet) || [];
-      await cacheService.setFollowing(wallet, followingWallets);
-    }
+    const followingWallets = await getFollowingWallets(wallet);
 
     // Build exclusion list: users already followed + current user
     const excludeWallets = [...followingWallets, wallet];
