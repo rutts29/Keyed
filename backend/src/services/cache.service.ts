@@ -91,6 +91,16 @@ export const cacheService = {
     await redis.setex('trending:posts', TTL.TRENDING, JSON.stringify(posts));
   },
 
+  // Trending topics cache
+  async getTrendingTopics() {
+    const data = await redis.get('trending:topics');
+    return data ? JSON.parse(data) : null;
+  },
+
+  async setTrendingTopics(topics: unknown) {
+    await redis.setex('trending:topics', TTL.TRENDING, JSON.stringify(topics));
+  },
+
   // Search suggestions cache
   async getSuggestions(prefix: string) {
     const data = await redis.get(`suggestions:${prefix.toLowerCase()}`);

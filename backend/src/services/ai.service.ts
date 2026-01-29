@@ -335,7 +335,8 @@ export const aiService = {
         reason: data.reason,
         blockedAt: data.blockedAt,
       };
-    } catch {
+    } catch (error) {
+      logger.warn({ error, imageHash: imageHash.substring(0, 8) }, 'Hash check failed');
       return { knownBad: false };
     }
   },

@@ -329,4 +329,82 @@ export const feedController = {
       data: { posts: feedItems },
     });
   },
+
+  /**
+   * Trending topics/hashtags from auto_tags in the last 24-48 hours
+   * Cached for 1 minute to reduce database load
+   */
+  async getTrendingTopics(req: AuthenticatedRequest, res: Response) {
+    // Try cache first
+    const cached = await cacheService.getTrendingTopics();
+    if (cached) {
+      res.json({ success: true, data: cached });
+      return;
+    }
+
+    // Query posts from the last 48 hours to get a good sample
+    const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+
+    // Use raw SQL via RPC to unnest and aggregate auto_tags
+    const { data, error } = await supabase.rpc('get_trending_topics', {
+      since_timestamp: twoDaysAgo,
+      topic_limit: 10,
+    });
+
+    if (error) {
+      // Fallback: If RPC doesn't exist, query posts and aggregate in JS
+      logger.warn({ error }, 'RPC get_trending_topics failed, falling back to JS aggregation');
+
+      const { data: posts, error: postsError } = await supabase
+        .from('posts')
+        .select('auto_tags')
+        .gte('timestamp', twoDaysAgo)
+        .not('auto_tags', 'is', null);
+
+      if (postsError) {
+        throw new AppError(500, 'DB_ERROR', 'Failed to fetch trending topics');
+      }
+
+      // Aggregate tags in JavaScript
+      const tagCounts = new Map<string, number>();
+      for (const post of posts || []) {
+        if (post.auto_tags && Array.isArray(post.auto_tags)) {
+          for (const tag of post.auto_tags) {
+            const normalizedTag = tag.toLowerCase().trim();
+            if (normalizedTag) {
+              tagCounts.set(normalizedTag, (tagCounts.get(normalizedTag) || 0) + 1);
+            }
+          }
+        }
+      }
+
+      // Sort by count and take top 10
+      const sortedTopics = Array.from(tagCounts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([name, postCount]) => ({
+          name,
+          postCount,
+          trend: 'stable' as const,
+        }));
+
+      const result = { topics: sortedTopics };
+      await cacheService.setTrendingTopics(result);
+
+      res.json({ success: true, data: result });
+      return;
+    }
+
+    // Format RPC results
+    const topics = (data || []).map((row: { tag: string; post_count: number }) => ({
+      name: row.tag,
+      postCount: row.post_count,
+      trend: 'stable' as const,
+    }));
+
+    const result = { topics };
+    await cacheService.setTrendingTopics(result);
+
+    res.json({ success: true, data: result });
+  },
 };

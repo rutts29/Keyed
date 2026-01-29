@@ -12,5 +12,6 @@ router.get('/', authMiddleware, rateLimitGet, validateQuery(schemas.pagination),
 router.get('/explore', optionalAuthMiddleware, rateLimitGet, validateQuery(schemas.pagination), asyncHandler<AuthenticatedRequest>(feedController.getExploreFeed));
 router.get('/following', authMiddleware, rateLimitGet, validateQuery(schemas.pagination), asyncHandler<AuthenticatedRequest>(feedController.getFollowingFeed));
 router.get('/trending', rateLimitGet, asyncHandler<AuthenticatedRequest>(feedController.getTrending));
+router.get('/trending-topics', rateLimitGet, asyncHandler<AuthenticatedRequest>(feedController.getTrendingTopics));
 
 export default router;
