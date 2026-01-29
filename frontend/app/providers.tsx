@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { DynamicContextProvider } from "@dynamic-labs/sdk-react-core";
 import { Toaster } from "sonner";
@@ -12,7 +11,6 @@ import { createQueryClient } from "@/lib/queryClient";
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => createQueryClient());
   const [mounted, setMounted] = useState(false);
-  const router = useRouter();
 
   // Prevent Dynamic Labs from rendering during SSR/SSG
   useEffect(() => {
@@ -22,13 +20,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   const settings = useMemo(
     () => ({
       ...dynamicConfig,
-      events: {
-        onAuthSuccess: () => {
-          router.push("/app");
-        },
-      },
     }),
-    [router]
+    []
   );
 
   // During SSR/SSG, render without Dynamic Labs provider

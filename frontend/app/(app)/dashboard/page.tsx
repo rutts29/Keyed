@@ -3,6 +3,16 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import {
+  ArrowUp,
+  Calendar,
+  CircleDollarSign,
+  CreditCard,
+  FileText,
+  Star,
+  CheckCircle,
+  Users,
+} from "lucide-react";
 import { PrivateTipsReceived } from "@/components/PrivateTipsReceived";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,29 +27,9 @@ import { lamportsToSol } from "@/lib/solana";
 import { cn } from "@/lib/utils";
 import type { Transaction, TransactionType } from "@/types";
 
+import { formatWallet, formatTimestamp } from "@/lib/format";
+
 type FilterType = "all" | "tip" | "subscribe" | "withdrawal";
-
-// Helper to format wallet addresses
-function formatWallet(wallet: string | null): string {
-  if (!wallet) return "Unknown";
-  return `${wallet.slice(0, 4)}...${wallet.slice(-4)}`;
-}
-
-// Helper to format timestamps nicely
-function formatTimestamp(timestamp: string): string {
-  const date = new Date(timestamp);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return "Just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
 
 // Get transaction type color classes
 function getTypeColor(type: TransactionType | "withdrawal"): string {
@@ -192,19 +182,7 @@ function StatCard({
                   growth > 0 ? "text-emerald-400" : "text-rose-400"
                 )}
               >
-                <svg
-                  className={cn("h-3 w-3", growth < 0 && "rotate-180")}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M5 10l7-7m0 0l7 7m-7-7v18"
-                  />
-                </svg>
+                <ArrowUp className={cn("h-3 w-3", growth < 0 && "rotate-180")} />
                 {Math.abs(growth).toFixed(0)}%
               </span>
             )}
@@ -228,21 +206,9 @@ function TransactionItem({ tx }: { tx: Transaction }) {
             getTypeColor(tx.type)
           )}
         >
-          {tx.type === "tip" && (
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          )}
-          {tx.type === "subscribe" && (
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-            </svg>
-          )}
-          {tx.type !== "tip" && tx.type !== "subscribe" && (
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          )}
+          {tx.type === "tip" && <CircleDollarSign className="h-4 w-4" />}
+          {tx.type === "subscribe" && <Star className="h-4 w-4" />}
+          {tx.type !== "tip" && tx.type !== "subscribe" && <CheckCircle className="h-4 w-4" />}
         </div>
         <div className="space-y-0.5">
           <p className="text-sm font-medium text-foreground">{typeLabel}</p>
@@ -490,32 +456,20 @@ export default function DashboardPage() {
           value={earnings ? lamportsToSol(earnings.totalTips).toFixed(2) : "--"}
           suffix="SOL"
           isLoading={earningsLoading}
-          icon={
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          }
+          icon={<CircleDollarSign className="h-4 w-4" />}
         />
         <StatCard
           title="Subscribers"
           value={earnings?.subscriberCount?.toString() ?? "--"}
           isLoading={earningsLoading}
-          icon={
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-          }
+          icon={<Users className="h-4 w-4" />}
         />
         <StatCard
           title="Available balance"
           value={vault ? lamportsToSol(vault.availableBalance).toFixed(2) : "--"}
           suffix="SOL"
           isLoading={vaultLoading}
-          icon={
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-            </svg>
-          }
+          icon={<CreditCard className="h-4 w-4" />}
         />
         <StatCard
           title="This month"
@@ -523,11 +477,7 @@ export default function DashboardPage() {
           suffix="SOL"
           growth={monthlyGrowth}
           isLoading={earningsLoading}
-          icon={
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          }
+          icon={<Calendar className="h-4 w-4" />}
         />
       </div>
 
@@ -631,19 +581,7 @@ export default function DashboardPage() {
             <TabsContent value={activeFilter} className="mt-4 space-y-3">
               {filteredTransactions.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                  <svg
-                    className="h-12 w-12 mb-3 opacity-50"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={1}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
+                  <FileText className="h-12 w-12 mb-3 opacity-50" strokeWidth={1} />
                   <p className="text-sm">No transactions found</p>
                   <p className="text-xs">
                     {activeFilter === "withdrawal"

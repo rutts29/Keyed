@@ -111,17 +111,4 @@ export const cacheService = {
     await redis.setex(`suggestions:${prefix.toLowerCase()}`, TTL.SEARCH, JSON.stringify(suggestions));
   },
 
-  // Generic cache helpers
-  async get<T>(key: string): Promise<T | null> {
-    const data = await redis.get(key);
-    return data ? JSON.parse(data) : null;
-  },
-
-  async set(key: string, value: unknown, ttl: number) {
-    await redis.setex(key, ttl, JSON.stringify(value));
-  },
-
-  async del(key: string) {
-    await redis.del(key);
-  },
 };

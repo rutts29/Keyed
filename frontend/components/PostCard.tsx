@@ -12,35 +12,10 @@ import { useUIStore } from "@/store/uiStore";
 import type { FeedItem } from "@/types";
 import { MessageCircle, Share2 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { getInitials, formatTimestamp, resolveImageUrl } from "@/lib/format";
 
 type PostCardProps = {
   post: FeedItem;
-};
-
-const getInitials = (value: string) =>
-  value
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("");
-
-const formatTimestamp = (timestamp: string) => {
-  const date = new Date(timestamp);
-  if (Number.isNaN(date.getTime())) return timestamp;
-  return date.toLocaleDateString();
-};
-
-const resolveImageUrl = (uri?: string | null) => {
-  if (!uri) return null;
-  if (uri.startsWith("ipfs://")) {
-    const cid = uri.replace("ipfs://", "");
-    const gateway =
-      process.env.NEXT_PUBLIC_R2_PUBLIC_URL ??
-      process.env.NEXT_PUBLIC_IPFS_GATEWAY;
-    return gateway ? `${gateway}/${cid}` : uri;
-  }
-  return uri;
 };
 
 export function PostCard({ post }: PostCardProps) {
@@ -49,7 +24,7 @@ export function PostCard({ post }: PostCardProps) {
   const authorHandle = post.creator.username
     ? `@${post.creator.username}`
     : post.creator.wallet;
-  const initials = getInitials(authorName);
+  const initials = getInitials(post.creator.username, post.creator.wallet);
   const createdAt = formatTimestamp(post.timestamp);
   const content = post.caption ?? post.llmDescription ?? "New post";
   const tags = post.autoTags ?? [];

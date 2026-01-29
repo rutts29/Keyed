@@ -133,23 +133,8 @@ export const aiService = {
         }
         
         const data = await response.json() as AIModerationResponse;
-        
-        return {
-          verdict: data.verdict,
-          scores: {
-            nsfw: data.scores.nsfw,
-            violence: data.scores.violence,
-            hate: data.scores.hate,
-            childSafety: data.scores.childSafety,
-            spam: data.scores.spam,
-            drugsWeapons: data.scores.drugsWeapons,
-          },
-          maxScore: data.maxScore,
-          blockedCategory: data.blockedCategory,
-          explanation: data.explanation,
-          processingTimeMs: data.processingTimeMs,
-          violationId: data.violationId,
-        };
+
+        return data;
       } catch (error) {
         const isTimeout = error instanceof Error && error.name === 'AbortError';
         
@@ -202,18 +187,8 @@ export const aiService = {
       }
       
       const data = await response.json() as AIAnalysisResponse;
-      
-      return {
-        description: data.description,
-        tags: data.tags,
-        sceneType: data.sceneType,
-        objects: data.objects,
-        mood: data.mood,
-        colors: data.colors,
-        safetyScore: data.safetyScore,
-        altText: data.altText,
-        embedding: data.embedding,
-      };
+
+      return data;
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         logger.warn('AI analysis request timed out');
@@ -246,16 +221,8 @@ export const aiService = {
       }
       
       const data = await response.json() as AISearchResponse;
-      
-      return {
-        results: data.results.map(r => ({
-          postId: r.postId,
-          score: r.score,
-          description: r.description,
-          creatorWallet: r.creatorWallet,
-        })),
-        expandedQuery: data.expandedQuery,
-      };
+
+      return data;
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         logger.warn('AI search request timed out');
@@ -294,13 +261,9 @@ export const aiService = {
       }
       
       const data = await response.json() as AIRecommendResponse;
-      
+
       return {
-        recommendations: data.recommendations.map(r => ({
-          postId: r.postId,
-          score: r.score,
-          reason: r.reason,
-        })),
+        recommendations: data.recommendations,
         tasteProfile: data.tasteProfile || null,
       };
     } catch (error) {
@@ -329,12 +292,8 @@ export const aiService = {
       }
       
       const data = await response.json() as AIHashCheckResponse;
-      
-      return { 
-        knownBad: data.knownBad, 
-        reason: data.reason,
-        blockedAt: data.blockedAt,
-      };
+
+      return data;
     } catch (error) {
       logger.warn({ error, imageHash: imageHash.substring(0, 8) }, 'Hash check failed');
       return { knownBad: false };

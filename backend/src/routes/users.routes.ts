@@ -9,7 +9,7 @@ import { AuthenticatedRequest } from '../types/index.js';
 const router = Router();
 
 // Browse all creators (public, paginated)
-router.get('/explore', rateLimitGet, validateQuery(schemas.pagination), asyncHandler<AuthenticatedRequest>(usersController.listCreators));
+router.get('/explore', rateLimitGet, validateQuery(schemas.pagination), asyncHandler(usersController.listCreators));
 
 // Suggested users (must be before /:wallet to avoid matching 'suggested' as wallet param)
 router.get('/suggested', authMiddleware, rateLimitGet, asyncHandler<AuthenticatedRequest>(usersController.getSuggestedUsers));

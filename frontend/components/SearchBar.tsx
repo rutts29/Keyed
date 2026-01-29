@@ -262,7 +262,10 @@ export function SearchBar({ className }: { className?: string }) {
             </p>
           )}
           <div className="space-y-0.5">
-            {allSuggestions.map((item, index) => (
+            {allSuggestions
+              .map((item, index) => ({ item, index }))
+              .filter(({ item }) => item.type !== "trending")
+              .map(({ item, index }) => (
               <button
                 key={`${item.type}-${item.text}`}
                 type="button"

@@ -23,32 +23,7 @@ import { useSemanticSearch } from "@/hooks/useSearch";
 import { useTrendingTopics } from "@/hooks/useTrendingTopics";
 import { useSuggestedUsers } from "@/hooks/useSuggestedUsers";
 import type { UserProfile } from "@/types";
-
-// Helper to get initials from name or wallet
-const getInitials = (value: string) =>
-  value
-    .split(/[\s._-]/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("");
-
-// Helper to format wallet address
-const formatWallet = (wallet: string) =>
-  `${wallet.slice(0, 4)}...${wallet.slice(-4)}`;
-
-// Helper to resolve image URL from IPFS or regular URL
-const resolveImageUrl = (uri?: string | null) => {
-  if (!uri) return null;
-  if (uri.startsWith("ipfs://")) {
-    const cid = uri.replace("ipfs://", "");
-    const gateway =
-      process.env.NEXT_PUBLIC_R2_PUBLIC_URL ??
-      process.env.NEXT_PUBLIC_IPFS_GATEWAY;
-    return gateway ? `${gateway}/${cid}` : uri;
-  }
-  return uri;
-};
+import { getInitials, formatWallet, resolveImageUrl } from "@/lib/format";
 
 // Skeleton card for loading state
 function SearchResultSkeleton() {
@@ -94,7 +69,7 @@ function CreatorCard({ user }: { user: UserProfile }) {
               <AvatarImage src={imageUrl} alt={user.username ?? ""} />
             ) : null}
             <AvatarFallback>
-              {getInitials(user.username ?? user.wallet)}
+              {getInitials(user.username, user.wallet)}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
@@ -192,7 +167,7 @@ function SearchResultCard({
               <div className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="text-xs">
-                    {creatorWallet ? getInitials(creatorWallet) : "?"}
+                    {creatorWallet ? getInitials(null, creatorWallet) : "?"}
                   </AvatarFallback>
                 </Avatar>
                 <div className="min-w-0">
@@ -340,20 +315,6 @@ function SearchContent() {
   const searchResults = useMemo(() => data?.results ?? [], [data?.results]);
   const expandedQuery = data?.expandedQuery;
 
-  // Apply filter to results
-  const filteredResults = useMemo(() => {
-    switch (activeFilter) {
-      case "posts":
-        return searchResults;
-      case "creators":
-        return []; // Creators shown separately via suggestedUsers
-      case "tags":
-        return []; // Tags shown separately via trendingTopics
-      default:
-        return searchResults;
-    }
-  }, [searchResults, activeFilter]);
-
   // Get result count based on filter
   const getResultCount = () => {
     switch (activeFilter) {
@@ -458,7 +419,7 @@ function SearchContent() {
               </div>
             ) : (
               // API search results
-              filteredResults.map((result) => (
+              searchResults.map((result) => (
                 <SearchResultCard
                   key={result.postId}
                   postId={result.postId}

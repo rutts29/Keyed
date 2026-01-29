@@ -1,12 +1,12 @@
 "use client"
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 
-import { useSafeDynamicContext } from "./useSafeDynamicContext"
+import { useSignedMutation } from "./useSignedMutation"
 
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/queryClient"
-import { signAndSubmitTransaction, solToLamports } from "@/lib/solana"
+import { solToLamports } from "@/lib/solana"
 import { useAuthStore } from "@/store/authStore"
 import type { ApiResponse, CreatorVault, Transaction, TransactionResponse } from "@/types"
 
@@ -18,123 +18,52 @@ type EarningsResponse = {
 }
 
 export function useTip() {
-  const queryClient = useQueryClient()
-  const { primaryWallet } = useSafeDynamicContext()
-
-  return useMutation({
-    mutationFn: async ({
-      creatorWallet,
-      amountInSol,
-      postId,
-    }: {
-      creatorWallet: string
-      amountInSol: number
-      postId?: string
-    }) => {
-      if (!primaryWallet) {
-        throw new Error("Connect your wallet")
-      }
-      const { data } = await api.post<ApiResponse<TransactionResponse>>(
-        "/payments/tip",
-        {
-          creatorWallet,
-          amount: solToLamports(amountInSol),
-          postId,
-        }
-      )
-      if (!data.data) {
-        throw new Error("Tip unavailable")
-      }
-      await signAndSubmitTransaction(data.data.transaction, primaryWallet)
-      return data.data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.earnings() })
-    },
+  return useSignedMutation<{
+    creatorWallet: string
+    amountInSol: number
+    postId?: string
+  }>({
+    mutationFn: ({ creatorWallet, amountInSol, postId }) =>
+      api.post<ApiResponse<TransactionResponse>>("/payments/tip", {
+        creatorWallet,
+        amount: solToLamports(amountInSol),
+        postId,
+      }),
+    invalidateKeys: [queryKeys.earnings()],
   })
 }
 
 export function useSubscribe() {
-  const queryClient = useQueryClient()
-  const { primaryWallet } = useSafeDynamicContext()
-
-  return useMutation({
-    mutationFn: async ({
-      creatorWallet,
-      amountInSol,
-    }: {
-      creatorWallet: string
-      amountInSol: number
-    }) => {
-      if (!primaryWallet) {
-        throw new Error("Connect your wallet")
-      }
-      const { data } = await api.post<ApiResponse<TransactionResponse>>(
-        "/payments/subscribe",
-        {
-          creatorWallet,
-          amountPerMonth: solToLamports(amountInSol),
-        }
-      )
-      if (!data.data) {
-        throw new Error("Subscribe failed")
-      }
-      await signAndSubmitTransaction(data.data.transaction, primaryWallet)
-      return data.data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.earnings() })
-    },
+  return useSignedMutation<{
+    creatorWallet: string
+    amountInSol: number
+  }>({
+    mutationFn: ({ creatorWallet, amountInSol }) =>
+      api.post<ApiResponse<TransactionResponse>>("/payments/subscribe", {
+        creatorWallet,
+        amountPerMonth: solToLamports(amountInSol),
+      }),
+    invalidateKeys: [queryKeys.earnings()],
   })
 }
 
 export function useCancelSubscription(creatorWallet: string) {
-  const queryClient = useQueryClient()
-  const { primaryWallet } = useSafeDynamicContext()
-
-  return useMutation({
-    mutationFn: async () => {
-      if (!primaryWallet) {
-        throw new Error("Connect your wallet")
-      }
-      const { data } = await api.delete<ApiResponse<TransactionResponse>>(
+  return useSignedMutation({
+    mutationFn: () =>
+      api.delete<ApiResponse<TransactionResponse>>(
         `/payments/subscribe/${creatorWallet}`
-      )
-      if (!data.data) {
-        throw new Error("Cancel failed")
-      }
-      await signAndSubmitTransaction(data.data.transaction, primaryWallet)
-      return data.data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.earnings() })
-    },
+      ),
+    invalidateKeys: [queryKeys.earnings()],
   })
 }
 
 export function useWithdrawEarnings() {
-  const queryClient = useQueryClient()
-  const { primaryWallet } = useSafeDynamicContext()
-
-  return useMutation({
-    mutationFn: async (amountInSol: number) => {
-      if (!primaryWallet) {
-        throw new Error("Connect your wallet")
-      }
-      const { data } = await api.post<ApiResponse<TransactionResponse>>(
-        "/payments/withdraw",
-        { amount: solToLamports(amountInSol) }
-      )
-      if (!data.data) {
-        throw new Error("Withdraw failed")
-      }
-      await signAndSubmitTransaction(data.data.transaction, primaryWallet)
-      return data.data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.vault() })
-      queryClient.invalidateQueries({ queryKey: queryKeys.earnings() })
-    },
+  return useSignedMutation<number>({
+    mutationFn: (amountInSol) =>
+      api.post<ApiResponse<TransactionResponse>>("/payments/withdraw", {
+        amount: solToLamports(amountInSol),
+      }),
+    invalidateKeys: [queryKeys.vault(), queryKeys.earnings()],
   })
 }
 

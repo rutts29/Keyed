@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
-import { v4 as uuidv4 } from 'uuid';
 import { logger } from '../utils/logger.js';
 import { AuthenticatedRequest } from '../types/index.js';
 
@@ -21,7 +20,7 @@ export function errorHandler(
   res: Response,
   _next: NextFunction
 ): void {
-  const requestId = (req.headers['x-request-id'] as string) || uuidv4();
+  const requestId = req.headers['x-request-id'] as string || 'unknown';
   const wallet = (req as AuthenticatedRequest).wallet || 'anonymous';
 
   logger.error({

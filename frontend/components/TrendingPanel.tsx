@@ -6,6 +6,7 @@ import { TrendingUp, TrendingDown, Minus, Hash } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RightRailCard } from "@/components/RightRailCard";
 import { useTrendingTopics } from "@/hooks/useTrendingTopics";
+import { formatCompactCount } from "@/lib/format";
 
 function TrendIcon({ trend }: { trend: "up" | "down" | "stable" }) {
   switch (trend) {
@@ -16,13 +17,6 @@ function TrendIcon({ trend }: { trend: "up" | "down" | "stable" }) {
     case "stable":
       return <Minus className="h-3 w-3 text-muted-foreground" />;
   }
-}
-
-function formatPostCount(count: number): string {
-  if (count >= 1000) {
-    return `${(count / 1000).toFixed(1).replace(/\.0$/, "")}k posts`;
-  }
-  return `${count} posts`;
 }
 
 export function TrendingPanel() {
@@ -63,7 +57,7 @@ export function TrendingPanel() {
                 <TrendIcon trend={topic.trend} />
               </div>
               <p className="text-xs text-muted-foreground pl-5">
-                {formatPostCount(topic.postCount)}
+                {`${formatCompactCount(topic.postCount)} posts`}
               </p>
             </Link>
           ))}
