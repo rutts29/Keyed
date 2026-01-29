@@ -1,44 +1,32 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
-import { ImagePlus, Lock, Sparkles } from "lucide-react";
+import { useUIStore } from "@/store/uiStore";
+import { ImagePlus, Lock, PenLine } from "lucide-react";
 
 export function FeedComposer() {
+  const openCreatePost = useUIStore((state) => state.openCreatePost);
+
   return (
-    <Card className="border-border/70 bg-card/70">
-      <CardContent className="space-y-4 p-4">
-        <Textarea
-          placeholder="Share a creator update, drop, or thought..."
-          className="min-h-[96px] resize-none bg-background/50"
-        />
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <button
-              type="button"
-              aria-label="Attach media"
-              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 transition hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-            >
-              <ImagePlus className="h-3.5 w-3.5" />
-              Media
-            </button>
-            <button
-              type="button"
-              aria-label="Add access rules"
-              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 transition hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-            >
-              <Lock className="h-3.5 w-3.5" />
-              Gated access
-            </button>
-            <button
-              type="button"
-              aria-label="Polish with AI"
-              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 transition hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              AI polish
-            </button>
+    <Card
+      className="cursor-pointer border-border/70 bg-card/70 transition-colors hover:border-border hover:bg-muted/40"
+      onClick={openCreatePost}
+    >
+      <CardContent className="p-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+            <PenLine className="h-4 w-4 text-muted-foreground" />
           </div>
-          <Button className="h-9 px-4 text-sm">Publish</Button>
+          <div className="flex-1">
+            <p className="text-sm text-muted-foreground">
+              Share a creator update, drop, or thought...
+            </p>
+          </div>
+          <div className="hidden items-center gap-2 text-muted-foreground sm:flex">
+            <ImagePlus className="h-4 w-4" />
+            <Lock className="h-4 w-4" />
+          </div>
         </div>
       </CardContent>
     </Card>

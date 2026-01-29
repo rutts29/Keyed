@@ -1,39 +1,58 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useSafeDynamicContext } from "@/hooks/useSafeDynamicContext";
+
+import { PrivacyBalance } from "@/components/PrivacyBalance";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import {
-  Bell,
-  Bookmark,
   Gem,
   Home,
-  Mail,
   MoreHorizontal,
+  Search,
   Settings,
   User,
   Zap,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useAuthStore } from "@/store/authStore";
 
 const navItems = [
-  { label: "Home", icon: Home, active: true },
-  { label: "Discover", icon: Zap },
-  { label: "Notifications", icon: Bell },
-  { label: "Messages", icon: Mail },
-  { label: "Bookmarks", icon: Bookmark },
-  { label: "Creator Hub", icon: Gem, badge: "New" },
-  { label: "Profile", icon: User },
-  { label: "Settings", icon: Settings },
+  { label: "Home", icon: Home, href: "/app" },
+  { label: "Discover", icon: Zap, href: "/explore" },
+  { label: "Search", icon: Search, href: "/search" },
+  { label: "Creator Hub", icon: Gem, href: "/dashboard", badge: "New" },
+  { label: "Profile", icon: User, href: "/profile/me", match: "/profile" },
+  { label: "Settings", icon: Settings, href: "/settings" },
 ];
 
 export function AppSidebar() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { handleLogOut } = useSafeDynamicContext();
+  const wallet = useAuthStore((state) => state.wallet);
+  const clearAuth = useAuthStore((state) => state.clearAuth);
+  const profileHref = wallet ? `/profile/${wallet}` : "/profile/me";
+
+  const handleSignOut = async () => {
+    try {
+      await handleLogOut();
+    } catch {
+      // Ignore logout errors
+    }
+    clearAuth();
+    router.push("/");
+  };
+
   return (
     <div className="flex h-full flex-col justify-between gap-6">
       <div className="space-y-6">
@@ -49,15 +68,18 @@ export function AppSidebar() {
         <nav className="space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
-            return (
-              <Button
-                key={item.label}
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start gap-3 rounded-xl px-3 text-sm font-medium transition-colors hover:bg-muted/80 hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-0",
-                  item.active && "bg-muted text-foreground"
-                )}
-              >
+            const href = item.label === "Profile" ? profileHref : item.href;
+            const isActive = href
+              ? item.match
+                ? pathname.startsWith(item.match)
+                : pathname === href
+              : false;
+            const navClasses = cn(
+              "w-full justify-start gap-3 rounded-xl px-3 text-sm font-medium transition-colors hover:bg-muted/80 hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-0",
+              isActive && "bg-muted text-foreground"
+            );
+            const content = (
+              <>
                 <Icon className="h-4 w-4" />
                 <span className="flex-1 text-left">{item.label}</span>
                 {item.badge ? (
@@ -65,25 +87,25 @@ export function AppSidebar() {
                     {item.badge}
                   </Badge>
                 ) : null}
+              </>
+            );
+
+            return (
+              <Button
+                key={item.label}
+                variant="ghost"
+                className={navClasses}
+                asChild={Boolean(href)}
+              >
+                {href ? <Link href={href}>{content}</Link> : content}
               </Button>
             );
           })}
         </nav>
-        <Button className="h-11 w-full rounded-xl text-sm font-semibold">
-          Post update
+        <PrivacyBalance />
+        <Button className="h-11 w-full rounded-xl text-sm font-semibold" asChild>
+          <Link href="/create">Post update</Link>
         </Button>
-        <Separator className="bg-border/70" />
-        <div className="rounded-xl border border-border/70 bg-card/60 p-3 text-xs text-muted-foreground">
-          <p className="text-sm font-semibold text-foreground">
-            Weekly creator digest
-          </p>
-          <p className="mt-1 leading-5">
-            Curated threads, drop calendars, and top creators.
-          </p>
-          <Button variant="secondary" className="mt-3 h-8 w-full text-xs">
-            Subscribe
-          </Button>
-        </div>
       </div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -93,23 +115,26 @@ export function AppSidebar() {
           >
             <div className="flex items-center gap-3">
               <Avatar className="h-9 w-9">
-                <AvatarFallback>SS</AvatarFallback>
+                <AvatarFallback>
+                  {wallet ? wallet.slice(0, 2).toUpperCase() : "SS"}
+                </AvatarFallback>
               </Avatar>
               <div>
                 <p className="text-sm font-medium text-foreground">
-                  SolShare Labs
+                  {wallet ? `${wallet.slice(0, 4)}...${wallet.slice(-4)}` : "SolShare Labs"}
                 </p>
-                <p className="text-xs text-muted-foreground">@solshare</p>
+                <p className="text-xs text-muted-foreground">
+                  {wallet ? "Connected" : "@solshare"}
+                </p>
               </div>
             </div>
             <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-44">
-          <DropdownMenuItem>View profile</DropdownMenuItem>
-          <DropdownMenuItem>Creator settings</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem>Sign out</DropdownMenuItem>
+          <DropdownMenuItem onClick={handleSignOut}>
+            Sign out
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

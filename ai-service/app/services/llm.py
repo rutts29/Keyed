@@ -1,18 +1,16 @@
 import json
 import base64
 import asyncio
+import logging
 from google import genai
 from google.genai import types
 from fastapi import HTTPException
 from app.config import get_settings
 
+logger = logging.getLogger(__name__)
+
 # Default timeout for Gemini API calls (in seconds)
 GEMINI_TIMEOUT_SECONDS = 60
-
-
-class GeminiTimeoutError(Exception):
-    """Raised when a Gemini API call times out."""
-    pass
 
 _client: genai.Client | None = None
 
@@ -173,13 +171,13 @@ Respond with valid JSON only."""
             timeout=GEMINI_TIMEOUT_SECONDS
         )
     except asyncio.TimeoutError:
-        # For reranking, we can gracefully fallback to original order
+        logger.warning(f"Reranking timed out for query '{query[:50]}', falling back to original order")
         return items[:top_k]
 
     try:
         result = json.loads(response.text)
-    except json.JSONDecodeError:
-        # Fallback: return original order
+    except json.JSONDecodeError as e:
+        logger.warning(f"Failed to parse rerank response: {e}, response: {response.text[:200]}")
         return items[:top_k]
     
     rankings = result.get("rankings", [])

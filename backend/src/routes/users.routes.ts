@@ -8,6 +8,9 @@ import { AuthenticatedRequest } from '../types/index.js';
 
 const router = Router();
 
+// Suggested users (must be before /:wallet to avoid matching 'suggested' as wallet param)
+router.get('/suggested', authMiddleware, rateLimitGet, asyncHandler<AuthenticatedRequest>(usersController.getSuggestedUsers));
+
 // Profile management
 router.get('/:wallet', optionalAuthMiddleware, rateLimitGet, asyncHandler<AuthenticatedRequest>(usersController.getProfile));
 router.post('/profile', authMiddleware, rateLimitPost, validateBody(schemas.createProfile), asyncHandler<AuthenticatedRequest>(usersController.createOrUpdateProfile));

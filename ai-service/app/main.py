@@ -21,8 +21,18 @@ class RateLimiter:
     Tracks request counts per client IP per endpoint.
     """
     def __init__(self):
-        # Structure: {endpoint: {client_ip: [(timestamp, count)]}}
+        # Structure: {endpoint: {client_ip: [timestamp, ...]}}
         self._requests: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
+        self._cleanup_counter = 0
+
+    def _cleanup_stale_ips(self) -> None:
+        """Remove IPs with no recent requests to prevent unbounded memory growth."""
+        for endpoint in list(self._requests.keys()):
+            for ip in list(self._requests[endpoint].keys()):
+                if not self._requests[endpoint][ip]:
+                    del self._requests[endpoint][ip]
+            if not self._requests[endpoint]:
+                del self._requests[endpoint]
 
     def is_rate_limited(self, client_ip: str, endpoint: str, limit: int, window_seconds: int = 60) -> bool:
         """
@@ -44,6 +54,12 @@ class RateLimiter:
         requests = self._requests[endpoint][client_ip]
         # Keep only requests within the window
         self._requests[endpoint][client_ip] = [ts for ts in requests if ts > window_start]
+
+        # Periodic cleanup of stale IPs (every 100 requests)
+        self._cleanup_counter += 1
+        if self._cleanup_counter >= 100:
+            self._cleanup_counter = 0
+            self._cleanup_stale_ips()
 
         if len(self._requests[endpoint][client_ip]) >= limit:
             return True
