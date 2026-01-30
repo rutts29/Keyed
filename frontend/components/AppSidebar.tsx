@@ -16,7 +16,9 @@ import {
 import { cn } from "@/lib/utils";
 import {
   Gem,
+  Gift,
   Home,
+  MessageSquare,
   MoreHorizontal,
   Search,
   Settings,
@@ -30,7 +32,9 @@ const navItems = [
   { label: "Home", icon: Home, href: "/app" },
   { label: "Discover", icon: Zap, href: "/explore" },
   { label: "Search", icon: Search, href: "/search" },
-  { label: "Creator Hub", icon: Gem, href: "/dashboard", badge: "New" },
+  { label: "Rooms", icon: MessageSquare, href: "/rooms", match: "/rooms" },
+  { label: "Airdrops", icon: Gift, href: "/airdrops", match: "/airdrops", badge: "New" },
+  { label: "Creator Hub", icon: Gem, href: "/dashboard" },
   { label: "Profile", icon: User, href: "/profile/me", match: "/profile" },
   { label: "Settings", icon: Settings, href: "/settings" },
 ];
