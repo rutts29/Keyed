@@ -223,3 +223,86 @@ export interface PrivacyPoolInfo {
 export interface ShieldRequest {
   amount: number;
 }
+
+// Chat types
+
+export type ChatGateType = "token" | "nft" | "both" | "open";
+
+export interface ChatRoom {
+  id: string;
+  creator_wallet: string;
+  name: string;
+  description: string | null;
+  required_token: string | null;
+  minimum_balance: number;
+  required_nft_collection: string | null;
+  gate_type: ChatGateType;
+  max_members: number;
+  is_active: boolean;
+  created_at: string;
+  chat_members?: { count: number }[];
+}
+
+export interface ChatMessage {
+  id: string;
+  room_id: string;
+  sender_wallet: string;
+  content: string;
+  created_at: string;
+  users?: {
+    wallet: string;
+    username: string | null;
+    profile_image_uri: string | null;
+  };
+}
+
+// Airdrop types
+
+export type AirdropType = "spl_token" | "cnft";
+export type AirdropAudienceType =
+  | "followers"
+  | "tippers"
+  | "subscribers"
+  | "token_holders"
+  | "custom";
+export type AirdropStatus =
+  | "draft"
+  | "funded"
+  | "processing"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export interface AirdropCampaign {
+  id: string;
+  creator_wallet: string;
+  name: string;
+  description: string | null;
+  type: AirdropType;
+  token_mint: string | null;
+  amount_per_recipient: number | null;
+  metadata_uri: string | null;
+  collection_mint: string | null;
+  audience_type: AirdropAudienceType;
+  audience_filter: Record<string, unknown> | null;
+  status: AirdropStatus;
+  total_recipients: number;
+  successful_transfers: number;
+  failed_transfers: number;
+  escrow_pubkey: string | null;
+  fund_tx_signature: string | null;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export type AirdropRecipientStatus = "pending" | "sent" | "failed";
+
+export interface AirdropRecipient {
+  id: string;
+  campaign_id: string;
+  wallet: string;
+  status: AirdropRecipientStatus;
+  tx_signature: string | null;
+  error_message: string | null;
+  created_at: string;
+}
