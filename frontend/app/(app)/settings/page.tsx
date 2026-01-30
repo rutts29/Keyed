@@ -51,7 +51,7 @@ function validateUsername(value: string): string | null {
 export default function SettingsPage() {
   const { primaryWallet } = useSafeDynamicContext();
   const wallet = primaryWallet?.address ?? null;
-  const { user, setUser, connectedAt } = useAuthStore();
+  const { user, setUser, connectedAt, authReady } = useAuthStore();
 
   // Profile form state
   const { data: profileData, isLoading: isLoadingProfile } = useUserProfile(
@@ -241,8 +241,29 @@ export default function SettingsPage() {
     }
   };
 
-  // Show wallet not connected state
+  // While auth is resolving, show a loading state instead of "connect wallet"
   if (!wallet) {
+    if (!authReady) {
+      return (
+        <div className="space-y-6">
+          <div className="space-y-1">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              Settings
+            </p>
+            <h1 className="text-2xl font-semibold text-foreground">
+              Profile preferences
+            </h1>
+          </div>
+          <Card className="border-border/70 bg-card/70">
+            <CardContent className="flex items-center gap-2 p-6">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Loading session...</p>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
