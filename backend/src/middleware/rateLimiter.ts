@@ -87,27 +87,34 @@ export function createRateLimiter(category: keyof typeof RATE_LIMITS) {
     }
     
     const key = `ratelimit:${category}:${identifier}`;
-    
-    const current = await redis.incr(key);
-    
-    if (current === 1) {
-      await redis.pexpire(key, config.windowMs);
+
+    try {
+      const current = await Promise.race([
+        redis.incr(key),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Redis timeout')), 2000)),
+      ]);
+
+      if (current === 1) {
+        await redis.pexpire(key, config.windowMs).catch(() => {});
+      }
+
+      const ttl = await redis.pttl(key).catch(() => config.windowMs);
+
+      res.setHeader('X-RateLimit-Limit', config.max);
+      res.setHeader('X-RateLimit-Remaining', Math.max(0, config.max - current));
+      res.setHeader('X-RateLimit-Reset', Date.now() + ttl);
+
+      if (current > config.max) {
+        res.status(429).json({
+          success: false,
+          error: { code: 'RATE_LIMITED', message: 'Too many requests' },
+        });
+        return;
+      }
+    } catch {
+      // Fail open: if Redis is unavailable, allow the request through
     }
-    
-    const ttl = await redis.pttl(key);
-    
-    res.setHeader('X-RateLimit-Limit', config.max);
-    res.setHeader('X-RateLimit-Remaining', Math.max(0, config.max - current));
-    res.setHeader('X-RateLimit-Reset', Date.now() + ttl);
-    
-    if (current > config.max) {
-      res.status(429).json({
-        success: false,
-        error: { code: 'RATE_LIMITED', message: 'Too many requests' },
-      });
-      return;
-    }
-    
+
     next();
   };
 }

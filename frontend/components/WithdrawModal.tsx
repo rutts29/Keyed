@@ -10,40 +10,38 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
-import { usePrivacyBalance, useShieldSol } from "@/hooks/usePrivacy"
-import { usePrivacyStore } from "@/store/privacyStore"
+import { usePrivacyBalance, useWithdrawSol } from "@/hooks/usePrivacy"
 
-type ShieldStatus = "idle" | "initializing" | "proving" | "signing" | "submitting" | "confirming" | "success"
+type WithdrawStatus = "idle" | "proving" | "submitting" | "confirming" | "success"
 
-const STATUS_LABELS: Record<ShieldStatus, string> = {
+const STATUS_LABELS: Record<WithdrawStatus, string> = {
   idle: "",
-  initializing: "Initializing privacy session...",
   proving: "Generating ZK proof...",
-  signing: "Signing transaction...",
   submitting: "Submitting to network...",
   confirming: "Confirming transaction...",
-  success: "Shield confirmed!",
+  success: "Withdrawal confirmed!",
 }
 
-const STATUS_PROGRESS: Record<ShieldStatus, number> = {
+const STATUS_PROGRESS: Record<WithdrawStatus, number> = {
   idle: 0,
-  initializing: 10,
   proving: 30,
-  signing: 60,
-  submitting: 75,
-  confirming: 90,
+  submitting: 60,
+  confirming: 85,
   success: 100,
 }
 
-export function ShieldModal() {
+interface WithdrawModalProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
+
+export function WithdrawModal({ open, onOpenChange }: WithdrawModalProps) {
   const { primaryWallet } = useSafeDynamicContext()
-  const { initialize, isInitialized, isInitializing } = usePrivacySession()
+  const { isInitialized } = usePrivacySession()
   const { data } = usePrivacyBalance()
-  const { mutateAsync, isPending } = useShieldSol()
-  const isOpen = usePrivacyStore((state) => state.isShieldModalOpen)
-  const closeShieldModal = usePrivacyStore((state) => state.closeShieldModal)
+  const { mutateAsync, isPending } = useWithdrawSol()
   const [amount, setAmount] = useState("")
-  const [status, setStatus] = useState<ShieldStatus>("idle")
+  const [status, setStatus] = useState<WithdrawStatus>("idle")
 
   const resetState = () => {
     setAmount("")
@@ -52,7 +50,7 @@ export function ShieldModal() {
 
   const handleClose = () => {
     resetState()
-    closeShieldModal()
+    onOpenChange(false)
   }
 
   const handleSubmit = async () => {
@@ -65,48 +63,45 @@ export function ShieldModal() {
       toast.error("Connect your wallet to continue")
       return
     }
+    if (!isInitialized) {
+      toast.error("Privacy session not initialized")
+      return
+    }
 
     try {
-      // Step 1: Ensure session is initialized
-      if (!isInitialized) {
-        setStatus("initializing")
-        await initialize()
-      }
-
-      // Step 2: The SDK handles proof generation, signing, relay, and confirmation
       setStatus("proving")
-      await mutateAsync(value)
+      const result = await mutateAsync(value)
 
       setStatus("success")
-      toast.success("Shield transaction confirmed")
+      const withdrawnSol = result.amount_in_lamports / 1e9
+      const feeSol = result.fee_in_lamports / 1e9
+      toast.success(
+        `Withdrew ${withdrawnSol.toFixed(4)} SOL (fee: ${feeSol.toFixed(4)} SOL)`
+      )
       handleClose()
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Shielding failed"
+        error instanceof Error ? error.message : "Withdrawal failed"
       )
       setStatus("idle")
     }
   }
 
   const isProcessing = status !== "idle" && status !== "success"
+  const shieldedBalance = data?.available ?? 0
 
   return (
-    <Dialog
-      open={isOpen}
-      onOpenChange={(open) => {
-        if (!open) handleClose()
-      }}
-    >
+    <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose() }}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Shield SOL</DialogTitle>
+          <DialogTitle>Withdraw Shielded SOL</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 text-sm text-muted-foreground">
-          <p>Shielded SOL can be used to send anonymous tips.</p>
+          <p>Unshield SOL back to your wallet.</p>
           <div className="space-y-2">
-            <Label htmlFor="shield-amount">Amount (SOL)</Label>
+            <Label htmlFor="withdraw-amount">Amount (SOL)</Label>
             <Input
-              id="shield-amount"
+              id="withdraw-amount"
               type="number"
               min="0"
               step="0.01"
@@ -118,9 +113,9 @@ export function ShieldModal() {
           </div>
           <div className="rounded-lg border border-border/70 bg-muted/40 p-3 text-xs">
             <p>
-              Available balance: {typeof data?.available === "number" ? data.available.toFixed(4) : "0"} SOL
+              Shielded balance: {shieldedBalance.toFixed(4)} SOL
             </p>
-            <p className="mt-1">Shielding is reversible via withdrawal.</p>
+            <p className="mt-1">A small fee is deducted for withdrawal.</p>
           </div>
           {isProcessing && (
             <div className="space-y-2">
@@ -132,8 +127,8 @@ export function ShieldModal() {
             <Button variant="secondary" onClick={handleClose} disabled={isProcessing}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit} disabled={isPending || isProcessing || isInitializing}>
-              {isProcessing ? "Processing..." : "Shield"}
+            <Button onClick={handleSubmit} disabled={isPending || isProcessing}>
+              {isProcessing ? "Processing..." : "Withdraw"}
             </Button>
           </div>
         </div>

@@ -1,76 +1,102 @@
 import { redis } from '../config/redis.js';
+import { logger } from '../utils/logger.js';
 
-/**
- * Cache TTL values (in seconds)
- *
- * Caching strategy:
- * - USER: Medium TTL - profile data changes infrequently
- * - POST: Long TTL - post content is immutable, only stats change
- * - FEED: Medium TTL - balance between freshness and performance
- * - FOLLOWING: Medium TTL - social graph changes infrequently
- * - SEARCH: Short TTL - search results should be relatively fresh
- * - TRENDING: Short TTL - trending content changes frequently
- */
 const TTL = {
-  USER: 300,        // 5 min
-  POST: 3600,       // 1 hour
-  FEED: 300,        // 5 min (increased from 30s to reduce DB load)
-  FOLLOWING: 300,   // 5 min
-  SEARCH: 120,      // 2 min
-  TRENDING: 60,     // 1 min
+  USER: 300,
+  POST: 3600,
+  FEED: 300,
+  FOLLOWING: 300,
+  SEARCH: 120,
+  TRENDING: 60,
 };
+
+const REDIS_TIMEOUT = 2000;
+
+async function safeGet(key: string): Promise<string | null> {
+  try {
+    return await Promise.race([
+      redis.get(key),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Redis timeout')), REDIS_TIMEOUT)),
+    ]);
+  } catch {
+    logger.warn({ key }, 'Cache get failed, skipping');
+    return null;
+  }
+}
+
+async function safeSet(key: string, ttl: number, value: string): Promise<void> {
+  try {
+    await Promise.race([
+      redis.setex(key, ttl, value),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Redis timeout')), REDIS_TIMEOUT)),
+    ]);
+  } catch {
+    logger.warn({ key }, 'Cache set failed, skipping');
+  }
+}
+
+async function safeDel(key: string): Promise<void> {
+  try {
+    await Promise.race([
+      redis.del(key),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Redis timeout')), REDIS_TIMEOUT)),
+    ]);
+  } catch {
+    logger.warn({ key }, 'Cache del failed, skipping');
+  }
+}
 
 export const cacheService = {
   async getUser(wallet: string) {
-    const data = await redis.get(`user:${wallet}`);
+    const data = await safeGet(`user:${wallet}`);
     return data ? JSON.parse(data) : null;
   },
 
   async setUser(wallet: string, user: unknown) {
-    await redis.setex(`user:${wallet}`, TTL.USER, JSON.stringify(user));
+    await safeSet(`user:${wallet}`, TTL.USER, JSON.stringify(user));
   },
 
   async invalidateUser(wallet: string) {
-    await redis.del(`user:${wallet}`);
+    await safeDel(`user:${wallet}`);
   },
 
   async getPost(postId: string) {
-    const data = await redis.get(`post:${postId}`);
+    const data = await safeGet(`post:${postId}`);
     return data ? JSON.parse(data) : null;
   },
 
   async setPost(postId: string, post: unknown) {
-    await redis.setex(`post:${postId}`, TTL.POST, JSON.stringify(post));
+    await safeSet(`post:${postId}`, TTL.POST, JSON.stringify(post));
   },
 
   async invalidatePost(postId: string) {
-    await redis.del(`post:${postId}`);
+    await safeDel(`post:${postId}`);
   },
 
   async getFeed(wallet: string) {
-    const data = await redis.get(`feed:${wallet}`);
+    const data = await safeGet(`feed:${wallet}`);
     return data ? JSON.parse(data) : null;
   },
 
   async setFeed(wallet: string, feed: unknown) {
-    await redis.setex(`feed:${wallet}`, TTL.FEED, JSON.stringify(feed));
+    await safeSet(`feed:${wallet}`, TTL.FEED, JSON.stringify(feed));
   },
 
   async invalidateFeed(wallet: string) {
-    await redis.del(`feed:${wallet}`);
+    await safeDel(`feed:${wallet}`);
   },
 
   async getFollowing(wallet: string): Promise<string[] | null> {
-    const data = await redis.get(`following:${wallet}`);
+    const data = await safeGet(`following:${wallet}`);
     return data ? JSON.parse(data) : null;
   },
 
   async setFollowing(wallet: string, following: string[]) {
-    await redis.setex(`following:${wallet}`, TTL.FOLLOWING, JSON.stringify(following));
+    await safeSet(`following:${wallet}`, TTL.FOLLOWING, JSON.stringify(following));
   },
 
   async invalidateFollowing(wallet: string) {
-    await redis.del(`following:${wallet}`);
+    await safeDel(`following:${wallet}`);
   },
 
   async invalidateAll(wallet: string) {
@@ -81,34 +107,30 @@ export const cacheService = {
     ]);
   },
 
-  // Trending content cache
   async getTrending() {
-    const data = await redis.get('trending:posts');
+    const data = await safeGet('trending:posts');
     return data ? JSON.parse(data) : null;
   },
 
   async setTrending(posts: unknown) {
-    await redis.setex('trending:posts', TTL.TRENDING, JSON.stringify(posts));
+    await safeSet('trending:posts', TTL.TRENDING, JSON.stringify(posts));
   },
 
-  // Trending topics cache
   async getTrendingTopics() {
-    const data = await redis.get('trending:topics');
+    const data = await safeGet('trending:topics');
     return data ? JSON.parse(data) : null;
   },
 
   async setTrendingTopics(topics: unknown) {
-    await redis.setex('trending:topics', TTL.TRENDING, JSON.stringify(topics));
+    await safeSet('trending:topics', TTL.TRENDING, JSON.stringify(topics));
   },
 
-  // Search suggestions cache
   async getSuggestions(prefix: string) {
-    const data = await redis.get(`suggestions:${prefix.toLowerCase()}`);
+    const data = await safeGet(`suggestions:${prefix.toLowerCase()}`);
     return data ? JSON.parse(data) : null;
   },
 
   async setSuggestions(prefix: string, suggestions: unknown) {
-    await redis.setex(`suggestions:${prefix.toLowerCase()}`, TTL.SEARCH, JSON.stringify(suggestions));
+    await safeSet(`suggestions:${prefix.toLowerCase()}`, TTL.SEARCH, JSON.stringify(suggestions));
   },
-
 };

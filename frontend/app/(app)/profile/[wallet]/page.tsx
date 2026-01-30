@@ -64,33 +64,30 @@ export default function ProfilePage({ params }: ProfilePageProps) {
   return (
     <div className="space-y-6">
       <Card className="border-border/70 bg-card/70">
-        <CardContent className="space-y-4 p-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-16 w-16">
+        <CardContent className="space-y-3 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10">
                 {displayUser?.profileImageUri && (
                   <AvatarImage
                     src={resolveImageUrl(displayUser.profileImageUri) ?? undefined}
                     alt={displayUser.username ?? displayWallet}
                   />
                 )}
-                <AvatarFallback className="text-lg">
+                <AvatarFallback className="text-sm">
                   {getInitials(displayUser?.username, displayWallet)}
                 </AvatarFallback>
               </Avatar>
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                  Profile
-                </p>
                 {isLoadingProfile && !displayUser ? (
-                  <Skeleton className="mt-1 h-8 w-48" />
+                  <Skeleton className="h-5 w-32" />
                 ) : (
-                  <h1 className="text-2xl font-semibold text-foreground">
+                  <h1 className="text-base font-semibold text-foreground">
                     {displayUser?.username ?? formatWallet(displayWallet, 6)}
                   </h1>
                 )}
                 {displayUser?.username && (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     {formatWallet(displayWallet, 6)}
                   </p>
                 )}
@@ -98,12 +95,12 @@ export default function ProfilePage({ params }: ProfilePageProps) {
             </div>
             <div className="flex items-center gap-2">
               {displayUser?.isVerified && (
-                <Badge variant="secondary">Verified</Badge>
+                <Badge variant="secondary" className="text-[10px]">Verified</Badge>
               )}
               {isOwnProfile ? (
-                <Button variant="secondary" className="h-9 gap-2" asChild>
+                <Button variant="secondary" className="h-8 gap-1.5 text-xs" asChild>
                   <Link href="/settings">
-                    <Settings className="h-4 w-4" />
+                    <Settings className="h-3.5 w-3.5" />
                     Edit Profile
                   </Link>
                 </Button>
@@ -115,14 +112,14 @@ export default function ProfilePage({ params }: ProfilePageProps) {
                   />
                   <Button
                     variant="secondary"
-                    className="h-9"
+                    className="h-8 text-xs"
                     onClick={() => openTipModal(displayWallet)}
                   >
                     Tip
                   </Button>
                   <Button
                     variant="secondary"
-                    className="h-9"
+                    className="h-8 text-xs"
                     onClick={() => openSubscribeModal(displayWallet)}
                   >
                     Subscribe
@@ -142,33 +139,33 @@ export default function ProfilePage({ params }: ProfilePageProps) {
           <Separator className="bg-border/70" />
 
           {/* Stats section */}
-          <div className="grid gap-3 text-sm text-muted-foreground md:grid-cols-3">
+          <div className="grid grid-cols-3 gap-3 text-muted-foreground">
             <div>
-              <p className="text-xs uppercase tracking-[0.2em]">Followers</p>
+              <p className="text-[10px] uppercase tracking-[0.15em]">Followers</p>
               {isLoadingProfile && !displayUser ? (
-                <Skeleton className="mt-1 h-6 w-12" />
+                <Skeleton className="mt-0.5 h-5 w-8" />
               ) : (
-                <p className="mt-1 text-lg font-semibold text-foreground animate-in fade-in duration-300">
+                <p className="mt-0.5 text-sm font-semibold text-foreground">
                   {displayUser?.followerCount?.toLocaleString() ?? "0"}
                 </p>
               )}
             </div>
             <div>
-              <p className="text-xs uppercase tracking-[0.2em]">Following</p>
+              <p className="text-[10px] uppercase tracking-[0.15em]">Following</p>
               {isLoadingProfile && !displayUser ? (
-                <Skeleton className="mt-1 h-6 w-12" />
+                <Skeleton className="mt-0.5 h-5 w-8" />
               ) : (
-                <p className="mt-1 text-lg font-semibold text-foreground animate-in fade-in duration-300">
+                <p className="mt-0.5 text-sm font-semibold text-foreground">
                   {displayUser?.followingCount?.toLocaleString() ?? "0"}
                 </p>
               )}
             </div>
             <div>
-              <p className="text-xs uppercase tracking-[0.2em]">Posts</p>
+              <p className="text-[10px] uppercase tracking-[0.15em]">Posts</p>
               {isLoadingProfile && !displayUser ? (
-                <Skeleton className="mt-1 h-6 w-12" />
+                <Skeleton className="mt-0.5 h-5 w-8" />
               ) : (
-                <p className="mt-1 text-lg font-semibold text-foreground animate-in fade-in duration-300">
+                <p className="mt-0.5 text-sm font-semibold text-foreground">
                   {displayUser?.postCount?.toLocaleString() ?? "0"}
                 </p>
               )}

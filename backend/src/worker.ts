@@ -16,6 +16,8 @@ function createWorker<T = unknown, R = unknown>(name: string, processor: (job: J
   const worker = new Worker(name, processor, {
     connection,
     concurrency: 5,
+    drainDelay: 30,        // Wait 30s between polls when queue is empty (default: 5s)
+    stalledInterval: 60000, // Check for stalled jobs every 60s (default: 30s)
     limiter: {
       max: 10,
       duration: 1000,

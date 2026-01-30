@@ -85,14 +85,14 @@ export const schemas = {
   }),
   
   createProfile: z.object({
-    username: z.string().min(1).max(32),
-    bio: z.string().max(256).optional(),
-    profileImageUri: z.string().url().optional(),
+    username: z.string().min(1).max(32).nullable().optional(),
+    bio: z.string().max(256).nullable().optional(),
+    profileImageUri: z.string().url().nullable().optional(),
   }),
-  
+
   updateProfile: z.object({
-    bio: z.string().max(256).optional(),
-    profileImageUri: z.string().url().optional(),
+    bio: z.string().max(256).nullable().optional(),
+    profileImageUri: z.string().url().nullable().optional(),
   }),
   
   createPost: z.object({

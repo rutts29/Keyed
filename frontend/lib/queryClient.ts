@@ -26,4 +26,5 @@ export const queryKeys = {
   privacyTipsSent: () => ["privacy", "tips", "sent"] as const,
   privacySettings: () => ["privacy", "settings"] as const,
   privacyPoolInfo: () => ["privacy", "pool"] as const,
+  walletBalance: () => ["wallet", "balance"] as const,
 };

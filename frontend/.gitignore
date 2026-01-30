@@ -37,6 +37,9 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# ZK circuit files (large binaries, copied from privacy-cash-sdk)
+public/circuit2.*
+
 # vercel
 .vercel
 

@@ -16,9 +16,9 @@ services:
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
-      # Redis
-      - UPSTASH_REDIS_URL=${UPSTASH_REDIS_URL}
-      - UPSTASH_REDIS_TOKEN=${UPSTASH_REDIS_TOKEN}
+      # Redis (local Docker Redis by default; override with Upstash URL in .env for production)
+      - UPSTASH_REDIS_URL=${UPSTASH_REDIS_URL:-redis://redis:6379}
+      - UPSTASH_REDIS_TOKEN=${UPSTASH_REDIS_TOKEN:-}
       # R2 Storage
       - R2_ACCOUNT_ID=${R2_ACCOUNT_ID}
       - R2_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID}
@@ -41,8 +41,12 @@ services:
       - AI_SERVICE_API_KEY=${AI_SERVICE_API_KEY}
       # Frontend
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+    volumes:
+      - ./privacy-cash-sdk:/privacy-cash-sdk:ro
     depends_on:
       ai-service:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/health"]
@@ -66,9 +70,9 @@ services:
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
-      # Redis
-      - UPSTASH_REDIS_URL=${UPSTASH_REDIS_URL}
-      - UPSTASH_REDIS_TOKEN=${UPSTASH_REDIS_TOKEN}
+      # Redis (local Docker Redis by default; override with Upstash URL in .env for production)
+      - UPSTASH_REDIS_URL=${UPSTASH_REDIS_URL:-redis://redis:6379}
+      - UPSTASH_REDIS_TOKEN=${UPSTASH_REDIS_TOKEN:-}
       # R2 Storage
       - R2_ACCOUNT_ID=${R2_ACCOUNT_ID}
       - R2_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID}
@@ -93,6 +97,7 @@ services:
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
     depends_on:
       - backend
+      - redis
     restart: unless-stopped
     networks:
       - solshare-network
@@ -133,6 +138,26 @@ services:
     restart: unless-stopped
     networks:
       - solshare-network
+
+  # Local Redis (replaces Upstash for dev — switch back via .env for production)
+  redis:
+    image: redis:7-alpine
+    container_name: solshare-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - solshare-network
+
+volumes:
+  redis-data:
 
 networks:
   solshare-network:
