@@ -27,4 +27,12 @@ export const queryKeys = {
   privacySettings: () => ["privacy", "settings"] as const,
   privacyPoolInfo: () => ["privacy", "pool"] as const,
   walletBalance: () => ["wallet", "balance"] as const,
+  chatRooms: (creator?: string) =>
+    creator ? (["chat", "rooms", creator] as const) : (["chat", "rooms"] as const),
+  chatRoom: (roomId: string) => ["chat", "room", roomId] as const,
+  chatMessages: (roomId: string) => ["chat", "messages", roomId] as const,
+  myRooms: () => ["chat", "my-rooms"] as const,
+  airdrops: () => ["airdrops", "campaigns"] as const,
+  airdropCampaign: (id: string) => ["airdrops", "campaign", id] as const,
+  receivedDrops: () => ["airdrops", "received"] as const,
 };
