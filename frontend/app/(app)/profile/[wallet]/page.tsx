@@ -30,6 +30,10 @@ export default function ProfilePage({ params }: ProfilePageProps) {
   const openTipModal = useUIStore((state) => state.openTipModal);
   const authWallet = useAuthStore((state) => state.wallet);
   const authUser = useAuthStore((state) => state.user);
+  const authReady = useAuthStore((state) => state.authReady);
+
+  // For /profile/me, wait until auth is resolved so we don't render stale data
+  const isMe = walletParam === "me";
 
   // Determine if viewing own profile
   const isOwnProfile = walletParam === "me" || walletParam === authWallet;
@@ -60,6 +64,33 @@ export default function ProfilePage({ params }: ProfilePageProps) {
   // Flatten paginated posts
   const posts = postsData?.pages.flatMap((page) => page.posts) ?? [];
 
+  // While auth is resolving after hydration, show skeleton instead of stale data
+  if (isMe && !authReady) {
+    return (
+      <div className="space-y-6">
+        <Card className="border-border/70 bg-card/70">
+          <CardContent className="space-y-3 p-4">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-10 w-10 rounded-full" />
+              <div className="space-y-1.5">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+            </div>
+            <Separator className="bg-border/70" />
+            <div className="grid grid-cols-3 gap-3">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-10 w-full" />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+        {[1, 2].map((i) => (
+          <PostCardSkeleton key={i} />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

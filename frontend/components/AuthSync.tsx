@@ -12,6 +12,7 @@ export function AuthSync() {
   const wallet = useAuthStore((state) => state.wallet);
   const setWallet = useAuthStore((state) => state.setWallet);
   const clearAuth = useAuthStore((state) => state.clearAuth);
+  const setAuthReady = useAuthStore((state) => state.setAuthReady);
   const { login } = useAuth();
   const lastWalletRef = useRef<string | null>(null);
   const isAuthenticating = useRef(false);
@@ -29,18 +30,28 @@ export function AuthSync() {
     if (!sdkHasLoaded) return;
 
     if (!primaryWallet?.address) {
+      // SDK loaded but no wallet connected — clear any stale session
       if (token) {
-        clearAuth();
+        clearAuth(); // clearAuth also sets authReady = true
+      } else {
+        setAuthReady();
       }
       lastWalletRef.current = null;
       return;
     }
 
-    if (token || isAuthenticating.current) {
+    // Wallet is connected and we already have a token — session is valid
+    if (token) {
+      setAuthReady();
+      return;
+    }
+
+    if (isAuthenticating.current) {
       return;
     }
 
     if (lastWalletRef.current === primaryWallet.address) {
+      setAuthReady();
       return;
     }
 
@@ -49,10 +60,11 @@ export function AuthSync() {
 
     login().catch(() => {
       // Backend unavailable — wallet address is already stored above
+      setAuthReady();
     }).finally(() => {
       isAuthenticating.current = false;
     });
-  }, [clearAuth, login, primaryWallet, sdkHasLoaded, token]);
+  }, [clearAuth, login, primaryWallet, sdkHasLoaded, setAuthReady, token]);
 
   return null;
 }

@@ -8,6 +8,8 @@ interface AuthState {
   wallet: string | null;
   connectedAt: string | null;
   user: UserProfile | null;
+  /** True once AuthSync has validated the session after hydration. */
+  authReady: boolean;
   setAuth: (auth: {
     token: string;
     wallet: string;
@@ -15,6 +17,7 @@ interface AuthState {
   }) => void;
   setWallet: (wallet: string) => void;
   setUser: (user: UserProfile) => void;
+  setAuthReady: () => void;
   clearAuth: () => void;
 }
 
@@ -30,8 +33,9 @@ export const useAuthStore = create<AuthState>()(
       wallet: null,
       connectedAt: null,
       user: null,
+      authReady: false,
       setAuth: (auth) =>
-        set({ token: auth.token, wallet: auth.wallet, user: auth.user }),
+        set({ token: auth.token, wallet: auth.wallet, user: auth.user, authReady: true }),
       setWallet: (wallet) =>
         set((state) => ({
           wallet,
@@ -41,12 +45,19 @@ export const useAuthStore = create<AuthState>()(
               : new Date().toISOString(),
         })),
       setUser: (user) => set({ user }),
+      setAuthReady: () => set({ authReady: true }),
       clearAuth: () =>
-        set({ token: null, wallet: null, connectedAt: null, user: null }),
+        set({ token: null, wallet: null, connectedAt: null, user: null, authReady: true }),
     }),
     {
       name: "solshare-auth",
       storage,
+      partialize: (state) => ({
+        token: state.token,
+        wallet: state.wallet,
+        connectedAt: state.connectedAt,
+        user: state.user,
+      }),
     }
   )
 );
