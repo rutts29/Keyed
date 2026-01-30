@@ -7,7 +7,7 @@ from collections import defaultdict
 import logging
 import time
 
-from app.api.routes import moderate, analyze, search, recommend
+from app.api.routes import moderate, analyze, search, recommend, pipeline
 from app.services import vector_db
 from app.config import get_settings
 
@@ -78,6 +78,7 @@ RATE_LIMITS = {
     "/api/analyze": 5,
     "/api/search": 20,
     "/api/recommend": 20,
+    "/api/pipeline": 30,
 }
 
 
@@ -165,6 +166,7 @@ app.include_router(moderate.router, prefix="/api")
 app.include_router(analyze.router, prefix="/api")
 app.include_router(search.router, prefix="/api")
 app.include_router(recommend.router, prefix="/api")
+app.include_router(pipeline.router, prefix="/api")
 
 
 @app.get("/health")

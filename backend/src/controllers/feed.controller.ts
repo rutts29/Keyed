@@ -6,111 +6,83 @@ import { aiService } from '../services/ai.service.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { logger } from '../utils/logger.js';
 import { getFollowingWallets, enrichPostsWithLikeStatus } from '../utils/helpers.js';
+import { executeForYouPipeline } from '../pipeline/index.js';
 
 export const feedController = {
   /**
-   * Personalized feed using AI recommendations
-   * Falls back to following-based feed if AI service unavailable
+   * Personalized "For You" feed using x-algorithm-inspired pipeline.
+   *
+   * Pipeline stages (mirrors xAI's x-algorithm architecture):
+   *   1. Query Hydration: user context (following, likes, seen posts)
+   *   2. Candidate Sourcing: InNetwork (Thunder) + OutOfNetwork (Phoenix) + Trending
+   *   3. Hydration: enrich OON candidates with full DB records
+   *   4. Filtering: dedup, age, self-post, blocked, seen, muted keywords
+   *   5. Scoring: multi-action engagement + weighted combination + freshness
+   *   6. Selection: top-K by score
+   *   7. Post-selection: author diversity (max 2 per creator)
+   *   8. Side effects: cache + metrics logging
+   *
+   * Falls back to chronological following-based feed if pipeline fails.
+   *
+   * @see https://github.com/xai-org/x-algorithm
    */
   async getPersonalizedFeed(req: AuthenticatedRequest, res: Response) {
     const wallet = req.wallet!;
     const limit = parseInt(req.query.limit as string) || 20;
     const cursor = req.query.cursor as string;
-    
+
     // Check cache first (only for first page)
     const cached = !cursor ? await cacheService.getFeed(wallet) : null;
     if (cached) {
       res.json({ success: true, data: cached });
       return;
     }
-    
-    // Get user's liked posts for AI recommendations
-    const { data: userLikes } = await supabase
-      .from('likes')
-      .select('post_id')
-      .eq('user_wallet', wallet)
-      .order('timestamp', { ascending: false })
-      .limit(50);
 
-    const likedPostIds = userLikes?.map(l => l.post_id) || [];
-    
-    // Get already seen posts to exclude
-    const { data: interactions } = await supabase
-      .from('interactions')
-      .select('post_id')
-      .eq('user_wallet', wallet)
-      .eq('interaction_type', 'view')
-      .order('timestamp', { ascending: false })
-      .limit(100);
-    
-    const seenPostIds = interactions?.map(i => i.post_id) || [];
-    
-    // Try AI recommendations first
-    let recommendedPostIds: string[] = [];
-    let tasteProfile: string | null = null;
-    
-    try {
-      const recommendations = await aiService.getRecommendations(
-        wallet,
-        likedPostIds,
-        limit * 2, // Request more to account for filtering
-        seenPostIds
-      );
-      
-      recommendedPostIds = recommendations.recommendations.map(r => r.postId);
-      tasteProfile = recommendations.tasteProfile;
-      
-      logger.debug({ wallet, recommendationCount: recommendedPostIds.length }, 'Got AI recommendations');
-    } catch (error) {
-      logger.warn({ error, wallet }, 'AI recommendations failed, falling back to following-based feed');
-    }
-    
     let posts;
-    
-    if (recommendedPostIds.length >= limit) {
-      // Use AI recommendations
-      const { data: aiPosts, error } = await supabase
-        .from('posts')
-        .select('*, users!posts_creator_wallet_fkey(*)')
-        .in('id', recommendedPostIds)
-        .limit(limit);
-      
-      if (error) {
-        throw new AppError(500, 'DB_ERROR', 'Failed to fetch recommended posts');
-      }
-      
-      // Sort by recommendation order
-      const postMap = new Map(aiPosts.map(p => [p.id, p]));
-      posts = recommendedPostIds
-        .filter(id => postMap.has(id))
-        .map(id => postMap.get(id)!)
-        .slice(0, limit);
-    } else {
-      // Fallback: Get posts from following + own posts
-      const following = await getFollowingWallets(wallet);
+    let tasteProfile: string | null = null;
+    let pipelineUsed = false;
 
-      const feedWallets = [...following, wallet];
-      
-      let query = supabase
-        .from('posts')
-        .select('*, users!posts_creator_wallet_fkey(*)')
-        .in('creator_wallet', feedWallets)
-        .order('timestamp', { ascending: false })
-        .limit(limit);
-      
-      if (cursor) {
-        query = query.lt('timestamp', cursor);
+    // Try the x-algorithm-inspired pipeline first
+    try {
+      const pipelineResult = await executeForYouPipeline(wallet, limit, cursor);
+      const selectedPostIds = pipelineResult.selectedCandidates.map((c) => c.postId);
+
+      if (selectedPostIds.length > 0) {
+        // Fetch full post data with creator info
+        const { data: pipelinePosts, error } = await supabase
+          .from('posts')
+          .select('*, users!posts_creator_wallet_fkey(*)')
+          .in('id', selectedPostIds);
+
+        if (!error && pipelinePosts && pipelinePosts.length > 0) {
+          // Sort by pipeline ranking order
+          const postMap = new Map(pipelinePosts.map((p) => [p.id, p]));
+          posts = selectedPostIds
+            .filter((id) => postMap.has(id))
+            .map((id) => postMap.get(id)!);
+          pipelineUsed = true;
+
+          logger.info(
+            {
+              wallet,
+              pipelineMs: pipelineResult.pipelineMetrics.totalMs,
+              retrieved: pipelineResult.retrievedCandidates.length,
+              filtered: pipelineResult.filteredCandidates.length,
+              selected: pipelineResult.selectedCandidates.length,
+            },
+            'For You pipeline executed',
+          );
+        }
       }
-      
-      const { data, error } = await query;
-      
-      if (error) {
-        throw new AppError(500, 'DB_ERROR', 'Failed to fetch feed');
-      }
-      
-      posts = data;
+    } catch (error) {
+      logger.warn({ error, wallet }, 'Pipeline failed, falling back to legacy feed');
     }
-    
+
+    // Fallback: legacy recommendation or chronological feed
+    if (!posts || posts.length === 0) {
+      posts = await legacyFeed(wallet, limit, cursor);
+    }
+
     // Enrich with like status
     const likedPosts = await enrichPostsWithLikeStatus(posts, wallet);
 
@@ -122,19 +94,20 @@ export const feedController = {
       ...post,
       isFollowing: followingSet.has(post.creator_wallet),
     }));
-    
+
     const nextCursor = posts.length === limit ? posts[posts.length - 1].timestamp : null;
-    const result = { 
-      posts: feedItems, 
+    const result = {
+      posts: feedItems,
       nextCursor,
-      tasteProfile, // Include taste profile for UI display
+      tasteProfile,
+      pipelineUsed,
     };
-    
+
     // Cache first page only
     if (!cursor) {
       await cacheService.setFeed(wallet, result);
     }
-    
+
     res.json({ success: true, data: result });
   },
 
@@ -144,31 +117,31 @@ export const feedController = {
   async getExploreFeed(req: AuthenticatedRequest, res: Response) {
     const limit = parseInt(req.query.limit as string) || 20;
     const cursor = req.query.cursor as string;
-    
+
     let query = supabase
       .from('posts')
       .select('*, users!posts_creator_wallet_fkey(*)')
       .order('likes', { ascending: false })
       .order('timestamp', { ascending: false })
       .limit(limit);
-    
+
     if (cursor) {
       query = query.lt('timestamp', cursor);
     }
-    
+
     const { data: posts, error } = await query;
-    
+
     if (error) {
       throw new AppError(500, 'DB_ERROR', 'Failed to fetch explore feed');
     }
-    
+
     let feedItems = posts;
     if (req.wallet) {
       feedItems = await enrichPostsWithLikeStatus(posts, req.wallet);
     }
-    
+
     const nextCursor = posts.length === limit ? posts[posts.length - 1].timestamp : null;
-    
+
     res.json({
       success: true,
       data: { posts: feedItems, nextCursor },
@@ -182,7 +155,7 @@ export const feedController = {
     const wallet = req.wallet!;
     const limit = parseInt(req.query.limit as string) || 20;
     const cursor = req.query.cursor as string;
-    
+
     const following = await getFollowingWallets(wallet);
 
     if (following.length === 0) {
@@ -192,33 +165,33 @@ export const feedController = {
       });
       return;
     }
-    
+
     let query = supabase
       .from('posts')
       .select('*, users!posts_creator_wallet_fkey(*)')
       .in('creator_wallet', following)
       .order('timestamp', { ascending: false })
       .limit(limit);
-    
+
     if (cursor) {
       query = query.lt('timestamp', cursor);
     }
-    
+
     const { data: posts, error } = await query;
-    
+
     if (error) {
       throw new AppError(500, 'DB_ERROR', 'Failed to fetch following feed');
     }
-    
+
     const likedPosts = await enrichPostsWithLikeStatus(posts, wallet);
 
     const feedItems = likedPosts.map(post => ({
       ...post,
       isFollowing: true,
     }));
-    
+
     const nextCursor = posts.length === limit ? posts[posts.length - 1].timestamp : null;
-    
+
     res.json({
       success: true,
       data: { posts: feedItems, nextCursor },
@@ -348,3 +321,77 @@ export const feedController = {
     res.json({ success: true, data: result });
   },
 };
+
+/**
+ * Legacy feed fallback — used when the pipeline is unavailable.
+ * Tries AI recommendations, then falls back to chronological following feed.
+ */
+async function legacyFeed(wallet: string, limit: number, cursor?: string): Promise<any[]> {
+  const { data: userLikes } = await supabase
+    .from('likes')
+    .select('post_id')
+    .eq('user_wallet', wallet)
+    .order('timestamp', { ascending: false })
+    .limit(50);
+
+  const likedPostIds = userLikes?.map(l => l.post_id) || [];
+
+  const { data: interactions } = await supabase
+    .from('interactions')
+    .select('post_id')
+    .eq('user_wallet', wallet)
+    .eq('interaction_type', 'view')
+    .order('timestamp', { ascending: false })
+    .limit(100);
+
+  const seenPostIds = interactions?.map(i => i.post_id) || [];
+
+  let recommendedPostIds: string[] = [];
+
+  try {
+    const recommendations = await aiService.getRecommendations(
+      wallet, likedPostIds, limit * 2, seenPostIds
+    );
+    recommendedPostIds = recommendations.recommendations.map(r => r.postId);
+  } catch (error) {
+    logger.warn({ error, wallet }, 'Legacy AI recommendations failed');
+  }
+
+  if (recommendedPostIds.length >= limit) {
+    const { data: aiPosts, error } = await supabase
+      .from('posts')
+      .select('*, users!posts_creator_wallet_fkey(*)')
+      .in('id', recommendedPostIds)
+      .limit(limit);
+
+    if (!error && aiPosts) {
+      const postMap = new Map(aiPosts.map(p => [p.id, p]));
+      return recommendedPostIds
+        .filter(id => postMap.has(id))
+        .map(id => postMap.get(id)!)
+        .slice(0, limit);
+    }
+  }
+
+  // Final fallback: chronological following feed
+  const following = await getFollowingWallets(wallet);
+  const feedWallets = [...following, wallet];
+
+  let query = supabase
+    .from('posts')
+    .select('*, users!posts_creator_wallet_fkey(*)')
+    .in('creator_wallet', feedWallets)
+    .order('timestamp', { ascending: false })
+    .limit(limit);
+
+  if (cursor) {
+    query = query.lt('timestamp', cursor);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    throw new AppError(500, 'DB_ERROR', 'Failed to fetch feed');
+  }
+
+  return data || [];
+}
