@@ -113,45 +113,45 @@ type PrepareResponse = {
   fundTransaction: string;
 };
 
-export function usePrepareCampaign(id: string) {
+export function usePrepareCampaign() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (campaignId: string) => {
       const { data } = await api.post<ApiResponse<PrepareResponse>>(
-        `/airdrops/${id}/prepare`
+        `/airdrops/${campaignId}/prepare`
       );
       if (!data.data) throw new Error("Failed to prepare campaign");
       return data.data;
     },
-    onSuccess: () => {
+    onSuccess: (_data, campaignId) => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.airdropCampaign(id),
+        queryKey: queryKeys.airdropCampaign(campaignId),
       });
     },
   });
 }
 
-export function useFundCampaign(id: string) {
+export function useFundCampaign() {
   const queryClient = useQueryClient();
   const { primaryWallet } = useSafeDynamicContext();
 
   return useMutation({
-    mutationFn: async (fundTransaction: string) => {
+    mutationFn: async ({ id, fundTransaction }: { id: string; fundTransaction: string }) => {
       if (!primaryWallet) throw new Error("Connect your wallet");
 
-      // Sign and submit the fund transaction
-      await signAndSubmitTransaction(fundTransaction, primaryWallet);
+      // Sign and submit the fund transaction, get on-chain signature
+      const txSignature = await signAndSubmitTransaction(fundTransaction, primaryWallet);
 
-      // Notify backend
+      // Notify backend with the actual on-chain signature
       const { data } = await api.post<ApiResponse<{ funded: true }>>(
         `/airdrops/${id}/fund`,
-        { txSignature: fundTransaction }
+        { txSignature }
       );
       if (!data.data) throw new Error("Failed to confirm funding");
       return data.data;
     },
-    onSuccess: () => {
+    onSuccess: (_data, { id }) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.airdropCampaign(id),
       });
@@ -159,20 +159,20 @@ export function useFundCampaign(id: string) {
   });
 }
 
-export function useStartCampaign(id: string) {
+export function useStartCampaign() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (campaignId: string) => {
       const { data } = await api.post<
         ApiResponse<{ started: true; recipientCount: number }>
-      >(`/airdrops/${id}/start`);
+      >(`/airdrops/${campaignId}/start`);
       if (!data.data) throw new Error("Failed to start campaign");
       return data.data;
     },
-    onSuccess: () => {
+    onSuccess: (_data, campaignId) => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.airdropCampaign(id),
+        queryKey: queryKeys.airdropCampaign(campaignId),
       });
     },
   });

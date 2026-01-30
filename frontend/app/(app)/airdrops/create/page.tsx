@@ -55,11 +55,11 @@ export default function CreateAirdropPage() {
   const { mutateAsync: createCampaign, isPending: isCreating } =
     useCreateCampaign();
   const { mutateAsync: prepare, isPending: isPreparing } =
-    usePrepareCampaign(campaignId ?? "");
+    usePrepareCampaign();
   const { mutateAsync: fund, isPending: isFunding } =
-    useFundCampaign(campaignId ?? "");
+    useFundCampaign();
   const { mutateAsync: start, isPending: isStarting } =
-    useStartCampaign(campaignId ?? "");
+    useStartCampaign();
 
   const isBusy = isCreating || isPreparing || isFunding || isStarting;
 
@@ -88,8 +88,8 @@ export default function CreateAirdropPage() {
 
       setCampaignId(campaign.id);
 
-      // Prepare (resolve audience, build fund tx)
-      const result = await prepare();
+      // Prepare (resolve audience, build fund tx) — pass ID directly to avoid stale closure
+      const result = await prepare(campaign.id);
       setPrepareResult(result);
 
       toast.success(`Found ${result.recipientCount} recipients`);
@@ -104,10 +104,10 @@ export default function CreateAirdropPage() {
     if (!prepareResult || !campaignId) return;
 
     try {
-      await fund(prepareResult.fundTransaction);
+      await fund({ id: campaignId, fundTransaction: prepareResult.fundTransaction });
       toast.success("Campaign funded");
 
-      await start();
+      await start(campaignId);
       toast.success("Airdrop started!");
       router.push(`/airdrops/${campaignId}`);
     } catch (error) {
@@ -284,7 +284,7 @@ export default function CreateAirdropPage() {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Audience</span>
                   <span className="text-foreground capitalize">
-                    {audienceType.replace("_", " ")}
+                    {audienceType.replaceAll("_", " ")}
                   </span>
                 </div>
                 {tokenMint && (

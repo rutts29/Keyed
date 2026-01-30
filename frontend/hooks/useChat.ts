@@ -234,10 +234,20 @@ export function useChatRealtime(roomId: string) {
         config: { presence: { key: wallet } },
       })
       .on("broadcast", { event: "chat:message" }, (payload) => {
-        const msg = payload.payload as ChatMessage;
-        // Avoid duplicating own messages (already added by mutation)
-        if (msg.sender_wallet !== wallet) {
-          appendMessage(msg);
+        const msg = payload.payload;
+        // Validate payload before treating as ChatMessage
+        if (
+          msg &&
+          typeof msg === "object" &&
+          typeof msg.id === "string" &&
+          typeof msg.content === "string" &&
+          typeof msg.sender_wallet === "string" &&
+          typeof msg.room_id === "string"
+        ) {
+          // Avoid duplicating own messages (already added by mutation)
+          if (msg.sender_wallet !== wallet) {
+            appendMessage(msg as ChatMessage);
+          }
         }
       })
       .on("presence", { event: "sync" }, () => {

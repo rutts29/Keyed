@@ -15,18 +15,9 @@ import {
   useCancelCampaign,
   useStartCampaign,
 } from "@/hooks/useAirdrops";
+import { statusConfig } from "@/lib/airdrop-config";
 import { formatTimestamp, formatWallet } from "@/lib/format";
 import { useAuthStore } from "@/store/authStore";
-import type { AirdropStatus } from "@/types";
-
-const statusConfig: Record<AirdropStatus, { label: string; className: string }> = {
-  draft: { label: "Draft", className: "bg-muted text-muted-foreground" },
-  funded: { label: "Funded", className: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
-  processing: { label: "Processing", className: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" },
-  completed: { label: "Completed", className: "bg-green-500/10 text-green-500 border-green-500/20" },
-  failed: { label: "Failed", className: "bg-red-500/10 text-red-500 border-red-500/20" },
-  cancelled: { label: "Cancelled", className: "bg-muted text-muted-foreground" },
-};
 
 type CampaignPageProps = {
   params: Promise<{ id: string }>;
@@ -37,7 +28,7 @@ export default function CampaignDetailPage({ params }: CampaignPageProps) {
   const wallet = useAuthStore((state) => state.wallet);
   const { data: campaign, isLoading, error } = useCampaign(id);
   const { mutateAsync: startCampaign, isPending: isStarting } =
-    useStartCampaign(id);
+    useStartCampaign();
   const { mutateAsync: cancelCampaign, isPending: isCancelling } =
     useCancelCampaign(id);
 
@@ -45,7 +36,7 @@ export default function CampaignDetailPage({ params }: CampaignPageProps) {
 
   const handleStart = async () => {
     try {
-      await startCampaign();
+      await startCampaign(id);
       toast.success("Airdrop started");
     } catch (error) {
       toast.error(
@@ -146,7 +137,7 @@ export default function CampaignDetailPage({ params }: CampaignPageProps) {
             <div className="flex justify-between">
               <span className="text-muted-foreground">Audience</span>
               <span className="text-foreground capitalize">
-                {campaign.audience_type.replace("_", " ")}
+                {campaign.audience_type.replaceAll("_", " ")}
               </span>
             </div>
             <div className="flex justify-between">
