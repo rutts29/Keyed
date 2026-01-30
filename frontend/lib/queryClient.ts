@@ -32,7 +32,7 @@ export const queryKeys = {
   chatRoom: (roomId: string) => ["chat", "room", roomId] as const,
   chatMessages: (roomId: string) => ["chat", "messages", roomId] as const,
   myRooms: () => ["chat", "my-rooms"] as const,
-  airdrops: () => ["airdrops"] as const,
-  airdropCampaign: (id: string) => ["airdrops", id] as const,
+  airdrops: () => ["airdrops", "campaigns"] as const,
+  airdropCampaign: (id: string) => ["airdrops", "campaign", id] as const,
   receivedDrops: () => ["airdrops", "received"] as const,
 };

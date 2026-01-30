@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Send } from "lucide-react";
 
 import { ChatMessageBubble } from "@/components/ChatMessage";
@@ -34,14 +34,22 @@ export function ChatRoomView({ roomId }: ChatRoomProps) {
   const messages =
     messagesData?.pages.flatMap((page) => page.messages) ?? [];
 
-  // Auto-scroll to bottom on new messages
+  // Memoize reversed messages to avoid re-creating array on every render
+  const displayMessages = useMemo(() => [...messages].reverse(), [messages]);
+
+  // Auto-scroll only when a new message arrives (first page grows), not on "load older"
+  const prevFirstPageLenRef = useRef(0);
   const scrollToBottom = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages.length, scrollToBottom]);
+    const firstPageLen = messagesData?.pages[0]?.messages.length ?? 0;
+    if (firstPageLen > prevFirstPageLenRef.current) {
+      scrollToBottom();
+    }
+    prevFirstPageLenRef.current = firstPageLen;
+  }, [messagesData?.pages, scrollToBottom]);
 
   const handleSend = async () => {
     const text = input.trim();
@@ -107,8 +115,8 @@ export function ChatRoomView({ roomId }: ChatRoomProps) {
           </p>
         )}
 
-        {/* Render messages in reverse (oldest first for display) */}
-        {[...messages].reverse().map((msg) => (
+        {/* Render messages oldest first for display */}
+        {displayMessages.map((msg) => (
           <ChatMessageBubble
             key={msg.id}
             message={msg}
