@@ -14,6 +14,46 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_API_URL: process.env.API_URL || process.env.NEXT_PUBLIC_API_URL,
     NEXT_PUBLIC_DYNAMIC_ENV_ID: process.env.DYNAMIC_ENV_ID || process.env.NEXT_PUBLIC_DYNAMIC_ENV_ID,
   },
+
+  // Transpile the local SDK so Turbopack resolves it correctly
+  transpilePackages: ["privacycash"],
+
+  // Turbopack config (Next.js 16 default bundler)
+  turbopack: {
+    resolveAlias: {
+      crypto: "crypto-browserify",
+      stream: "stream-browserify",
+      buffer: "buffer",
+      "node:crypto": "crypto-browserify",
+      "node-localstorage": { browser: "./empty-module.js" },
+      // Turbopack doesn't always resolve package.json "exports" for file: deps
+      "privacycash/utils": require.resolve("privacycash/utils"),
+    },
+  },
+
+  // Webpack fallback (used when building with --webpack flag)
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        crypto: require.resolve("crypto-browserify"),
+        stream: require.resolve("stream-browserify"),
+        buffer: require.resolve("buffer"),
+        path: false,
+        fs: false,
+        os: false,
+        "node:path": false,
+        "node:fs": false,
+        "node:crypto": require.resolve("crypto-browserify"),
+        "node-localstorage": false,
+      };
+      config.experiments = {
+        ...config.experiments,
+        asyncWebAssembly: true,
+      };
+    }
+    return config;
+  },
 };
 
 export default nextConfig;

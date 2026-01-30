@@ -8,69 +8,33 @@ import { logger } from '../utils/logger.js';
 
 /**
  * Privacy Controller
- * Handles endpoints for private tipping using Privacy Cash SDK
+ *
+ * Shield/withdraw/balance are handled client-side via the Privacy Cash SDK.
+ * The backend handles tip logging, tip history, settings, and pool info.
  */
 export const privacyController = {
   /**
-   * POST /privacy/shield
-   * Shield SOL into privacy pool
+   * POST /privacy/tip/log
+   * Log a private tip after the frontend SDK completes the ZK withdraw.
    *
-   * Body: { amount: number }
+   * Body: { creatorWallet: string, amount: number, postId?: string, txSignature: string }
    */
-  async shield(req: AuthenticatedRequest, res: Response) {
+  async logPrivateTip(req: AuthenticatedRequest, res: Response) {
     const wallet = req.wallet!;
-    const { amount } = req.body;
-
-    if (!amount || amount <= 0) {
-      throw new AppError(400, 'INVALID_AMOUNT', 'Amount must be greater than 0');
-    }
-
-    // Build shield transaction
-    const txResponse = await privacyService.buildShieldTx(wallet, amount);
-
-    // Log shield intent (actual balance will be updated after tx confirmation)
-    const lamports = Math.floor(amount * 1e9);
-    await supabase.from('transactions').insert({
-      signature: `pending_shield_${Date.now()}`,
-      type: 'tip', // Reusing 'tip' type for now, could add 'shield' type
-      from_wallet: wallet,
-      to_wallet: null, // Shielding to privacy pool
-      amount: lamports,
-      status: 'pending',
-      post_id: null,
-    });
-
-    logger.info({ wallet, amount }, 'Built shield transaction');
-
-    res.json({
-      success: true,
-      data: {
-        ...txResponse,
-        message: 'Shield transaction ready. Sign to deposit SOL into privacy pool.',
-      },
-    });
-  },
-
-  /**
-   * POST /privacy/tip
-   * Send private tip from privacy pool to creator
-   *
-   * Body: { creatorWallet: string, amount: number, postId?: string }
-   */
-  async privateTip(req: AuthenticatedRequest, res: Response) {
-    const wallet = req.wallet!;
-    const { creatorWallet, amount, postId } = req.body;
-
-    if (wallet === creatorWallet) {
-      throw new AppError(400, 'INVALID_ACTION', 'Cannot tip yourself');
-    }
-
-    if (!amount || amount <= 0) {
-      throw new AppError(400, 'INVALID_AMOUNT', 'Amount must be greater than 0');
-    }
+    const { creatorWallet, amount, postId, txSignature } = req.body;
 
     if (!creatorWallet) {
       throw new AppError(400, 'MISSING_CREATOR', 'Creator wallet is required');
+    }
+    if (!amount || amount <= 0) {
+      throw new AppError(400, 'INVALID_AMOUNT', 'Amount must be greater than 0');
+    }
+    if (!txSignature) {
+      throw new AppError(400, 'MISSING_TX', 'Transaction signature is required');
+    }
+
+    if (wallet === creatorWallet) {
+      throw new AppError(400, 'INVALID_ACTION', 'Cannot tip yourself');
     }
 
     // Verify creator exists
@@ -84,43 +48,28 @@ export const privacyController = {
       throw new AppError(404, 'NOT_FOUND', 'Creator not found');
     }
 
-    // Check if user has sufficient shielded balance
-    const hasSufficientBalance = await privacyService.hasSufficientBalance(wallet, amount);
-    if (!hasSufficientBalance) {
-      throw new AppError(
-        400,
-        'INSUFFICIENT_BALANCE',
-        'Insufficient shielded balance. Please shield more SOL first.'
-      );
-    }
-
-    // Build private tip transaction
-    const txResponse = await privacyService.buildPrivateTipTx(wallet, creatorWallet, amount);
-
-    // Log private tip (without revealing tipper publicly)
     const lamports = Math.floor(amount * 1e9);
-    const signature = `pending_private_${Date.now()}`;
 
     // Store in private_tips table (creator can see amount, not tipper)
     await supabase.from('private_tips').insert({
       creator_wallet: creatorWallet,
       amount: lamports,
-      tx_signature: signature,
+      tx_signature: txSignature,
       post_id: postId || null,
     });
 
     // Track in transactions table -- omit from_wallet to preserve tipper privacy
     await supabase.from('transactions').insert({
-      signature,
+      signature: txSignature,
       type: 'tip',
       from_wallet: null,
       to_wallet: creatorWallet,
       amount: lamports,
       post_id: postId || null,
-      status: 'pending',
+      status: 'confirmed',
     });
 
-    // Update post tips if postId provided (don't reveal who tipped)
+    // Update post tips if postId provided
     if (postId) {
       await supabase
         .from('posts')
@@ -137,40 +86,13 @@ export const privacyController = {
     });
 
     logger.info(
-      { creatorWallet, amount, postId, isPrivate: true },
-      'Built private tip transaction'
+      { creatorWallet, amount, postId, txSignature, isPrivate: true },
+      'Logged private tip'
     );
 
     res.json({
       success: true,
-      data: {
-        ...txResponse,
-        message: 'Private tip transaction ready. Your identity will remain anonymous.',
-      },
-    });
-  },
-
-  /**
-   * GET /privacy/balance
-   * Get user's shielded balance
-   */
-  async getBalance(req: AuthenticatedRequest, res: Response) {
-    const wallet = req.wallet!;
-
-    const balance = await privacyService.getShieldedBalance(wallet);
-
-    // Convert lamports to SOL
-    const balanceInSol = {
-      shielded: balance.shielded / 1e9,
-      available: balance.available / 1e9,
-      pending: balance.pending / 1e9,
-    };
-
-    logger.info({ wallet, balance: balanceInSol }, 'Fetched shielded balance');
-
-    res.json({
-      success: true,
-      data: balanceInSol,
+      data: { message: 'Private tip logged successfully.' },
     });
   },
 

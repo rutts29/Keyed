@@ -1,8 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { PublicKey, VersionedTransaction } from "@solana/web3.js"
+import type { ISolana } from "@dynamic-labs/solana-core"
 
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/queryClient"
 import { useAuthStore } from "@/store/authStore"
+import { usePrivacyStore } from "@/store/privacyStore"
+import { useSafeDynamicContext } from "@/hooks/useSafeDynamicContext"
+import {
+  shieldSol,
+  getShieldedBalance,
+  withdrawSol,
+  isSessionInitialized,
+} from "@/lib/privacySdk"
 import type {
   ApiResponse,
   PrivateTipReceived,
@@ -10,17 +20,16 @@ import type {
   PrivacyBalance,
   PrivacyPoolInfo,
   PrivacySettings,
-  TransactionResponse,
 } from "@/types"
 
-export function usePrivacyBalance() {
+export function useWalletBalance() {
   const token = useAuthStore((state) => state.token)
 
-  return useQuery<PrivacyBalance>({
-    queryKey: queryKeys.privacyBalance(),
+  return useQuery<{ balance: number }>({
+    queryKey: queryKeys.walletBalance(),
     queryFn: async () => {
-      const { data } = await api.get<ApiResponse<PrivacyBalance>>(
-        "/privacy/balance"
+      const { data } = await api.get<ApiResponse<{ balance: number }>>(
+        "/users/me/balance"
       )
       if (!data.data) {
         throw new Error("Balance unavailable")
@@ -31,28 +40,79 @@ export function usePrivacyBalance() {
   })
 }
 
+export function usePrivacyBalance() {
+  const { primaryWallet } = useSafeDynamicContext()
+  const isInitialized = usePrivacyStore(
+    (state) => state.isPrivacySessionInitialized
+  )
+
+  return useQuery<PrivacyBalance>({
+    queryKey: queryKeys.privacyBalance(),
+    queryFn: async () => {
+      if (!primaryWallet) throw new Error("Wallet not connected")
+      const address = await primaryWallet.address
+      const publicKey = new PublicKey(address)
+      const { lamports } = await getShieldedBalance({ publicKey })
+      const sol = lamports / 1e9
+      return { shielded: sol, available: sol, pending: 0 }
+    },
+    enabled: Boolean(primaryWallet) && isInitialized && isSessionInitialized(),
+    staleTime: 30_000, // UTXO scanning is expensive
+  })
+}
+
 export function useShieldSol() {
   const queryClient = useQueryClient()
+  const { primaryWallet } = useSafeDynamicContext()
 
   return useMutation({
     mutationFn: async (amount: number) => {
-      const { data } = await api.post<ApiResponse<TransactionResponse>>(
-        "/privacy/shield",
-        { amount }
-      )
-      if (!data.data) {
-        throw new Error("Shielding unavailable")
-      }
-      return data.data
+      if (!primaryWallet) throw new Error("Wallet not connected")
+      const signer: ISolana = await (primaryWallet as any).connector.getSigner()
+      const address = await primaryWallet.address
+      const publicKey = new PublicKey(address)
+
+      return shieldSol({
+        amount,
+        publicKey,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        signTransaction: (tx: VersionedTransaction) =>
+          signer.signTransaction(tx as any) as unknown as Promise<VersionedTransaction>,
+      })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.privacyBalance() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.walletBalance() })
+    },
+  })
+}
+
+export function useWithdrawSol() {
+  const queryClient = useQueryClient()
+  const { primaryWallet } = useSafeDynamicContext()
+
+  return useMutation({
+    mutationFn: async (amount: number) => {
+      if (!primaryWallet) throw new Error("Wallet not connected")
+      const address = await primaryWallet.address
+      const publicKey = new PublicKey(address)
+
+      return withdrawSol({
+        amount,
+        publicKey,
+        recipient: publicKey, // Withdraw to self
+      })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.privacyBalance() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.walletBalance() })
     },
   })
 }
 
 export function usePrivateTip() {
   const queryClient = useQueryClient()
+  const { primaryWallet } = useSafeDynamicContext()
 
   return useMutation({
     mutationFn: async ({
@@ -64,14 +124,27 @@ export function usePrivateTip() {
       amount: number
       postId?: string
     }) => {
-      const { data } = await api.post<ApiResponse<TransactionResponse>>(
-        "/privacy/tip",
-        { creatorWallet, amount, postId }
-      )
-      if (!data.data) {
-        throw new Error("Private tip unavailable")
-      }
-      return data.data
+      if (!primaryWallet) throw new Error("Wallet not connected")
+      const address = await primaryWallet.address
+      const publicKey = new PublicKey(address)
+      const recipient = new PublicKey(creatorWallet)
+
+      // SDK handles the ZK withdraw to the creator
+      const result = await withdrawSol({
+        amount,
+        publicKey,
+        recipient,
+      })
+
+      // Log the tip to the backend for DB records
+      await api.post("/privacy/tip/log", {
+        creatorWallet,
+        amount,
+        postId,
+        txSignature: result.tx,
+      })
+
+      return result
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.privacyBalance() })

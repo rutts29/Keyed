@@ -1,3 +1,10 @@
+-- Privacy Tables (client-side Privacy Cash SDK architecture)
+--
+-- Shield, withdraw, and balance operations are handled entirely client-side
+-- via the Privacy Cash SDK. The backend only handles:
+--   - Tip logging (DB records for creator dashboards)
+--   - Privacy settings (user preferences)
+
 -- Privacy Tips Table
 -- Stores private tips received by creators
 -- NOTE: This table does NOT store the tipper wallet to preserve anonymity
@@ -30,37 +37,8 @@ CREATE TABLE user_privacy_settings (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Privacy Shield Commitments Table (optional - for tracking user's shielded state)
--- This table can be used to cache user's shielded balance from Privacy Cash
--- NOTE: The source of truth is on-chain in Privacy Cash program
-CREATE TABLE privacy_shield_cache (
-    wallet VARCHAR(44) PRIMARY KEY REFERENCES users(wallet),
-    shielded_balance BIGINT DEFAULT 0,  -- Cached shielded balance in lamports
-    last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    CONSTRAINT valid_balance CHECK (shielded_balance >= 0)
-);
-
--- Index for balance cache updates
-CREATE INDEX idx_privacy_shield_updated ON privacy_shield_cache(last_updated);
-
--- Privacy Activity Log (for analytics, privacy-preserving)
--- Tracks aggregate privacy feature usage without revealing user identities
-CREATE TABLE privacy_activity_log (
-    id SERIAL PRIMARY KEY,
-    activity_type VARCHAR(20) NOT NULL, -- 'shield', 'private_tip', 'balance_query'
-    amount BIGINT,                      -- Amount involved (if applicable)
-    timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    CONSTRAINT valid_activity_type CHECK (activity_type IN ('shield', 'private_tip', 'balance_query'))
-);
-
--- Index for analytics queries
-CREATE INDEX idx_privacy_activity_type ON privacy_activity_log(activity_type, timestamp DESC);
-
--- Add helpful comments
 COMMENT ON TABLE private_tips IS 'Private tips received by creators. Tipper identity is NOT stored to preserve anonymity via Privacy Cash.';
 COMMENT ON TABLE user_privacy_settings IS 'User preferences for privacy features like default private tipping.';
-COMMENT ON TABLE privacy_shield_cache IS 'Cache of user shielded balances from Privacy Cash program. Source of truth is on-chain.';
-COMMENT ON TABLE privacy_activity_log IS 'Aggregate privacy feature usage for analytics. Does not contain personally identifiable information.';
 
 -- Function to update privacy settings timestamp
 CREATE OR REPLACE FUNCTION update_privacy_settings_timestamp()
@@ -69,10 +47,32 @@ BEGIN
     NEW.updated_at = NOW();
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+SET search_path = '';
 
 -- Trigger for privacy settings updates
 CREATE TRIGGER privacy_settings_update_timestamp
     BEFORE UPDATE ON user_privacy_settings
     FOR EACH ROW
     EXECUTE FUNCTION update_privacy_settings_timestamp();
+
+-- RLS policies
+ALTER TABLE private_tips ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Creators can view received private tips"
+  ON private_tips FOR SELECT
+  USING (creator_wallet = public.jwt_wallet());
+
+ALTER TABLE user_privacy_settings ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own privacy settings"
+  ON user_privacy_settings FOR SELECT
+  USING (wallet = public.jwt_wallet());
+
+CREATE POLICY "Users can update own privacy settings"
+  ON user_privacy_settings FOR UPDATE
+  USING (wallet = public.jwt_wallet());
+
+CREATE POLICY "Users can insert own privacy settings"
+  ON user_privacy_settings FOR INSERT
+  WITH CHECK (wallet = public.jwt_wallet());

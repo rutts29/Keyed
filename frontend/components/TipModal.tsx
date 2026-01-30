@@ -9,8 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { signAndSubmitTransaction } from "@/lib/solana"
 import { usePrivateTip, usePrivacyBalance, usePrivacySettings } from "@/hooks/usePrivacy"
+import { usePrivacySession } from "@/hooks/usePrivacySession"
 import { useTip } from "@/hooks/usePayments"
 import { usePrivacyStore } from "@/store/privacyStore"
 import { useUIStore } from "@/store/uiStore"
@@ -19,6 +19,7 @@ const presets = [0.1, 0.5, 1]
 
 export function TipModal() {
   const { primaryWallet } = useSafeDynamicContext()
+  const { initialize, isInitialized } = usePrivacySession()
   const { data: privacySettings } = usePrivacySettings()
   const { data: privacyBalance } = usePrivacyBalance()
   const openShieldModal = usePrivacyStore((state) => state.openShieldModal)
@@ -76,12 +77,16 @@ export function TipModal() {
 
     try {
       if (isPrivate) {
-        const transaction = await sendPrivateTip({
-            creatorWallet: tipTarget.wallet,
-            amount: amountValue,
-            postId: tipTarget.postId,
+        // Ensure privacy session is initialized before sending private tip
+        if (!isInitialized) {
+          await initialize()
+        }
+        // SDK handles ZK proof, relay, and confirmation internally
+        await sendPrivateTip({
+          creatorWallet: tipTarget.wallet,
+          amount: amountValue,
+          postId: tipTarget.postId,
         })
-        await signAndSubmitTransaction(transaction.transaction, primaryWallet)
       } else {
         await sendPublicTip({
           creatorWallet: tipTarget.wallet,

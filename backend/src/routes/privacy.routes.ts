@@ -7,10 +7,8 @@ import { AuthenticatedRequest } from '../types/index.js';
 
 const router = Router();
 
-// Privacy Cash Operations
-router.post('/shield', authMiddleware, rateLimitPost, asyncHandler<AuthenticatedRequest>(privacyController.shield));
-router.post('/tip', authMiddleware, rateLimitPost, asyncHandler<AuthenticatedRequest>(privacyController.privateTip));
-router.get('/balance', authMiddleware, rateLimitGet, asyncHandler<AuthenticatedRequest>(privacyController.getBalance));
+// Private tip logging (frontend SDK handles the ZK withdraw, backend logs to DB)
+router.post('/tip/log', authMiddleware, rateLimitPost, asyncHandler<AuthenticatedRequest>(privacyController.logPrivateTip));
 
 // Privacy Tips History
 router.get('/tips/received', authMiddleware, rateLimitGet, asyncHandler<AuthenticatedRequest>(privacyController.getPrivateTipsReceived));

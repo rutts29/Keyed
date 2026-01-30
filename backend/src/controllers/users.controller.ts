@@ -63,13 +63,49 @@ export const usersController = {
     });
   },
 
+  async uploadAvatar(req: AuthenticatedRequest, res: Response) {
+    const wallet = req.wallet!;
+    const file = req.file;
+
+    if (!file) {
+      throw new AppError(400, 'NO_FILE', 'No file uploaded');
+    }
+
+    const ext = file.originalname.split('.').pop() || 'jpg';
+    const filename = `${wallet}.${ext}`;
+
+    const { error } = await supabase.storage
+      .from('avatars')
+      .upload(filename, file.buffer, {
+        contentType: file.mimetype,
+        upsert: true,
+      });
+
+    if (error) {
+      logger.error({ error, wallet }, 'Avatar upload failed');
+      throw new AppError(500, 'UPLOAD_ERROR', 'Failed to upload avatar');
+    }
+
+    const { data: publicUrl } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(filename);
+
+    res.json({
+      success: true,
+      data: { url: publicUrl.publicUrl },
+    });
+  },
+
   async createOrUpdateProfile(req: AuthenticatedRequest, res: Response) {
     const wallet = req.wallet!;
     const { username, bio, profileImageUri } = req.body;
 
-    // Check if profile already exists on-chain
-    const existingProfile = await fetchUserProfile(new PublicKey(wallet));
-    const isUpdate = existingProfile !== null;
+    // Check if profile already exists in DB
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('wallet, username, bio, profile_image_uri')
+      .eq('wallet', wallet)
+      .single();
 
     // Check username uniqueness
     if (username) {
@@ -85,45 +121,33 @@ export const usersController = {
       }
     }
 
-    let txResponse;
-    if (isUpdate) {
-      // Update existing profile
-      txResponse = await solanaService.buildUpdateProfileTx(
-        wallet,
-        bio,
-        profileImageUri
-      );
-      logger.info({ wallet }, 'Built update profile transaction');
-    } else {
-      // Create new profile
-      if (!username) {
-        throw new AppError(400, 'VALIDATION_ERROR', 'Username is required for new profiles');
-      }
-      txResponse = await solanaService.buildCreateProfileTx(
-        wallet,
-        username,
-        bio || '',
-        profileImageUri || ''
-      );
-      logger.info({ wallet, username }, 'Built create profile transaction');
+    // For new profiles, username is required
+    if (!existingUser && !username) {
+      throw new AppError(400, 'VALIDATION_ERROR', 'Username is required for new profiles');
     }
 
     // Upsert in database
-    await supabase.from('users').upsert({
+    const { error } = await supabase.from('users').upsert({
       wallet,
-      username: username || existingProfile?.username,
-      bio: bio ?? existingProfile?.bio,
-      profile_image_uri: profileImageUri ?? existingProfile?.profileImageUri,
+      username: username || existingUser?.username,
+      bio: bio ?? existingUser?.bio ?? null,
+      profile_image_uri: profileImageUri ?? existingUser?.profile_image_uri ?? null,
       last_synced: new Date().toISOString(),
     });
 
+    if (error) {
+      logger.error({ error, wallet }, 'Profile upsert failed');
+      throw new AppError(500, 'DB_ERROR', 'Failed to update profile');
+    }
+
     await cacheService.invalidateUser(wallet);
+
+    logger.info({ wallet, username }, existingUser ? 'Updated profile' : 'Created profile');
 
     res.json({
       success: true,
       data: {
-        ...txResponse,
-        metadata: { isUpdate },
+        metadata: { isUpdate: !!existingUser },
       },
     });
   },
@@ -365,6 +389,16 @@ export const usersController = {
     res.json({
       success: true,
       data: { users: users || [], nextCursor },
+    });
+  },
+
+  async getWalletBalance(req: AuthenticatedRequest, res: Response) {
+    const wallet = req.wallet!;
+    const balance = await solanaService.getBalance(wallet);
+
+    res.json({
+      success: true,
+      data: { balance },
     });
   },
 

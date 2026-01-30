@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSafeDynamicContext } from "@/hooks/useSafeDynamicContext";
-import { Loader2 } from "lucide-react";
+import { Camera, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { PrivateTipHistory } from "@/components/PrivateTipHistory";
@@ -20,10 +20,11 @@ import {
 } from "@/hooks/usePrivacy";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { api } from "@/lib/api";
-import { lamportsToSol, signAndSubmitTransaction } from "@/lib/solana";
+import { lamportsToSol } from "@/lib/solana";
 import { useAuthStore } from "@/store/authStore";
-import type { ApiResponse, TransactionResponse } from "@/types";
-import { formatWallet } from "@/lib/format";
+import type { ApiResponse } from "@/types";
+import { formatWallet, resolveImageUrl, getInitials } from "@/lib/format";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,20}$/;
 const BIO_MAX_LENGTH = 160;
@@ -61,6 +62,10 @@ export default function SettingsPage() {
   const [profileImageUri, setProfileImageUri] = useState("");
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Privacy settings state
   const { data: privacySettingsData, isLoading: isLoadingPrivacy } =
@@ -93,9 +98,10 @@ export default function SettingsPage() {
     return (
       username !== (profileData.username ?? "") ||
       bio !== (profileData.bio ?? "") ||
-      profileImageUri !== (profileData.profileImageUri ?? "")
+      profileImageUri !== (profileData.profileImageUri ?? "") ||
+      avatarFile !== null
     );
-  }, [profileData, username, bio, profileImageUri]);
+  }, [profileData, username, bio, profileImageUri, avatarFile]);
 
   // Check if privacy settings have unsaved changes
   const hasPrivacyChanges = useMemo(() => {
@@ -117,6 +123,55 @@ export default function SettingsPage() {
     }
   };
 
+  // Handle avatar file selection
+  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowed = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    if (!allowed.includes(file.type)) {
+      toast.error("Please select a JPG, PNG, GIF, or WebP image");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be under 5MB");
+      return;
+    }
+
+    setAvatarFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setAvatarPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  // Remove selected avatar
+  const handleRemoveAvatar = () => {
+    setAvatarFile(null);
+    setAvatarPreview(null);
+    setProfileImageUri("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  // Upload avatar file and return the URI
+  const uploadAvatar = async (): Promise<string | null> => {
+    if (!avatarFile) return null;
+    setIsUploadingAvatar(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", avatarFile);
+      const { data } = await api.post<ApiResponse<{ url: string }>>(
+        "/users/profile/avatar",
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+      return data.data?.url ?? null;
+    } catch (error) {
+      toast.error("Failed to upload profile image");
+      return null;
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
 
   // Save profile
   const handleSaveProfile = async () => {
@@ -134,45 +189,35 @@ export default function SettingsPage() {
 
     setIsSavingProfile(true);
     try {
-      const { data } = await api.post<ApiResponse<TransactionResponse>>(
-        "/users/profile",
-        {
-          username: username || null,
-          bio: bio || null,
-          profileImageUri: profileImageUri || null,
+      // Upload avatar if a new file was selected
+      let finalImageUri = profileImageUri || null;
+      if (avatarFile) {
+        const uploadedUrl = await uploadAvatar();
+        if (uploadedUrl) {
+          finalImageUri = uploadedUrl;
+          setProfileImageUri(uploadedUrl);
+          setAvatarFile(null);
+          setAvatarPreview(null);
+          if (fileInputRef.current) fileInputRef.current.value = "";
         }
-      );
-
-      if (!data.data) {
-        throw new Error("Profile update failed");
       }
 
-      // If there's a transaction to sign (on-chain update)
-      if (data.data.transaction && primaryWallet) {
-        toast.info("Please sign the transaction to update your profile");
-        try {
-          await signAndSubmitTransaction(data.data.transaction, primaryWallet);
-          toast.success("Profile updated on-chain");
-        } catch (txError) {
-          const message = txError instanceof Error ? txError.message : "Transaction failed";
-          if (message.includes("cancelled") || message.includes("rejected")) {
-            toast.error("Transaction signing was cancelled");
-          } else {
-            toast.error(`Transaction failed: ${message}`);
-          }
-          return;
-        }
-      } else {
-        toast.success("Profile updated successfully");
-      }
+      // Build payload, omitting empty/null fields so Zod validation passes
+      const payload: Record<string, string> = {};
+      if (username) payload.username = username;
+      if (bio) payload.bio = bio;
+      if (finalImageUri) payload.profileImageUri = finalImageUri;
+
+      await api.post("/users/profile", payload);
+      toast.success("Profile updated successfully");
 
       // Update local user state
       if (user) {
         setUser({
           ...user,
-          username: username || null,
-          bio: bio || null,
-          profileImageUri: profileImageUri || null,
+          username: username || user.username,
+          bio: bio || user.bio,
+          profileImageUri: finalImageUri || user.profileImageUri,
         });
       }
     } catch (error) {
@@ -293,19 +338,57 @@ export default function SettingsPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="profileImage" className="text-sm text-muted-foreground">
-              Profile Image URL
+            <Label className="text-sm text-muted-foreground">
+              Profile Photo
             </Label>
-            <Input
-              id="profileImage"
-              placeholder="https://example.com/image.jpg"
-              value={profileImageUri}
-              onChange={(e) => setProfileImageUri(e.target.value)}
-              disabled={isLoadingProfile || isSavingProfile}
-            />
-            <p className="text-xs text-muted-foreground">
-              Enter a URL for your profile image
-            </p>
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <Avatar className="h-16 w-16">
+                  {(avatarPreview || profileImageUri) && (
+                    <AvatarImage
+                      src={avatarPreview ?? resolveImageUrl(profileImageUri) ?? undefined}
+                      alt="Profile preview"
+                    />
+                  )}
+                  <AvatarFallback className="text-lg">
+                    {getInitials(username, wallet)}
+                  </AvatarFallback>
+                </Avatar>
+                {(avatarPreview || profileImageUri) && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveAvatar}
+                    className="absolute -top-1 -right-1 rounded-full bg-destructive p-0.5 text-destructive-foreground hover:bg-destructive/80"
+                    disabled={isSavingProfile}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+              <div className="flex-1 space-y-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  onChange={handleAvatarSelect}
+                  className="hidden"
+                  disabled={isLoadingProfile || isSavingProfile}
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="h-9 gap-2"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isLoadingProfile || isSavingProfile}
+                >
+                  <Camera className="h-4 w-4" />
+                  {profileImageUri || avatarPreview ? "Change Photo" : "Upload Photo"}
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  JPG, PNG, GIF, or WebP. Max 5MB.
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className="flex justify-end">
@@ -316,13 +399,14 @@ export default function SettingsPage() {
                 !hasProfileChanges ||
                 !!usernameError ||
                 isLoadingProfile ||
-                isSavingProfile
+                isSavingProfile ||
+                isUploadingAvatar
               }
             >
-              {isSavingProfile ? (
+              {isSavingProfile || isUploadingAvatar ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
+                  {isUploadingAvatar ? "Uploading..." : "Saving..."}
                 </>
               ) : (
                 "Save profile"
@@ -455,7 +539,7 @@ export default function SettingsPage() {
                 <p className="text-sm text-foreground">
                   {profileData?.isVerified ?? user?.isVerified
                     ? "Verified"
-                    : "Not verified"}
+                    : "Coming soon"}
                 </p>
               </div>
               {(profileData?.isVerified ?? user?.isVerified) ? (
@@ -464,7 +548,7 @@ export default function SettingsPage() {
                 </Badge>
               ) : (
                 <Badge variant="outline" className="text-[9px]">
-                  Unverified
+                  Coming Soon
                 </Badge>
               )}
             </div>
