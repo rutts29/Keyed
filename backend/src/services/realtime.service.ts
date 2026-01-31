@@ -1,7 +1,7 @@
 import { supabase } from '../config/supabase.js';
 import { logger } from '../utils/logger.js';
 
-type EventType = 'post:new' | 'post:liked' | 'tip:received' | 'follow:new' | 'comment:new';
+type EventType = 'post:new' | 'post:liked' | 'tip:received' | 'follow:new' | 'comment:new' | 'chat:message' | 'airdrop:received';
 
 interface RealtimePayload {
   type: EventType;
@@ -64,6 +64,14 @@ export const realtimeService = {
       type: 'comment:new',
       data: { postId, comment },
       targetWallet: postCreatorWallet,
+    });
+  },
+
+  async notifyAirdrop(recipientWallet: string, campaignName: string, type: 'spl_token' | 'cnft') {
+    await this.broadcast(`user:${recipientWallet}`, {
+      type: 'airdrop:received',
+      data: { campaignName, type },
+      targetWallet: recipientWallet,
     });
   },
 };

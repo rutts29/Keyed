@@ -17,6 +17,8 @@ import searchRoutes from './routes/search.routes.js';
 import accessRoutes from './routes/access.routes.js';
 import privacyRoutes from './routes/privacy.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
+import chatRoutes from './routes/chat.routes.js';
+import airdropRoutes from './routes/airdrop.routes.js';
 
 const app = express();
 
@@ -49,6 +51,8 @@ app.use('/api/search', searchRoutes);
 app.use('/api/access', accessRoutes);
 app.use('/api/privacy', privacyRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/airdrops', airdropRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

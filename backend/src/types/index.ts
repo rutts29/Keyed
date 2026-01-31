@@ -140,7 +140,7 @@ export interface RecommendationResult {
   tasteProfile: string | null;
 }
 
-export type NotificationType = 'like' | 'comment' | 'follow' | 'tip' | 'new_post';
+export type NotificationType = 'like' | 'comment' | 'follow' | 'tip' | 'new_post' | 'airdrop_received';
 
 export interface Notification {
   id: string;

@@ -10,13 +10,14 @@ export const queues = {
   notification: new Queue('notification', { connection }),
   'feed-refresh': new Queue('feed-refresh', { connection }),
   'sync-chain': new Queue('sync-chain', { connection }),
+  airdrop: new Queue('airdrop', { connection }),
 };
 
 interface JobData {
   [key: string]: unknown;
 }
 
-type QueueName = 'ai-analysis' | 'embedding' | 'notification' | 'feed-refresh' | 'sync-chain';
+type QueueName = 'ai-analysis' | 'embedding' | 'notification' | 'feed-refresh' | 'sync-chain' | 'airdrop';
 
 export async function addJob(
   queueName: QueueName,

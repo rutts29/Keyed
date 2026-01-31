@@ -5,12 +5,14 @@ import { notificationService } from '../services/notification.service.js';
 import { logger } from '../utils/logger.js';
 
 interface NotificationData {
-  type: 'new_post' | 'like' | 'comment' | 'follow' | 'tip';
+  type: 'new_post' | 'like' | 'comment' | 'follow' | 'tip' | 'airdrop_received';
   postId?: string;
   creatorWallet?: string;
   targetWallet?: string;
   fromWallet?: string;
   amount?: number;
+  campaignName?: string;
+  airdropType?: 'spl_token' | 'cnft';
 }
 
 export async function processNotification(job: Job<NotificationData>) {
@@ -91,6 +93,21 @@ export async function processNotification(job: Job<NotificationData>) {
         amount,
       });
       await realtimeService.notifyTip(fromWallet, targetWallet, amount, postId);
+      break;
+    }
+
+    case 'airdrop_received': {
+      if (!targetWallet || !fromWallet) break;
+      await notificationService.create({
+        recipient: targetWallet,
+        type: 'airdrop_received',
+        fromWallet,
+      });
+      await realtimeService.notifyAirdrop(
+        targetWallet,
+        job.data.campaignName || 'Airdrop',
+        job.data.airdropType || 'spl_token'
+      );
       break;
     }
   }

@@ -9,11 +9,13 @@ skip-lint = false
 solshare_payment = "H5FgabhipaFijiP2HQxtsDd1papEtC9rvvQANsm1fc8t"
 solshare_social = "G2USoTtbNw78NYvPJSeuYVZQS9oVQNLrLE5zJb7wsM3L"
 solshare_token_gate = "EXVqoivgZKebHm8VeQNBEFYZLRjJ61ZWNieXg3Npy4Hi"
+solshare_airdrop = "AirD1111111111111111111111111111111111111111"
 
 [programs.localnet]
 solshare_payment = "H5FgabhipaFijiP2HQxtsDd1papEtC9rvvQANsm1fc8t"
 solshare_social = "G2USoTtbNw78NYvPJSeuYVZQS9oVQNLrLE5zJb7wsM3L"
 solshare_token_gate = "EXVqoivgZKebHm8VeQNBEFYZLRjJ61ZWNieXg3Npy4Hi"
+solshare_airdrop = "AirD1111111111111111111111111111111111111111"
 
 [registry]
 url = "https://api.apr.dev"

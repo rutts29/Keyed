@@ -7,6 +7,7 @@ import { processEmbedding } from './jobs/embedding.job.js';
 import { processNotification } from './jobs/notification.job.js';
 import { processFeedRefresh } from './jobs/feed-refresh.job.js';
 import { processSyncChain } from './jobs/sync-chain.job.js';
+import { processAirdrop } from './jobs/airdrop.job.js';
 
 const connection = { url: env.UPSTASH_REDIS_URL };
 
@@ -45,6 +46,7 @@ createWorker('embedding', processEmbedding);
 createWorker('notification', processNotification);
 createWorker('feed-refresh', processFeedRefresh);
 createWorker('sync-chain', processSyncChain);
+createWorker('airdrop', processAirdrop);
 
 logger.info({ workerCount: workers.length }, '🔧 SolShare workers started');
 
