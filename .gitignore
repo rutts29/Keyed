@@ -82,3 +82,10 @@ temp/
 backend/node_modules/.vite/vitest/results.json
 frontend/playwright-report
 cursor\ transcripts/
+
+# ============================================
+# AI / IDE Session Files
+# ============================================
+.cursor/
+.claude/
+.worktrees/
