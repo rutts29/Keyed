@@ -63,20 +63,22 @@ export const airdropService = {
         break;
       }
       case 'token_holders': {
-        // For token_holders, the filter should contain a tokenMint
         const tokenMint = audienceFilter?.tokenMint as string;
         if (!tokenMint) return [];
 
-        // Query on-chain: get all token accounts for this mint
-        const accounts = await connection.getTokenLargestAccounts(new PublicKey(tokenMint));
-        // We'd need to resolve owner wallets from the token accounts
-        for (const account of accounts.value) {
+        // Query on-chain: get ALL token accounts for this mint using getProgramAccounts
+        const accounts = await connection.getProgramAccounts(TOKEN_PROGRAM_ID, {
+          filters: [
+            { dataSize: 165 },
+            { memcmp: { offset: 0, bytes: tokenMint } },
+          ],
+        });
+        for (const { account } of accounts) {
           try {
-            const accountInfo = await getAccount(connection, account.address);
-            wallets.push(accountInfo.owner.toBase58());
-          } catch {
-            // Skip accounts that can't be read
-          }
+            // Owner is at bytes 32-64 of the token account data
+            const ownerBytes = account.data.slice(32, 64);
+            wallets.push(new PublicKey(ownerBytes).toBase58());
+          } catch { }
         }
         break;
       }

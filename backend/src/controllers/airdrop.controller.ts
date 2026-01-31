@@ -189,11 +189,12 @@ export const airdropController = {
     // Generate escrow keypair and build fund tx
     const escrowKeypair = Keypair.generate();
     const escrowPubkey = escrowKeypair.publicKey.toBase58();
+    const escrowSecret = Buffer.from(escrowKeypair.secretKey).toString('base64');
 
-    // Store escrow pubkey (the private key handling would need secure storage in production)
+    // Store escrow pubkey and secret for later use by the airdrop job
     await supabase
       .from('airdrop_campaigns')
-      .update({ escrow_pubkey: escrowPubkey })
+      .update({ escrow_pubkey: escrowPubkey, escrow_secret: escrowSecret })
       .eq('id', id);
 
     let fundTransaction: string | null = null;

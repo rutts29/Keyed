@@ -62,7 +62,18 @@ export async function processAirdrop(job: Job<AirdropJobData>) {
       // For SPL token distribution, we need the escrow keypair
       // In production, this would be loaded from secure storage
       // For now, we'll use a placeholder that would be replaced with proper key management
-      const escrowKeypair = Keypair.generate(); // TODO: Load from secure storage using escrow_pubkey
+      if (!campaign.escrow_secret) {
+        logger.error({ campaignId }, 'Campaign missing escrow secret key');
+        // Mark all pending as failed
+        await supabase.from('airdrop_recipients')
+          .update({ status: 'failed', error_message: 'Missing escrow secret key' })
+          .eq('campaign_id', campaignId).eq('status', 'pending');
+        totalFailed += batch.length;
+        continue;
+      }
+      const escrowKeypair = Keypair.fromSecretKey(
+        Buffer.from(campaign.escrow_secret, 'base64')
+      );
 
       const result = await airdropService.executeDistributionBatch(
         campaignId,
@@ -85,6 +96,14 @@ export async function processAirdrop(job: Job<AirdropJobData>) {
           airdropType: campaign.type,
         });
       }
+    } else if (campaign.type === 'cnft') {
+      // CNFT distribution not yet implemented — mark recipients as failed
+      for (const wallet of batch) {
+        await supabase.from('airdrop_recipients')
+          .update({ status: 'failed', error_message: 'CNFT distribution not yet implemented' })
+          .eq('campaign_id', campaignId).eq('wallet', wallet);
+      }
+      totalFailed += batch.length;
     }
 
     // Update campaign counts
