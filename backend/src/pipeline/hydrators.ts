@@ -44,23 +44,29 @@ export class UserContextHydrator implements QueryHydrator<FeedQuery> {
   }
 
   private async fetchLikedPostIds(wallet: string): Promise<string[]> {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('likes')
       .select('post_id')
       .eq('user_wallet', wallet)
       .order('timestamp', { ascending: false })
       .limit(50);
+    if (error) {
+      logger.error({ error, wallet }, 'Failed to fetch liked post IDs');
+    }
     return data?.map((l) => l.post_id) || [];
   }
 
   private async fetchSeenPostIds(wallet: string): Promise<string[]> {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('interactions')
       .select('post_id')
       .eq('user_wallet', wallet)
       .eq('interaction_type', 'view')
       .order('timestamp', { ascending: false })
       .limit(200);
+    if (error) {
+      logger.error({ error, wallet }, 'Failed to fetch seen post IDs');
+    }
     return data?.map((i) => i.post_id) || [];
   }
 }
@@ -91,7 +97,7 @@ export class CoreDataHydrator implements Hydrator<FeedQuery, FeedCandidate> {
       .in('id', ids);
 
     if (error) {
-      logger.warn({ error, hydrator: this.name }, 'Core data hydration failed');
+      logger.error({ error, hydrator: this.name }, 'Core data hydration failed');
       return candidates;
     }
 

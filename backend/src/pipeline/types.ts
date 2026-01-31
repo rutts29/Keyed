@@ -8,6 +8,9 @@
  * @see https://github.com/xai-org/x-algorithm/tree/main/candidate-pipeline
  */
 
+import { env } from '../config/env.js';
+import { logger } from '../utils/logger.js';
+
 /**
  * Pipeline stages mirror the x-algorithm pipeline execution order:
  * QueryHydration -> Source -> Hydration -> Filter -> Score -> Select -> PostFilter
@@ -77,6 +80,45 @@ export const DEFAULT_ACTION_WEIGHTS: Record<EngagementAction, number> = {
   mute_creator: -5.0,
   report: -10.0,
 };
+
+let cachedWeights: Record<EngagementAction, number> | null = null;
+
+/**
+ * Fetch action weights from the AI service's /api/pipeline/info endpoint.
+ * Caches the result in memory. Falls back to DEFAULT_ACTION_WEIGHTS on failure.
+ */
+export async function fetchActionWeights(): Promise<Record<EngagementAction, number>> {
+  if (cachedWeights) return cachedWeights;
+
+  try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (env.AI_SERVICE_API_KEY) {
+      headers['X-Internal-API-Key'] = env.AI_SERVICE_API_KEY;
+    }
+
+    const response = await fetch(`${env.AI_SERVICE_URL}/api/pipeline/info`, { headers });
+    if (!response.ok) {
+      logger.warn({ status: response.status }, 'Failed to fetch action weights from AI service');
+      return DEFAULT_ACTION_WEIGHTS;
+    }
+
+    const data = (await response.json()) as { default_weights: Record<string, number> };
+    const weights = data.default_weights as Record<EngagementAction, number>;
+
+    // Validate that all expected actions are present
+    const missingActions = ENGAGEMENT_ACTIONS.filter((a) => !(a in weights));
+    if (missingActions.length > 0) {
+      logger.warn({ missingActions }, 'AI service weights missing actions, using fallback');
+      return DEFAULT_ACTION_WEIGHTS;
+    }
+
+    cachedWeights = weights;
+    return weights;
+  } catch (error) {
+    logger.warn({ error }, 'Failed to fetch action weights, using local defaults');
+    return DEFAULT_ACTION_WEIGHTS;
+  }
+}
 
 /** Query context passed through the pipeline — hydrated with user data. */
 export interface FeedQuery {

@@ -14,6 +14,7 @@
 
 import { CandidatePipeline } from './candidate-pipeline.js';
 import type { FeedQuery, FeedCandidate, PipelineResult } from './types.js';
+import { fetchActionWeights } from './types.js';
 
 // Sources (Thunder + Phoenix equivalent)
 import { InNetworkSource, OutOfNetworkSource, TrendingSource } from './sources.js';
@@ -78,6 +79,7 @@ import { CacheFeedSideEffect, MetricsLogSideEffect } from './side-effects.js';
  */
 export function createForYouPipeline(
   resultSize: number = 20,
+  weights?: Partial<Record<string, number>>,
 ): CandidatePipeline<FeedQuery, FeedCandidate> {
   return new CandidatePipeline<FeedQuery, FeedCandidate>({
     name: 'ForYouFeedPipeline',
@@ -104,7 +106,7 @@ export function createForYouPipeline(
 
     scorers: [
       new EngagementScorer(),
-      new WeightedScorer(),
+      new WeightedScorer(weights),
       new InNetworkBoostScorer(1.2),
       new FreshnessScorer(48),
     ],
@@ -130,7 +132,8 @@ export async function executeForYouPipeline(
   limit: number = 20,
   cursor?: string,
 ): Promise<PipelineResult<FeedQuery, FeedCandidate>> {
-  const pipeline = createForYouPipeline(limit);
+  const weights = await fetchActionWeights();
+  const pipeline = createForYouPipeline(limit, weights);
 
   const query: FeedQuery = {
     requestId: `feed_${userWallet}_${Date.now()}`,

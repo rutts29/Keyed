@@ -157,14 +157,14 @@ describe('InNetworkBoostScorer', () => {
     expect(result[0].finalScore).toBe(0);
   });
 
-  it('should handle negative scores (boost amplifies them)', async () => {
+  it('should not boost negative scores', async () => {
     const scorer = new InNetworkBoostScorer(1.5);
     const candidates = [
       createMockCandidate({ source: 'in_network', finalScore: -5 }),
     ];
 
     const result = await scorer.score(createMockQuery(), candidates);
-    expect(result[0].finalScore).toBe(-7.5); // -5 * 1.5
+    expect(result[0].finalScore).toBe(-5); // Negative scores are not boosted
   });
 });
 

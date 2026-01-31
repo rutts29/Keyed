@@ -53,7 +53,7 @@ class ScoreRequest(BaseModel):
     user_wallet: str
     liked_post_ids: list[str] = []
     following_wallets: list[str] = []
-    candidates: list[CandidateInput]
+    candidates: list[CandidateInput] = Field(max_length=500)
     weights: dict[str, float] | None = None
 
 
@@ -75,7 +75,7 @@ class RetrieveRequest(BaseModel):
     liked_post_ids: list[str] = []
     following_wallets: list[str] = []
     exclude_ids: list[str] = []
-    limit: int = Field(default=100, le=500)
+    limit: int = Field(default=100, ge=1, le=500)
     weights: dict[str, float] | None = None
 
 

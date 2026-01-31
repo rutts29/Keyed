@@ -60,24 +60,28 @@ export class MetricsLogSideEffect implements SideEffect<FeedQuery, FeedCandidate
   }
 
   async run(query: FeedQuery, selectedCandidates: FeedCandidate[]): Promise<void> {
-    const sourceBreakdown: Record<string, number> = {};
-    for (const c of selectedCandidates) {
-      sourceBreakdown[c.source] = (sourceBreakdown[c.source] || 0) + 1;
-    }
+    try {
+      const sourceBreakdown: Record<string, number> = {};
+      for (const c of selectedCandidates) {
+        sourceBreakdown[c.source] = (sourceBreakdown[c.source] || 0) + 1;
+      }
 
-    logger.info(
-      {
-        requestId: query.requestId,
-        userWallet: query.userWallet,
-        totalSelected: selectedCandidates.length,
-        sourceBreakdown,
-        avgScore:
-          selectedCandidates.length > 0
-            ? selectedCandidates.reduce((sum, c) => sum + c.finalScore, 0) /
-              selectedCandidates.length
-            : 0,
-      },
-      'Pipeline: feed metrics',
-    );
+      logger.info(
+        {
+          requestId: query.requestId,
+          userWallet: query.userWallet,
+          totalSelected: selectedCandidates.length,
+          sourceBreakdown,
+          avgScore:
+            selectedCandidates.length > 0
+              ? selectedCandidates.reduce((sum, c) => sum + c.finalScore, 0) /
+                selectedCandidates.length
+              : 0,
+        },
+        'Pipeline: feed metrics',
+      );
+    } catch (error) {
+      logger.error({ error, sideEffect: this.name }, 'Metrics logging side effect failed');
+    }
   }
 }

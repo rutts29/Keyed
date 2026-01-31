@@ -54,6 +54,10 @@ export const feedController = {
           .select('*, users!posts_creator_wallet_fkey(*)')
           .in('id', selectedPostIds);
 
+        if (error) {
+          logger.error({ error, wallet }, 'Failed to fetch pipeline posts from Supabase');
+        }
+
         if (!error && pipelinePosts && pipelinePosts.length > 0) {
           // Sort by pipeline ranking order
           const postMap = new Map(pipelinePosts.map((p) => [p.id, p]));
@@ -75,7 +79,7 @@ export const feedController = {
         }
       }
     } catch (error) {
-      logger.warn({ error, wallet }, 'Pipeline failed, falling back to legacy feed');
+      logger.error({ error, wallet }, 'Pipeline failed, falling back to legacy feed');
     }
 
     // Fallback: legacy recommendation or chronological feed
@@ -327,22 +331,30 @@ export const feedController = {
  * Tries AI recommendations, then falls back to chronological following feed.
  */
 async function legacyFeed(wallet: string, limit: number, cursor?: string): Promise<any[]> {
-  const { data: userLikes } = await supabase
+  const { data: userLikes, error: likesError } = await supabase
     .from('likes')
     .select('post_id')
     .eq('user_wallet', wallet)
     .order('timestamp', { ascending: false })
     .limit(50);
 
+  if (likesError) {
+    logger.error({ error: likesError, wallet }, 'Legacy feed: failed to fetch likes');
+  }
+
   const likedPostIds = userLikes?.map(l => l.post_id) || [];
 
-  const { data: interactions } = await supabase
+  const { data: interactions, error: interactionsError } = await supabase
     .from('interactions')
     .select('post_id')
     .eq('user_wallet', wallet)
     .eq('interaction_type', 'view')
     .order('timestamp', { ascending: false })
     .limit(100);
+
+  if (interactionsError) {
+    logger.error({ error: interactionsError, wallet }, 'Legacy feed: failed to fetch interactions');
+  }
 
   const seenPostIds = interactions?.map(i => i.post_id) || [];
 

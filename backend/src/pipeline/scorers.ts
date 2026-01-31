@@ -89,7 +89,7 @@ export class EngagementScorer implements Scorer<FeedQuery, FeedCandidate> {
         }));
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as { predictions?: Array<{ post_id: string; scores: EngagementScores; final_score: number }> };
       const predMap = new Map<string, { scores: EngagementScores; finalScore: number }>();
 
       for (const pred of data.predictions || []) {
@@ -174,7 +174,7 @@ export class InNetworkBoostScorer implements Scorer<FeedQuery, FeedCandidate> {
 
   async score(_query: FeedQuery, candidates: FeedCandidate[]): Promise<FeedCandidate[]> {
     return candidates.map((c) => {
-      if (c.source === 'in_network') {
+      if (c.source === 'in_network' && c.finalScore > 0) {
         return { ...c, finalScore: c.finalScore * this.boostFactor };
       }
       return c;

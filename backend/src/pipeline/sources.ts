@@ -60,7 +60,7 @@ export class InNetworkSource implements Source<FeedQuery, FeedCandidate> {
   }
 
   async getCandidates(query: FeedQuery): Promise<FeedCandidate[]> {
-    const feedWallets = [...query.followingWallets, query.userWallet];
+    const feedWallets = query.followingWallets;
 
     let dbQuery = supabase
       .from('posts')
@@ -112,11 +112,12 @@ export class OutOfNetworkSource implements Source<FeedQuery, FeedCandidate> {
       });
 
       if (!response.ok) {
-        logger.warn({ status: response.status }, 'Out-of-network retrieval failed');
+        const body = await response.text().catch(() => '');
+        logger.error({ status: response.status, body }, 'Out-of-network retrieval failed');
         return [];
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as { candidates?: Array<any> };
       const candidates: FeedCandidate[] = [];
 
       for (const c of data.candidates || []) {

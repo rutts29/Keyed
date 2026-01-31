@@ -320,7 +320,7 @@ async def build_user_context(
             user.taste_embedding = await embeddings.generate_query_embedding(taste_text)
             user.taste_profile = taste_text[:500]
         except Exception as e:
-            logger.warning(f"Failed to generate taste embedding: {e}")
+            logger.exception("Failed to generate taste embedding")
 
     return user
 

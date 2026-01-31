@@ -288,8 +288,15 @@ export class CandidatePipeline<Q extends { requestId: string }, C> {
   private runSideEffects(query: Q, selected: C[]): void {
     const enabled = this.config.sideEffects.filter((se) => se.enable(query));
     // Fire-and-forget — mirrors x-algorithm's tokio::spawn
-    Promise.allSettled(enabled.map((se) => se.run(query, selected))).catch((err) => {
-      logger.error({ error: err }, 'Pipeline: side effect error');
+    Promise.allSettled(enabled.map((se) => se.run(query, selected))).then((results) => {
+      for (let i = 0; i < results.length; i++) {
+        if (results[i].status === 'rejected') {
+          logger.error(
+            { error: (results[i] as PromiseRejectedResult).reason, component: enabled[i].name },
+            'Pipeline: side effect failed',
+          );
+        }
+      }
     });
   }
 }

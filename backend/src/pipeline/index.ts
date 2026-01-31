@@ -33,6 +33,7 @@ export {
   PipelineStage,
   ENGAGEMENT_ACTIONS,
   DEFAULT_ACTION_WEIGHTS,
+  fetchActionWeights,
 } from './types.js';
 export type {
   EngagementAction,
