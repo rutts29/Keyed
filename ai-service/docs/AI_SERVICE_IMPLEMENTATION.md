@@ -1,8 +1,8 @@
-# SolShare AI/ML Service - Implementation Summary
+# Keyed AI/ML Service - Implementation Summary
 
 ## Overview
 
-This document describes the AI/ML microservice implementation for SolShare, built using FastAPI with GPT 5.2 for vision/text tasks, Voyage 3.5 for embeddings, and Qdrant for vector storage.
+This document describes the AI/ML microservice implementation for Keyed, built using FastAPI with GPT 5.2 for vision/text tasks, Voyage 3.5 for embeddings, and Qdrant for vector storage.
 
 ## Tech Stack
 
@@ -12,7 +12,7 @@ This document describes the AI/ML microservice implementation for SolShare, buil
 | Framework | FastAPI 0.115+ | API server |
 | Vision + Text LLM | OpenAI GPT 5.2 | Image analysis, moderation, query expansion |
 | Embeddings | Voyage AI voyage-3.5 | Semantic embeddings (1024 dimensions) |
-| Vector Database | Qdrant 1.11+ | Semantic search |
+| Vector Database | Qdrant 1.12+ | Semantic search |
 
 ## API Endpoints
 
@@ -53,6 +53,17 @@ This document describes the AI/ML microservice implementation for SolShare, buil
 - Vector search for similar content
 - Diversity filter to avoid same-creator clustering
 
+### 5. Pipeline (`/api/pipeline`)
+
+**POST `/api/pipeline/engagement-score`**
+- Multi-action engagement scoring for the recommendation pipeline
+- Accepts likes, comments, shares, and time-watched signals
+- Returns weighted, normalized engagement scores with freshness bonus
+
+**POST `/api/pipeline/retrieve`**
+- Retrieve post embeddings by IDs for pipeline hydration
+- Returns stored vector embeddings from Qdrant for downstream scoring
+
 ## Architecture
 
 ```
@@ -64,7 +75,8 @@ ai-service/
 │   │   ├── moderate.py      # Moderation endpoints
 │   │   ├── analyze.py       # Content analysis endpoint
 │   │   ├── search.py        # Semantic search endpoint
-│   │   └── recommend.py     # Recommendations endpoint
+│   │   ├── recommend.py     # Recommendations endpoint
+│   │   └── pipeline.py      # Pipeline endpoints
 │   ├── services/            # Business logic
 │   │   ├── llm.py           # GPT 5.2 client (Instant + Thinking)
 │   │   ├── embeddings.py    # Voyage 3.5 client
@@ -72,7 +84,10 @@ ai-service/
 │   │   ├── moderator.py     # Moderation pipeline
 │   │   ├── content_analyzer.py  # Analysis orchestration
 │   │   ├── semantic_search.py   # Search pipeline
-│   │   └── recommender.py   # Recommendation engine
+│   │   ├── recommender.py   # Recommendation engine
+│   │   ├── engagement_scorer.py # Multi-action engagement scoring (likes, comments, shares, time-watched)
+│   │   ├── retrieval.py     # Vector retrieval utilities
+│   │   └── database.py      # Supabase client integration
 │   ├── models/schemas.py    # Pydantic models (camelCase output)
 │   └── utils/image.py       # Image download, base64, phash
 ├── scripts/
@@ -120,6 +135,15 @@ ai-service/
 5. Diversity filter: limit posts per creator
 6. Return recommendations
 
+### Engagement Scoring Pipeline
+
+1. Receive multi-action engagement signals: likes, comments, shares, time-watched
+2. Apply configurable action weights to each signal type
+3. Compute weighted combination into a single engagement score
+4. Apply freshness bonus factor based on content recency
+5. Normalize scores to a consistent range for the recommendation pipeline
+6. Return normalized engagement scores per post
+
 ## Response Format
 
 All responses use camelCase JSON to match the backend TypeScript expectations:
@@ -155,7 +179,7 @@ OPENAI_API_KEY=sk-...
 VOYAGE_API_KEY=pa-...
 QDRANT_URL=https://xxx.qdrant.io
 QDRANT_API_KEY=xxx
-BACKEND_URL=http://solshare-backend.railway.internal:3001
+BACKEND_URL=http://keyed-backend.railway.internal:3001
 ```
 
 ### Qdrant Setup
@@ -168,6 +192,8 @@ Creates `solshare_posts` collection with:
 - 1024-dimension vectors (Voyage 3.5)
 - Cosine distance
 - Payload indexes: creator_wallet, scene_type, timestamp
+
+**Note:** `vector_db.py` uses `client.query_points()` (not `client.search()`, which was removed in qdrant-client 1.12+).
 
 ## Testing
 
@@ -184,5 +210,8 @@ The backend's `ai.service.ts` calls these endpoints:
 - `${AI_SERVICE_URL}/api/moderate/check-hash`
 - `${AI_SERVICE_URL}/api/analyze/content`
 - `${AI_SERVICE_URL}/api/search/semantic`
+- `${AI_SERVICE_URL}/api/recommend/feed`
+- `${AI_SERVICE_URL}/api/pipeline/engagement-score`
+- `${AI_SERVICE_URL}/api/pipeline/retrieve`
 
-Set `AI_SERVICE_URL=http://solshare-ai.railway.internal:8000` in backend.
+Set `AI_SERVICE_URL=http://keyed-ai.railway.internal:8000` in backend.

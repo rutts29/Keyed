@@ -1,13 +1,13 @@
-# SolShare Comprehensive Security & System Design Audit Report
-**Date:** January 9, 2026  
-**Auditor:** AI Security Review  
-**Scope:** Full codebase review - Backend, AI Service, Solana Smart Contracts, Database, Infrastructure
+# Keyed Comprehensive Security & System Design Audit Report
+**Date:** February 1, 2026
+**Auditor:** AI Security Review
+**Scope:** Full codebase review - Backend, AI Service, Solana Smart Contracts (4 programs), Database, Infrastructure
 
 ---
 
 ## Executive Summary
 
-The SolShare codebase demonstrates **production-quality architecture** with robust security practices in most areas. The implementation shows thoughtful design for a Web3 social platform with AI-powered features. This audit identifies several areas of strength and a few improvements needed to reach **optimal production readiness**.
+The Keyed codebase demonstrates **production-quality architecture** with robust security practices in most areas. The implementation shows thoughtful design for a Web3 social platform with AI-powered features. This audit identifies several areas of strength and a few improvements needed to reach **optimal production readiness**.
 
 **Overall Assessment:** ✅ **Production Ready** (with minor recommendations)
 
@@ -23,6 +23,16 @@ The SolShare codebase demonstrates **production-quality architecture** with robu
 - **JWT implementation** with proper secret length validation (min 32 chars)
 - **Challenge-response auth** with 5-minute TTL to prevent replay attacks
 - **Wallet restriction checking** on login and token refresh
+
+#### Chat Authorization
+- **Token-gated rooms** enforce 403 for unqualified users attempting to join
+- **Creator cannot leave own room** — ownership integrity is preserved
+- **Message and read access enforced per-member** — only current room members can send and read messages
+
+#### Airdrop Authorization
+- **Campaign operations** (prepare/fund/start/cancel) enforce `creator_wallet` ownership checks at the controller level
+- **Escrow keypair generated server-side** — private key material is never exposed to the client
+- **Escrow-based distribution** via a dedicated Solana Airdrop program with PDA-derived campaign accounts
 
 #### Input Validation
 - **Zod schema validation** on all API endpoints for body, query, and params
@@ -44,6 +54,7 @@ The SolShare codebase demonstrates **production-quality architecture** with robu
 - **Progressive restriction system** for repeat offenders
 
 #### Solana Smart Contracts
+- **4 on-chain programs**: User Profile, Social (tips/follows/likes), Content Vault, and Airdrop (escrow-based distribution)
 - **Proper PDA derivation** with seeds for deterministic account addresses
 - **Arithmetic overflow protection** using `checked_*` operations
 - **Self-action prevention** (can't tip/follow/like yourself)
@@ -62,7 +73,8 @@ The SolShare codebase demonstrates **production-quality architecture** with robu
 - **Location:** `ai-service/app/main.py`
 - **Issue:** AI service is only protected by CORS (backend_url), but in Docker network it's directly accessible on port 8000
 - **Risk:** If attacker gains network access, they can bypass backend rate limiting
-- **Recommendation:** Add API key authentication between backend and AI service:
+- **Update:** An `AI_SERVICE_API_KEY` environment variable has been added to the configuration, but enforcement middleware on the AI service side is still pending implementation.
+- **Recommendation:** Complete the enforcement by adding API key verification middleware:
 
 ```python
 # Add to AI service
@@ -83,6 +95,12 @@ async def verify_internal_api_key(x_internal_key: str = Header(...)):
 - **Location:** Docker/infrastructure configuration
 - **Issue:** No explicit HTTPS/TLS configuration in docker-compose
 - **Recommendation:** Add reverse proxy (nginx/traefik) with TLS termination for production
+
+**4. Escrow Secret Storage**
+- **Location:** `escrow_secret` column in the `airdrop_campaigns` table (Supabase)
+- **Issue:** The escrow keypair secret is stored as a base64-encoded string in plaintext in the database
+- **Risk:** If the database is compromised, an attacker can reconstruct escrow keypairs and drain unfunded or in-progress campaign escrow accounts
+- **Recommendation:** Encrypt the `escrow_secret` column at rest using application-level encryption (e.g., AES-256-GCM with a key from a secrets manager such as AWS KMS or HashiCorp Vault) before storing it in Supabase. Avoid relying solely on Supabase's transparent disk encryption for this sensitive material.
 
 #### LOW Priority Issues
 
@@ -219,7 +237,8 @@ res.setHeader('X-Request-ID', req.id);
 - [ ] Add APM/monitoring (Datadog, New Relic, or Sentry)
 - [ ] Add request tracing with correlation IDs
 - [ ] Add TLS termination/reverse proxy
-- [ ] Add internal API authentication for AI service
+- [ ] Complete internal API key enforcement for AI service
+- [ ] Encrypt escrow secrets at rest or migrate to a secrets manager
 - [ ] Set up database backups
 - [ ] Add circuit breaker for external services
 - [ ] Create runbook for common issues
@@ -235,11 +254,12 @@ res.setHeader('X-Request-ID', req.id);
 - **Proper async/await usage** without callback hell
 - **Meaningful error codes** for API responses
 - **Comments explaining security decisions**
+- **200+ E2E integration tests** covering authorization boundaries, input fuzzing, and account isolation
+- **Unit test coverage** for chat and airdrop controllers and services
 
 ### Minor Code Improvements
 1. **Consider extracting constants** (magic numbers like `3600000` for 1 hour)
 2. **Add JSDoc/docstrings** to public functions
-3. **Add integration tests** for critical paths
 
 ---
 
@@ -248,9 +268,10 @@ res.setHeader('X-Request-ID', req.id);
 ### Must Fix (Before Production)
 | Priority | Issue | Effort |
 |----------|-------|--------|
-| Medium | Add internal API key for AI service | 1 hour |
+| Medium | Complete AI service API key enforcement | 1 hour |
 | Medium | Add TLS/HTTPS configuration | 2 hours |
 | Medium | Sanitize error messages in production | 1 hour |
+| Medium | Encrypt escrow secrets at rest | 2 hours |
 
 ### Should Fix (Post-Launch)
 | Priority | Issue | Effort |
@@ -270,12 +291,12 @@ res.setHeader('X-Request-ID', req.id);
 
 ## 7. Final Verdict
 
-**The SolShare codebase is production-ready for a portfolio project and initial user launch.** The security practices are solid, the architecture is well-designed for scalability, and the code quality is professional.
+**The Keyed codebase is production-ready for a portfolio project and initial user launch.** The security practices are solid, the architecture is well-designed for scalability, and the code quality is professional. Comprehensive test coverage (200+ E2E tests plus unit tests) provides strong confidence in authorization boundaries and feature correctness.
 
 The few medium-priority issues identified are standard security hardening steps that should be addressed before handling significant user traffic, but don't represent critical vulnerabilities.
 
 **Recommended next steps:**
-1. Implement the 3 "Must Fix" items (4 hours total)
+1. Implement the 4 "Must Fix" items (6 hours total)
 2. Set up monitoring/APM
 3. Create operational runbooks
 4. Launch! 🚀

@@ -1,4 +1,4 @@
-# SolShare Frontend Technical Specification
+# Keyed Frontend Technical Specification
 
 > **Document Purpose:** Complete technical reference for frontend development  
 > **Target:** Frontend Agent / Developer  

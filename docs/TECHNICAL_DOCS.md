@@ -1,6 +1,6 @@
-# SolShare Technical Documentation
+# Keyed Technical Documentation
 
-Comprehensive technical documentation for deploying, configuring, and operating SolShare.
+Technical reference for the Keyed platform — covers architecture, API surface, deployment, and configuration.
 
 ## Table of Contents
 
@@ -30,8 +30,8 @@ Comprehensive technical documentation for deploying, configuring, and operating 
 ### 1. Clone and Install
 
 ```bash
-git clone https://github.com/your-org/solshare.git
-cd solshare
+git clone https://github.com/rutts29/solShare.git
+cd solShare
 
 # Backend
 cd backend && npm install
@@ -41,6 +41,12 @@ cd ../ai-service && pip install -r requirements.txt
 
 # Solana programs
 cd ../solshare && yarn install
+```
+
+### Docker Quick Start
+
+```bash
+docker compose up
 ```
 
 ### 2. Configure Environment
@@ -95,6 +101,9 @@ Run migrations in Supabase SQL Editor (in order):
 -- 4. backend/migrations/004_functions.sql
 -- 5. backend/migrations/005_realtime.sql
 -- 6. backend/migrations/006_privacy_tables.sql
+-- 7. backend/migrations/007_chat_tables.sql
+-- 8. backend/migrations/008_airdrop_tables.sql
+-- 9. backend/migrations/20260201_add_escrow_secret.sql
 ```
 
 Enable Realtime for tables: `posts`, `likes`, `comments`, `follows`
@@ -125,6 +134,7 @@ anchor deploy --provider.cluster devnet
 - Social: `G2USoTtbNw78NYvPJSeuYVZQS9oVQNLrLE5zJb7wsM3L`
 - Payment: `H5FgabhipaFijiP2HQxtsDd1papEtC9rvvQANsm1fc8t`
 - Token Gate: `EXVqoivgZKebHm8VeQNBEFYZLRjJ61ZWNieXg3Npy4Hi`
+- Airdrop: `AirD1111111111111111111111111111111111111111`
 
 ### Phase 5: Backend Deployment (Railway)
 
@@ -134,10 +144,10 @@ Railway runs one process per service, so you need **two separate services** for 
 ```bash
 cd backend
 railway login
-railway init --name solshare-api
+railway init --name keyed-api
 railway up
 ```
-Uses `railway.json` → runs `npm run start:api`
+Uses `railway.json` -> runs `npm run start:api`
 
 **Service 2: Background Worker**
 ```bash
@@ -145,7 +155,7 @@ Uses `railway.json` → runs `npm run start:api`
 # Set the start command to: npm run start:worker
 # Or use railway.worker.json as reference
 ```
-Uses `railway.worker.json` → runs `npm run start:worker`
+Uses `railway.worker.json` -> runs `npm run start:worker`
 
 Configure the same environment variables for both services in Railway dashboard.
 
@@ -159,7 +169,7 @@ railway init
 railway up
 ```
 
-Set internal URL: `http://solshare-ai.railway.internal:8000`
+Set internal URL: `http://keyed-ai.railway.internal:8000`
 
 ---
 
@@ -182,6 +192,14 @@ Set internal URL: `http://solshare-ai.railway.internal:8000`
 | `/api/posts/:id` | GET | Get post details |
 | `/api/posts/:id/like` | POST/DELETE | Like/unlike post |
 | `/api/posts/:id/comments` | GET/POST | Get/add comments |
+
+### Feed
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/feed/for-you` | GET | Personalized feed |
+| `/api/feed/following` | GET | Feed from followed users |
+| `/api/feed/explore` | GET | Explore/discovery feed |
 
 ### Search
 
@@ -210,6 +228,57 @@ Set internal URL: `http://solshare-ai.railway.internal:8000`
 | `/api/access/requirements` | POST | Set access requirements |
 | `/api/access/verify-token` | POST | Verify token access |
 | `/api/access/verify-nft` | POST | Verify NFT access |
+
+### Chat
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/chat/rooms` | POST | Create a chat room |
+| `/api/chat/rooms` | GET | List chat rooms |
+| `/api/chat/rooms/:id` | GET | Get chat room details |
+| `/api/chat/rooms/:id/join` | POST | Join a chat room |
+| `/api/chat/rooms/:id/leave` | POST | Leave a chat room |
+| `/api/chat/rooms/:id/messages` | GET | Get messages in a room |
+| `/api/chat/rooms/:id/messages` | POST | Send a message to a room |
+
+### Airdrops
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/airdrops` | POST | Create an airdrop campaign |
+| `/api/airdrops/my` | GET | List my airdrop campaigns |
+| `/api/airdrops/:id` | GET | Get airdrop details |
+| `/api/airdrops/:id/prepare` | POST | Prepare airdrop for distribution |
+| `/api/airdrops/:id/fund` | POST | Fund the airdrop escrow |
+| `/api/airdrops/:id/start` | POST | Start distributing airdrop |
+| `/api/airdrops/:id/cancel` | POST | Cancel an airdrop campaign |
+
+### Privacy
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/privacy/tip/log` | POST | Log a private tip |
+| `/api/privacy/tips/received` | GET | Get received private tips |
+| `/api/privacy/tips/sent` | GET | Get sent private tips |
+| `/api/privacy/settings` | GET | Get privacy settings |
+| `/api/privacy/settings` | PUT | Update privacy settings |
+| `/api/privacy/pool/info` | GET | Get privacy pool info |
+
+### Notifications
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/notifications` | GET | List notifications |
+| `/api/notifications/:id/read` | PUT | Mark notification as read |
+| `/api/notifications/unread-count` | GET | Get unread notification count |
+
+### Users
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/users/:wallet/followers` | GET | Get user's followers |
+| `/api/users/:wallet/following` | GET | Get user's following list |
+| `/api/users/suggested` | GET | Get suggested users to follow |
 
 ---
 
@@ -243,6 +312,7 @@ SOLANA_RPC_URL=https://api.devnet.solana.com
 SOCIAL_PROGRAM_ID=
 PAYMENT_PROGRAM_ID=
 TOKEN_GATE_PROGRAM_ID=
+AIRDROP_PROGRAM_ID=
 
 # IPFS
 PINATA_API_KEY=
@@ -254,6 +324,7 @@ JWT_SECRET=
 
 # AI Service
 AI_SERVICE_URL=
+AI_SERVICE_API_KEY=
 ```
 
 ### AI Service (.env)
@@ -294,23 +365,18 @@ cd ai-service && pytest
 cd solshare && anchor test
 ```
 
-### Integration Tests
+### E2E Integration Tests
 
 ```bash
-cd scripts/integration-tests
-npm install
-cp .env.example .env  # Configure test environment
-
-# Run all tests
-npm test
+# Run all E2E tests (requires running backend at localhost:3001)
+cd backend && npx vitest run --config vitest.e2e.config.ts
 
 # Run specific suite
-npm run test:auth
-npm run test:posts
-npm run test:search
-npm run test:payments
-npm run test:access
+npx vitest run --config vitest.e2e.config.ts tests/e2e/chat.e2e.test.ts
+npx vitest run --config vitest.e2e.config.ts tests/e2e/airdrop.e2e.test.ts
 ```
+
+7 E2E suites with 200+ tests covering: chat rooms, airdrops, social flows, authorization boundaries, input fuzzing, concurrency, and account isolation.
 
 ---
 
@@ -326,7 +392,7 @@ npm run test:access
 
 ### Deployment Order
 
-1. **Database**: Run migrations in order (001-006)
+1. **Database**: Run migrations in order (001-008 + 20260201)
 2. **AI Service**: Deploy first (backend depends on it)
 3. **Backend API**: Deploy with health check verification
 4. **Backend Worker**: Deploy after API is healthy
@@ -343,7 +409,7 @@ npm run test:access
 
 ```bash
 # Railway rollback
-railway rollback --service solshare-api
+railway rollback --service keyed-api
 
 # Or redeploy specific commit
 railway up --detach --ref <commit-sha>
@@ -410,19 +476,10 @@ X-API-Sunset-Date: 2026-06-01  # When deprecated endpoint will be removed
 - Content is moderated before indexing
 - Wallet restrictions for repeat violators
 - CORS restricted to frontend origin
-- AI service only accessible from backend
+- AI service only accessible from backend (authenticated via `AI_SERVICE_API_KEY`)
 
 ---
 
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests
-5. Submit a pull request
-
 ## Support
 
-- [GitHub Issues](https://github.com/your-org/solshare/issues)
-- [Discord Community](https://discord.gg/solshare)
+- [GitHub Issues](https://github.com/rutts29/solShare/issues)

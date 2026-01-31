@@ -6,7 +6,7 @@
 .env.local
 .env.development
 .env.production
-!.env.example
+.env.example
 
 # ============================================
 # Dependencies
@@ -70,6 +70,11 @@ reports/
 # Privacy Cash SDK (cloned dependency)
 # ============================================
 privacy-cash-sdk/
+
+# ============================================
+# Postman (kept local only)
+# ============================================
+postman/
 
 # ============================================
 # Misc

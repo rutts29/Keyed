@@ -1,4 +1,4 @@
-# SolShare - Complete Technical Specification
+# Keyed - Complete Technical Specification
 
 > **Version:** 3.0 | **Target:** Multi-Agent Autonomous Development | **Last Updated:** January 2026
 

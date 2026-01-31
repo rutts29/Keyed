@@ -1,6 +1,6 @@
 # Privacy Cash Integration Status
 
-## ✅ Completed - Backend Architecture
+## Completed - Backend Architecture
 
 All backend architecture for Privacy Cash SDK integration has been completed and is ready for SDK integration.
 
@@ -12,16 +12,15 @@ All backend architecture for Privacy Cash SDK integration has been completed and
    - Ready for SDK integration (placeholder implementations with TODOs)
 
 2. **backend/src/controllers/privacy.controller.ts**
-   - 8 privacy endpoints for shield, tip, balance, history, settings
+   - Privacy endpoints for tip logging, history, settings, and pool info
    - Full error handling and validation
    - Database integration for tracking private tips
 
 3. **backend/src/routes/privacy.routes.ts**
    - Complete route definitions for `/api/privacy/*`
    - Middleware integration (auth, rate limiting)
-   - 8 endpoints registered
 
-4. **backend/migrations/006_privacy_tables.sql**
+4. **backend/supabase/migrations/006_privacy_tables.sql**
    - `private_tips`: Stores tips received (WITHOUT tipper identity)
    - `user_privacy_settings`: User privacy preferences
    - `privacy_shield_cache`: Cached shielded balances
@@ -43,20 +42,20 @@ All backend architecture for Privacy Cash SDK integration has been completed and
    - Added "Privacy Cash Integration" section with architecture
    - Updated database setup to include migration 006
 
-### API Endpoints Ready
+### API Endpoints
 
-All endpoints are functional with placeholder implementations:
+The following backend routes are deployed via `privacy.routes.ts`:
 
-- `POST /api/privacy/shield` - Shield SOL into privacy pool
-- `POST /api/privacy/tip` - Send private anonymous tip
-- `GET /api/privacy/balance` - Get shielded balance
-- `GET /api/privacy/tips/received` - Get private tips received (creator view)
-- `GET /api/privacy/tips/sent` - Get private tips sent (user history)
+- `POST /api/privacy/tip/log` - Log anonymous tip
+- `GET /api/privacy/tips/received` - Creator's received private tips
+- `GET /api/privacy/tips/sent` - User's sent private tips
 - `GET /api/privacy/settings` - Get privacy preferences
 - `PUT /api/privacy/settings` - Update privacy preferences
 - `GET /api/privacy/pool/info` - Get privacy pool statistics
 
-### Database Schema Ready
+Note: Shielding and balance operations are client-side only, handled directly via the Privacy Cash SDK in the frontend. There are no `/api/privacy/shield` or `/api/privacy/balance` backend routes.
+
+### Database Schema
 
 All tables created and ready:
 
@@ -88,7 +87,7 @@ CREATE TABLE privacy_shield_cache (
 
 ---
 
-## ⏳ Pending - Privacy Cash SDK Integration
+## Pending - Privacy Cash SDK Integration
 
 ### Current Blocker
 
@@ -126,8 +125,8 @@ When Privacy Cash SDK becomes available:
    ```
 
 4. **Test Integration**
-   - Test shield flow: User deposits SOL → commitment created
-   - Test private tip: User tips creator → identity hidden
+   - Test shield flow: User deposits SOL, commitment created
+   - Test private tip: User tips creator, identity hidden
    - Test balance queries: Verify shielded balance correct
    - Test creator view: Creator sees tips (amounts only, no tipper)
 
@@ -138,21 +137,21 @@ When Privacy Cash SDK becomes available:
 
 ---
 
-## 📋 Architecture Overview
+## Architecture Overview
 
-### How Private Tipping Works
+### How Private Tipping Works in Keyed
 
 ```
 1. Shield Phase
-   User → Sign Tx → Privacy Cash Pool
-   └─> Creates ZK commitment
-   └─> SOL pooled with other users
+   User -> Sign Tx -> Privacy Cash Pool
+   -> Creates ZK commitment
+   -> SOL pooled with other users
 
 2. Private Tip Phase
-   User → Generate ZK Proof → Relayer → Creator
-   └─> Proof of balance (no identity)
-   └─> Relayer submits withdrawal
-   └─> Creator receives SOL (anonymous)
+   User -> Generate ZK Proof -> Relayer -> Creator
+   -> Proof of balance (no identity)
+   -> Relayer submits withdrawal
+   -> Creator receives SOL (anonymous)
 
 3. Privacy Preserved
    On-Chain: No link between tipper and tip
@@ -184,29 +183,7 @@ When Privacy Cash SDK becomes available:
 
 ---
 
-## 🎯 Hackathon Submission Targets
-
-### Privacy Cash "Best Integration to Existing App" ($6,000)
-- ✅ Backend architecture complete
-- ⏳ SDK integration pending
-- ⏳ Demo video pending
-- ✅ Documentation ready
-
-### Helius "Best Privacy Project" ($5,000)
-- ✅ Already using Helius RPC for all Solana calls
-- ✅ Documented in README
-- ⏳ Highlight in submission
-
-### Open Track ($18,000 pool)
-- ✅ Innovative privacy feature (anonymous tipping)
-- ✅ Existing app with real use case
-- ✅ Open source
-- ⏳ Deploy to devnet
-- ⏳ Demo video
-
----
-
-## 📝 SDK Integration Guide
+## SDK Integration Guide
 
 ### Example SDK Usage (when available)
 
@@ -258,39 +235,38 @@ async getShieldedBalance(wallet: string): Promise<PrivacyBalance> {
 
 ---
 
-## 🔍 Testing Checklist
+## Testing Checklist
 
 When SDK is integrated, test:
 
-- [ ] Shield SOL → Verify commitment created on-chain
-- [ ] Check shielded balance → Verify correct amount
-- [ ] Send private tip → Verify creator receives SOL
-- [ ] Check creator tips → Verify tipper NOT shown
-- [ ] Check on-chain → Verify no tipper link
-- [ ] Update privacy settings → Verify preferences saved
-- [ ] Query pool info → Verify statistics accurate
-- [ ] Test with multiple users → Verify anonymity set works
+- [ ] Shield SOL - Verify commitment created on-chain
+- [ ] Check shielded balance - Verify correct amount
+- [ ] Send private tip - Verify creator receives SOL
+- [ ] Check creator tips - Verify tipper NOT shown
+- [ ] Check on-chain - Verify no tipper link
+- [ ] Update privacy settings - Verify preferences saved
+- [ ] Query pool info - Verify statistics accurate
+- [ ] Test with multiple users - Verify anonymity set works
 
 ---
 
-## 📚 Resources
+## Resources
 
 - **Privacy Cash SDK**: (awaiting npm publication)
 - **Privacy Cash Docs**: https://docs.privacy.cash (placeholder)
-- **Solana Privacy Hackathon**: https://solana.com/events/privacy-hack
 - **Backend README**: `/backend/README.md` (Privacy Cash Integration section)
-- **Database Migration**: `/backend/migrations/006_privacy_tables.sql`
+- **Database Migration**: `/backend/supabase/migrations/006_privacy_tables.sql`
 
 ---
 
-## 🚀 Deployment Notes
+## Deployment Notes
 
 ### Database Migration
 
 Run in Supabase SQL Editor:
 ```sql
 -- After migrations 001-005
-\i backend/migrations/006_privacy_tables.sql
+\i backend/supabase/migrations/006_privacy_tables.sql
 ```
 
 ### Environment Setup
@@ -305,7 +281,7 @@ PRIVACY_CASH_PROGRAM_ID=9fhQBbumKEFuXtMBDw8AaQyAjCorLGJQiS3skWZdQyQD
 
 ```bash
 cd backend
-npm run build  # ✅ Passes without errors
+npm run build  # Passes without errors
 npm run test   # Run tests
 ```
 
@@ -313,22 +289,20 @@ npm run test   # Run tests
 
 ## Summary
 
-**Status**: Backend architecture 100% complete, ready for SDK integration
+**Status**: Backend architecture complete, awaiting SDK availability for full integration.
 
-**What's Done**:
-- ✅ All privacy endpoints implemented
-- ✅ Database schema created
-- ✅ Service layer structured
-- ✅ Routes registered
-- ✅ Documentation updated
-- ✅ Build passing
+**Completed**:
+- All backend privacy endpoints implemented (6 routes)
+- Database schema created (3 tables + activity log)
+- Service layer structured with placeholder SDK calls
+- Routes registered and middleware configured
+- Documentation updated
+- Build passing
 
-**What's Next**:
-- ⏳ Wait for Privacy Cash SDK npm package
-- ⏳ Install SDK and update service methods
-- ⏳ Test full privacy flow
-- ⏳ Deploy to devnet
-- ⏳ Record demo video
-- ⏳ Submit to hackathon
+**Pending**:
+- Privacy Cash SDK npm package publication
+- SDK installation and service method implementation
+- Full privacy flow end-to-end testing
+- Devnet deployment
 
-**Frontend**: Not implemented (user requested backend only)
+**Note**: Shielding and balance operations are handled client-side via the Privacy Cash SDK directly. The backend is responsible for tip logging, history retrieval, user settings, and pool info only.

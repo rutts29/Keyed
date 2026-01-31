@@ -1,11 +1,11 @@
-# SolShare Docker Setup
+# Keyed Docker Setup
 
-Run the entire SolShare backend with a single command using Docker.
+Run the entire Keyed backend with a single command using Docker.
 
 ## Prerequisites
 
 - Docker Desktop or Docker Engine
-- Docker Compose v2+
+- Docker Compose v2+ (`docker compose` CLI plugin)
 
 ## Quick Start
 
@@ -21,14 +21,14 @@ nano .env  # or use any editor
 
 ### 2. Run Services
 
-**Development Mode (Backend + AI Service):**
+**Full Stack (Backend + Worker + AI Service + Redis):**
 ```bash
-docker-compose -f docker-compose.dev.yml up --build
+docker compose up --build
 ```
 
-**Full Stack (Backend + Worker + AI Service):**
+**Partial Stack — Development Mode (Backend + AI Service only):**
 ```bash
-docker-compose up --build
+docker compose -f docker-compose.dev.yml up --build
 ```
 
 ### 3. Verify Services
@@ -37,8 +37,11 @@ docker-compose up --build
 # Backend health
 curl http://localhost:3001/health
 
-# AI Service health  
+# AI Service health
 curl http://localhost:8000/health
+
+# Redis ping
+docker compose exec redis redis-cli ping
 ```
 
 ## Services
@@ -48,41 +51,42 @@ curl http://localhost:8000/health
 | `backend` | 3001 | Express.js API server |
 | `worker` | - | BullMQ background jobs |
 | `ai-service` | 8000 | FastAPI AI/ML service |
+| `redis` | 6379 | Redis cache + BullMQ queues |
 
 ## Commands
 
 ```bash
 # Start all services
-docker-compose up -d
+docker compose up -d
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
 
 # View specific service logs
-docker-compose logs -f backend
+docker compose logs -f backend
 
 # Stop all services
-docker-compose down
+docker compose down
 
 # Rebuild and start
-docker-compose up --build
+docker compose up --build
 
 # Remove all containers and volumes
-docker-compose down -v
+docker compose down -v
 ```
 
 ## Development
 
 ### Rebuild a single service
 ```bash
-docker-compose build backend
-docker-compose up -d backend
+docker compose build backend
+docker compose up -d backend
 ```
 
 ### Shell into a container
 ```bash
-docker exec -it solshare-backend sh
-docker exec -it solshare-ai bash
+docker exec -it keyed-backend sh
+docker exec -it keyed-ai bash
 ```
 
 ### View resource usage
@@ -97,7 +101,7 @@ All environment variables are loaded from `.env` file. See `.env.docker` for the
 Key variables:
 - `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
 - `UPSTASH_REDIS_URL` (use `rediss://` protocol)
-- `GEMINI_API_KEY`, `VOYAGE_API_KEY`
+- `OPENAI_API_KEY`, `VOYAGE_API_KEY`
 - `QDRANT_URL`, `QDRANT_API_KEY`
 - `R2_*` credentials for Cloudflare R2
 - `PINATA_*` credentials for IPFS
@@ -108,17 +112,18 @@ Key variables:
 ### Container won't start
 ```bash
 # Check logs
-docker-compose logs backend
+docker compose logs backend
 
 # Check if ports are in use
 lsof -i :3001
 lsof -i :8000
+lsof -i :6379
 ```
 
 ### AI Service unhealthy
-- Check Gemini API quota
-- Verify `GEMINI_API_KEY` is set correctly
-- Check logs: `docker-compose logs ai-service`
+- Check OpenAI API quota
+- Verify `OPENAI_API_KEY` is set correctly
+- Check logs: `docker compose logs ai-service`
 
 ### Redis connection failed
 - Ensure `UPSTASH_REDIS_URL` uses `rediss://` protocol (with double 's')
@@ -127,33 +132,26 @@ lsof -i :8000
 ### Build cache issues
 ```bash
 # Clear Docker cache and rebuild
-docker-compose build --no-cache
+docker compose build --no-cache
 ```
-
-## Testing with Postman
-
-1. Import `postman/SolShare_API.postman_collection.json`
-2. Import `postman/SolShare_Local.postman_environment.json`
-3. Ensure Docker services are running
-4. Run the test collection
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                 Docker Network                       │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │
-│  │   Backend   │  │   Worker    │  │ AI Service  │ │
-│  │   :3001     │  │  (no port)  │  │   :8000     │ │
-│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘ │
-│         │                │                │        │
-│         └────────────────┴────────────────┘        │
-│                          │                          │
-└──────────────────────────┼──────────────────────────┘
-                           │
-              ┌────────────┴────────────┐
-              │    External Services    │
-              │  Supabase, Qdrant, R2   │
-              │  Redis, Pinata, Helius  │
-              └─────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                        Docker Network                            │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌────────┐ │
+│  │   Backend   │  │   Worker    │  │ AI Service  │  │ Redis  │ │
+│  │   :3001     │  │  (no port)  │  │   :8000     │  │ :6379  │ │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └───┬────┘ │
+│         │                │                │              │      │
+│         └────────────────┴────────────────┴──────────────┘      │
+│                                   │                              │
+└───────────────────────────────────┼──────────────────────────────┘
+                                    │
+                       ┌────────────┴────────────┐
+                       │    External Services    │
+                       │  Supabase, Qdrant, R2   │
+                       │     Pinata, Helius      │
+                       └─────────────────────────┘
 ```
