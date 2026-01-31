@@ -175,19 +175,7 @@ export const chatController = {
     if (room.gate_type !== 'open') {
       const hasAccess = await verifyTokenGateAccess(wallet, room);
       if (!hasAccess) {
-        res.json({
-          success: true,
-          data: {
-            hasAccess: false,
-            requirements: {
-              gateType: room.gate_type,
-              requiredToken: room.required_token,
-              minimumBalance: room.minimum_balance,
-              requiredNftCollection: room.required_nft_collection,
-            },
-          },
-        });
-        return;
+        throw new AppError(403, 'TOKEN_GATE_FAILED', 'You do not meet the token requirements for this room');
       }
     }
 
@@ -208,6 +196,17 @@ export const chatController = {
   async leaveRoom(req: AuthenticatedRequest, res: Response) {
     const wallet = req.wallet!;
     const { id } = req.params;
+
+    // Check if user is the room creator
+    const { data: room } = await supabase
+      .from('chat_rooms')
+      .select('creator_wallet')
+      .eq('id', id)
+      .single();
+
+    if (room && wallet === room.creator_wallet) {
+      throw new AppError(400, 'CANNOT_LEAVE', 'Room creator cannot leave their own room');
+    }
 
     const { error } = await supabase
       .from('chat_members')
@@ -340,7 +339,7 @@ async function verifyTokenGateAccess(
       // Check minimum balance if specified
       if (room.minimum_balance > 0) {
         const { value } = await connection.getTokenAccountBalance(tokenAccounts.value[0].pubkey);
-        const balance = parseInt(value.amount);
+        const balance = value.uiAmount ?? 0;
         if (balance < room.minimum_balance) return false;
       }
     }
