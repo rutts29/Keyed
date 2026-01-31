@@ -78,9 +78,9 @@ async def search_similar(
 
     query_filter = Filter(must=filter_conditions) if filter_conditions else None
 
-    results = await client.search(
+    response = await client.query_points(
         collection_name=settings.qdrant_collection,
-        query_vector=embedding,
+        query=embedding,
         limit=limit + len(exclude_ids or []),
         query_filter=query_filter,
         with_payload=True,
@@ -89,7 +89,7 @@ async def search_similar(
     exclude_set = set(exclude_ids or [])
     return [
         {"post_id": str(r.id), "score": r.score, **(r.payload or {})}
-        for r in results
+        for r in response.points
         if str(r.id) not in exclude_set
     ][:limit]
 
