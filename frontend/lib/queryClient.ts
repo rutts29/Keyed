@@ -35,4 +35,7 @@ export const queryKeys = {
   airdrops: () => ["airdrops", "campaigns"] as const,
   airdropCampaign: (id: string) => ["airdrops", "campaign", id] as const,
   receivedDrops: () => ["airdrops", "received"] as const,
+  notifications: (filter?: string) =>
+    filter ? (["notifications", filter] as const) : (["notifications"] as const),
+  unreadCount: () => ["notifications", "unread-count"] as const,
 };

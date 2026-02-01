@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import {
+  Bell,
   Gem,
   Gift,
   Home,
@@ -27,11 +28,13 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuthStore } from "@/store/authStore";
+import { useUIStore } from "@/store/uiStore";
 
 const navItems = [
   { label: "Home", icon: Home, href: "/app" },
   { label: "Discover", icon: Zap, href: "/explore" },
   { label: "Search", icon: Search, href: "/search" },
+  { label: "Notifications", icon: Bell, href: "/notifications", match: "/notifications" },
   { label: "Rooms", icon: MessageSquare, href: "/rooms", match: "/rooms" },
   { label: "Airdrops", icon: Gift, href: "/airdrops", match: "/airdrops", badge: "New" },
   { label: "Creator Hub", icon: Gem, href: "/dashboard" },
@@ -45,6 +48,7 @@ export function AppSidebar() {
   const { handleLogOut } = useSafeDynamicContext();
   const wallet = useAuthStore((state) => state.wallet);
   const clearAuth = useAuthStore((state) => state.clearAuth);
+  const notificationsCount = useUIStore((state) => state.notificationsCount);
   const profileHref = wallet ? `/profile/${wallet}` : "/profile/me";
 
   const handleSignOut = async () => {
@@ -62,10 +66,10 @@ export function AppSidebar() {
       <div className="space-y-6">
         <div className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/20 text-primary">
-            <span className="text-sm font-semibold">S</span>
+            <span className="text-sm font-semibold">K</span>
           </div>
           <div>
-            <p className="text-sm font-semibold text-foreground">SolShare</p>
+            <p className="text-sm font-semibold text-foreground">Keyed</p>
             <p className="text-xs text-muted-foreground">Creator network</p>
           </div>
         </div>
@@ -86,7 +90,11 @@ export function AppSidebar() {
               <>
                 <Icon className="h-4 w-4" />
                 <span className="flex-1 text-left">{item.label}</span>
-                {item.badge ? (
+                {item.label === "Notifications" && notificationsCount > 0 ? (
+                  <Badge variant="secondary" className="text-[10px]">
+                    {notificationsCount > 99 ? "99+" : notificationsCount}
+                  </Badge>
+                ) : item.badge ? (
                   <Badge variant="secondary" className="text-[10px]">
                     {item.badge}
                   </Badge>
@@ -120,15 +128,15 @@ export function AppSidebar() {
             <div className="flex items-center gap-3">
               <Avatar className="h-9 w-9">
                 <AvatarFallback>
-                  {wallet ? wallet.slice(0, 2).toUpperCase() : "SS"}
+                  {wallet ? wallet.slice(0, 2).toUpperCase() : "KD"}
                 </AvatarFallback>
               </Avatar>
               <div>
                 <p className="text-sm font-medium text-foreground">
-                  {wallet ? `${wallet.slice(0, 4)}...${wallet.slice(-4)}` : "SolShare Labs"}
+                  {wallet ? `${wallet.slice(0, 4)}...${wallet.slice(-4)}` : "Keyed Labs"}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {wallet ? "Connected" : "@solshare"}
+                  {wallet ? "Connected" : "@keyed"}
                 </p>
               </div>
             </div>
