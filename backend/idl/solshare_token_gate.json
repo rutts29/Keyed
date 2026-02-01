@@ -1,5 +1,5 @@
 {
-  "address": "EXVqoivgZKebHm8VeQNBEFYZLRjJ61ZWNieXg3Npy4Hi",
+  "address": "EeK73A5QDEmBCGVntKgRNYEtPRbKCkHAi2yfBLuMTQAz",
   "metadata": {
     "name": "solshare_token_gate",
     "version": "0.1.0",
@@ -153,6 +153,10 @@
           "type": {
             "option": "pubkey"
           }
+        },
+        {
+          "name": "post_index",
+          "type": "u64"
         }
       ]
     },
@@ -231,6 +235,9 @@
         },
         {
           "name": "nft_mint"
+        },
+        {
+          "name": "nft_metadata"
         },
         {
           "name": "user",
@@ -626,6 +633,14 @@
           },
           {
             "name": "verified",
+            "type": "bool"
+          },
+          {
+            "name": "token_verified",
+            "type": "bool"
+          },
+          {
+            "name": "nft_verified",
             "type": "bool"
           },
           {

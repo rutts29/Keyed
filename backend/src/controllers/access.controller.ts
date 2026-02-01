@@ -145,7 +145,7 @@ export const accessController = {
 
   async setRequirements(req: AuthenticatedRequest, res: Response) {
     const wallet = req.wallet!;
-    const { postId, requiredToken, minimumBalance, requiredNftCollection } = req.body;
+    const { postId, requiredToken, minimumBalance, requiredNftCollection, postIndex } = req.body;
 
     const { data: post } = await supabase
       .from('posts')
@@ -167,7 +167,8 @@ export const accessController = {
       postId,
       requiredToken,
       minimumBalance || 0,
-      requiredNftCollection
+      requiredNftCollection,
+      postIndex
     );
 
     // Update database record

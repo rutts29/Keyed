@@ -1,6 +1,6 @@
 # AI Agent Test Runner Guide
 
-This document describes how to use an AI agent with MCP browser tools to run interactive tests on SolShare.
+This document describes how to use an AI agent with MCP browser tools to run interactive tests on Keyed.
 
 ## Setup
 

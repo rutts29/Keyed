@@ -10,10 +10,10 @@ export function TopNav() {
       <div className="flex items-center gap-4 px-4 py-3">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/20 text-primary">
-            <span className="text-sm font-semibold">S</span>
+            <span className="text-sm font-semibold">K</span>
           </div>
           <div className="leading-tight">
-            <p className="text-sm font-semibold text-foreground">SolShare</p>
+            <p className="text-sm font-semibold text-foreground">Keyed</p>
             <Badge variant="secondary" className="mt-1 text-[10px]">
               Creator beta
             </Badge>

@@ -22,7 +22,7 @@ type TestFixtures = {
 };
 
 /**
- * Custom test with fixtures for SolShare E2E testing.
+ * Custom test with fixtures for Keyed E2E testing.
  */
 export const test = base.extend<TestFixtures>({
   // Default mock wallet type - cast needed for Playwright fixture option type

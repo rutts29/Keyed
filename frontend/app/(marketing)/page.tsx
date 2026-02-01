@@ -110,10 +110,10 @@ export default function MarketingPage() {
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/20 text-primary">
-              <span className="text-sm font-semibold">S</span>
+              <span className="text-sm font-semibold">K</span>
             </div>
             <div>
-              <p className="text-sm font-semibold text-foreground">SolShare</p>
+              <p className="text-sm font-semibold text-foreground">Keyed</p>
               <p className="text-xs text-muted-foreground">
                 Social layer for Solana
               </p>
@@ -135,7 +135,7 @@ export default function MarketingPage() {
               The minimal, premium home for Solana creators.
             </h1>
             <p className="text-base leading-7 text-muted-foreground md:text-lg">
-              SolShare pairs social discovery with on-chain access. Launch gated
+              Keyed pairs social discovery with on-chain access. Launch gated
               drops, host private rooms, and keep your community in one
               beautifully focused feed.
             </p>

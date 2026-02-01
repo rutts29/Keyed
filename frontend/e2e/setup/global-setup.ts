@@ -11,7 +11,7 @@ async function globalSetup(config: FullConfig): Promise<void> {
   const isMockMode = process.env.MOCK_MODE !== "false";
 
   console.log("\n========================================");
-  console.log("  SolShare E2E Test Suite");
+  console.log("  Keyed E2E Test Suite");
   console.log(`  Mode: ${isMockMode ? "MOCK" : "INTEGRATION"}`);
   console.log(`  Base URL: ${config.projects[0]?.use?.baseURL}`);
   console.log("========================================\n");

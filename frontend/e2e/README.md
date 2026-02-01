@@ -1,6 +1,6 @@
 # E2E Testing Suite
 
-End-to-end UI testing for SolShare using Playwright with mock wallet support.
+End-to-end UI testing for Keyed using Playwright with mock wallet support.
 
 ## Quick Start
 

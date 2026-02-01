@@ -234,7 +234,7 @@ function EmptyState({
           <h3 className="text-lg font-semibold text-foreground mb-2">
             {query
               ? `No results for "${query}"`
-              : "Start exploring SolShare"}
+              : "Start exploring Keyed"}
           </h3>
           <p className="text-sm text-muted-foreground max-w-md mx-auto">
             {query
@@ -342,7 +342,7 @@ function SearchContent() {
             Search
           </p>
           <h1 className="text-2xl font-semibold text-foreground">
-            {query ? `Results for "${query}"` : "Search SolShare"}
+            {query ? `Results for "${query}"` : "Search Keyed"}
           </h1>
         </div>
         <Badge variant="secondary" className="gap-1.5">
@@ -445,7 +445,7 @@ function SearchFallback() {
             Search
           </p>
           <h1 className="text-2xl font-semibold text-foreground">
-            Search SolShare
+            Search Keyed
           </h1>
         </div>
         <Badge variant="secondary" className="gap-1.5">

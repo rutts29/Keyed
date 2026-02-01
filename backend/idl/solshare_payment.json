@@ -1,5 +1,5 @@
 {
-  "address": "H5FgabhipaFijiP2HQxtsDd1papEtC9rvvQANsm1fc8t",
+  "address": "8ABx4UuH35a3V6VPyg5BmjkZVn7YYJq2a7VeCjdpWuzM",
   "metadata": {
     "name": "solshare_payment",
     "version": "0.1.0",
@@ -134,7 +134,11 @@
           "signer": true
         },
         {
-          "name": "fee_recipient"
+          "name": "fee_recipient",
+          "docs": [
+            "The platform authority (signer) chooses where fees are sent.",
+            "This is set once during initialization and stored in PlatformConfig."
+          ]
         },
         {
           "name": "system_program",
@@ -301,10 +305,6 @@
           ]
         },
         {
-          "name": "creator",
-          "writable": true
-        },
-        {
           "name": "fee_recipient",
           "writable": true
         },
@@ -418,10 +418,6 @@
           "signer": true
         },
         {
-          "name": "creator",
-          "writable": true
-        },
-        {
           "name": "fee_recipient",
           "writable": true
         },
@@ -528,10 +524,6 @@
           "name": "tipper",
           "writable": true,
           "signer": true
-        },
-        {
-          "name": "creator",
-          "writable": true
         },
         {
           "name": "fee_recipient",
@@ -813,6 +805,11 @@
       "code": 6010,
       "name": "ArithmeticOverflow",
       "msg": "Arithmetic overflow"
+    },
+    {
+      "code": 6011,
+      "name": "InvalidCreatorAccount",
+      "msg": "Invalid creator account - does not match vault owner"
     }
   ],
   "types": [

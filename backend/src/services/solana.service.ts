@@ -22,6 +22,7 @@ import { toValidatedPublicKey, toOptionalPublicKey } from '../utils/validation.j
 import type { TransactionResponse } from '../types/index.js';
 
 const PLATFORM_FEE_BPS = 200; // 2% (used as fallback)
+const METAPLEX_PROGRAM_ID = new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
 
 function serializeTransaction(tx: Transaction): string {
   return tx.serialize({ requireAllSignatures: false }).toString('base64');
@@ -353,7 +354,6 @@ export const solanaService = {
             creatorVault: vaultPda,
             tipRecord: tipRecordPda,
             tipper: tipperPubkey,
-            creator: creatorPubkey,
             feeRecipient: platformConfig.feeRecipient,
             systemProgram: SystemProgram.programId,
           })
@@ -417,7 +417,6 @@ export const solanaService = {
             creatorVault: vaultPda,
             subscription: subscriptionPda,
             subscriber: subscriberPubkey,
-            creator: creatorPubkey,
             feeRecipient: platformConfig.feeRecipient,
             systemProgram: SystemProgram.programId,
           })
@@ -503,7 +502,8 @@ export const solanaService = {
     postId: string,
     requiredToken?: string,
     minimumBalance: number = 0,
-    requiredNftCollection?: string
+    requiredNftCollection?: string,
+    postIndex?: number
   ): Promise<TransactionResponse> {
     const { tx, payerPubkey: creatorPubkey, blockhash, lastValidBlockHeight } = await createTxShell(wallet);
     const postPubkey = new PublicKey(postId);
@@ -521,7 +521,8 @@ export const solanaService = {
           postPubkey,
           tokenPubkey,
           new BN(minimumBalance),
-          nftCollectionPubkey
+          nftCollectionPubkey,
+          new BN(postIndex ?? 0)
         )
         .accounts({
           accessControl: accessControlPda,
@@ -582,6 +583,11 @@ export const solanaService = {
       const [accessControlPda] = pdaDerivation.accessControl(postPubkey);
       const [verificationPda] = pdaDerivation.accessVerification(payerPubkey, postPubkey);
 
+      const [nftMetadataPubkey] = PublicKey.findProgramAddressSync(
+        [Buffer.from("metadata"), METAPLEX_PROGRAM_ID.toBuffer(), nftMintPubkey.toBuffer()],
+        METAPLEX_PROGRAM_ID
+      );
+
       const ix = await programs.tokenGate.methods
         .verifyNftAccess()
         .accounts({
@@ -589,6 +595,7 @@ export const solanaService = {
           verification: verificationPda,
           nftTokenAccount: nftTokenAccountPubkey,
           nftMint: nftMintPubkey,
+          nftMetadata: nftMetadataPubkey,
           user: payerPubkey,
           systemProgram: SystemProgram.programId,
         })

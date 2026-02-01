@@ -1,0 +1,615 @@
+{
+  "address": "BDz31MWVhr9GHkQq3q8BL4Sp2tcEWqoss2zjNz5dhZKw",
+  "metadata": {
+    "name": "solshare_airdrop",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "SolShare airdrop campaign program with escrow"
+  },
+  "instructions": [
+    {
+      "name": "create_campaign",
+      "discriminator": [
+        111,
+        131,
+        187,
+        98,
+        160,
+        193,
+        114,
+        244
+      ],
+      "accounts": [
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "campaign",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  97,
+                  109,
+                  112,
+                  97,
+                  105,
+                  103,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "creator"
+              },
+              {
+                "kind": "arg",
+                "path": "campaign_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_mint"
+        },
+        {
+          "name": "escrow_ata",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "campaign"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        }
+      ],
+      "args": [
+        {
+          "name": "campaign_id",
+          "type": {
+            "array": [
+              "u8",
+              16
+            ]
+          }
+        },
+        {
+          "name": "amount_per_recipient",
+          "type": "u64"
+        },
+        {
+          "name": "total_recipients",
+          "type": "u32"
+        },
+        {
+          "name": "crank_authority",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "distribute_batch",
+      "discriminator": [
+        75,
+        80,
+        138,
+        222,
+        195,
+        82,
+        91,
+        34
+      ],
+      "accounts": [
+        {
+          "name": "crank_authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "campaign",
+          "writable": true
+        },
+        {
+          "name": "escrow_ata",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "recipient_count",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "fund_campaign",
+      "discriminator": [
+        109,
+        57,
+        56,
+        239,
+        99,
+        111,
+        221,
+        121
+      ],
+      "accounts": [
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "campaign"
+          ]
+        },
+        {
+          "name": "campaign",
+          "writable": true
+        },
+        {
+          "name": "creator_ata",
+          "writable": true
+        },
+        {
+          "name": "escrow_ata",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "refund",
+      "discriminator": [
+        2,
+        96,
+        183,
+        251,
+        63,
+        208,
+        46,
+        46
+      ],
+      "accounts": [
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "campaign"
+          ]
+        },
+        {
+          "name": "campaign",
+          "writable": true
+        },
+        {
+          "name": "creator_ata",
+          "writable": true
+        },
+        {
+          "name": "escrow_ata",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "CampaignState",
+      "discriminator": [
+        63,
+        79,
+        39,
+        33,
+        227,
+        95,
+        185,
+        189
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "BatchDistributed",
+      "discriminator": [
+        32,
+        64,
+        245,
+        235,
+        1,
+        44,
+        74,
+        140
+      ]
+    },
+    {
+      "name": "CampaignCreated",
+      "discriminator": [
+        9,
+        98,
+        69,
+        61,
+        53,
+        131,
+        64,
+        152
+      ]
+    },
+    {
+      "name": "CampaignFunded",
+      "discriminator": [
+        46,
+        83,
+        210,
+        201,
+        110,
+        227,
+        24,
+        212
+      ]
+    },
+    {
+      "name": "CampaignRefunded",
+      "discriminator": [
+        31,
+        13,
+        98,
+        74,
+        196,
+        11,
+        115,
+        225
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidStatus",
+      "msg": "Campaign is not in the expected status"
+    },
+    {
+      "code": 6001,
+      "name": "InsufficientFunds",
+      "msg": "Insufficient funds in escrow"
+    },
+    {
+      "code": 6002,
+      "name": "BatchTooLarge",
+      "msg": "Too many recipients in a single batch"
+    },
+    {
+      "code": 6003,
+      "name": "UnauthorizedCrank",
+      "msg": "Unauthorized crank authority"
+    },
+    {
+      "code": 6004,
+      "name": "AlreadyCompleted",
+      "msg": "Campaign already completed"
+    },
+    {
+      "code": 6005,
+      "name": "Overflow",
+      "msg": "Arithmetic overflow"
+    },
+    {
+      "code": 6006,
+      "name": "InvalidRecipientMint",
+      "msg": "Recipient ATA has incorrect mint"
+    }
+  ],
+  "types": [
+    {
+      "name": "BatchDistributed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "campaign_id",
+            "type": {
+              "array": [
+                "u8",
+                16
+              ]
+            }
+          },
+          {
+            "name": "recipient_count",
+            "type": "u32"
+          },
+          {
+            "name": "total_distributed",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CampaignCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "campaign_id",
+            "type": {
+              "array": [
+                "u8",
+                16
+              ]
+            }
+          },
+          {
+            "name": "token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount_per_recipient",
+            "type": "u64"
+          },
+          {
+            "name": "crank_authority",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CampaignFunded",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "campaign_id",
+            "type": {
+              "array": [
+                "u8",
+                16
+              ]
+            }
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CampaignRefunded",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "campaign_id",
+            "type": {
+              "array": [
+                "u8",
+                16
+              ]
+            }
+          },
+          {
+            "name": "refund_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CampaignState",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "campaign_id",
+            "type": {
+              "array": [
+                "u8",
+                16
+              ]
+            }
+          },
+          {
+            "name": "token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "escrow_ata",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount_per_recipient",
+            "type": "u64"
+          },
+          {
+            "name": "total_amount",
+            "type": "u64"
+          },
+          {
+            "name": "distributed_amount",
+            "type": "u64"
+          },
+          {
+            "name": "total_recipients",
+            "type": "u32"
+          },
+          {
+            "name": "distributed_count",
+            "type": "u32"
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "CampaignStatus"
+              }
+            }
+          },
+          {
+            "name": "crank_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CampaignStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Draft"
+          },
+          {
+            "name": "Funded"
+          },
+          {
+            "name": "Processing"
+          },
+          {
+            "name": "Completed"
+          },
+          {
+            "name": "Cancelled"
+          }
+        ]
+      }
+    }
+  ]
+}
