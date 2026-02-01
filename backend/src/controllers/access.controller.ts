@@ -99,7 +99,7 @@ export const accessController = {
           return;
         }
       } catch (error) {
-        logger.error({ error, wallet, postId }, 'Error checking on-chain access');
+        logger.error({ error, wallet, postId }, 'Error checking on-chain access — falling back to RPC balance check');
       }
     }
 
@@ -146,6 +146,10 @@ export const accessController = {
   async setRequirements(req: AuthenticatedRequest, res: Response) {
     const wallet = req.wallet!;
     const { postId, requiredToken, minimumBalance, requiredNftCollection, postIndex } = req.body;
+
+    if (postIndex !== undefined && (!Number.isInteger(postIndex) || postIndex < 0)) {
+      throw new AppError(400, 'INVALID_PARAM', 'postIndex must be a non-negative integer');
+    }
 
     const { data: post } = await supabase
       .from('posts')
@@ -279,7 +283,7 @@ export const accessController = {
       logger.error({ error, wallet, postId }, 'Error checking access on-chain');
       res.json({
         success: true,
-        data: { hasAccess: false },
+        data: { hasAccess: false, error: 'access_check_failed' },
       });
     }
   },

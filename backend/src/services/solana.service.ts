@@ -508,32 +508,34 @@ export const solanaService = {
     const { tx, payerPubkey: creatorPubkey, blockhash, lastValidBlockHeight } = await createTxShell(wallet);
     const postPubkey = new PublicKey(postId);
 
-    if (programs.tokenGate && programIds.tokenGate) {
-      const [accessControlPda] = pdaDerivation.accessControl(postPubkey);
-
-      const tokenPubkey = requiredToken ? new PublicKey(requiredToken) : null;
-      const nftCollectionPubkey = requiredNftCollection
-        ? new PublicKey(requiredNftCollection)
-        : null;
-
-      const ix = await programs.tokenGate.methods
-        .setAccessRequirements(
-          postPubkey,
-          tokenPubkey,
-          new BN(minimumBalance),
-          nftCollectionPubkey,
-          new BN(postIndex ?? 0)
-        )
-        .accounts({
-          accessControl: accessControlPda,
-          creator: creatorPubkey,
-          systemProgram: SystemProgram.programId,
-        })
-        .instruction();
-
-      tx.add(ix);
-      logger.debug({ wallet, postId }, 'Built set access requirements tx');
+    if (!programs.tokenGate || !programIds.tokenGate) {
+      throw new Error('Token gate program not available — cannot set access requirements');
     }
+
+    const [accessControlPda] = pdaDerivation.accessControl(postPubkey);
+
+    const tokenPubkey = requiredToken ? new PublicKey(requiredToken) : null;
+    const nftCollectionPubkey = requiredNftCollection
+      ? new PublicKey(requiredNftCollection)
+      : null;
+
+    const ix = await programs.tokenGate.methods
+      .setAccessRequirements(
+        postPubkey,
+        tokenPubkey,
+        new BN(minimumBalance),
+        nftCollectionPubkey,
+        new BN(postIndex ?? 0)
+      )
+      .accounts({
+        accessControl: accessControlPda,
+        creator: creatorPubkey,
+        systemProgram: SystemProgram.programId,
+      })
+      .instruction();
+
+    tx.add(ix);
+    logger.debug({ wallet, postId }, 'Built set access requirements tx');
 
     return finalizeTx(tx, blockhash, lastValidBlockHeight);
   },
@@ -547,23 +549,25 @@ export const solanaService = {
     const postPubkey = new PublicKey(postId);
     const tokenAccountPubkey = new PublicKey(userTokenAccount);
 
-    if (programs.tokenGate && programIds.tokenGate) {
-      const [accessControlPda] = pdaDerivation.accessControl(postPubkey);
-      const [verificationPda] = pdaDerivation.accessVerification(payerPubkey, postPubkey);
-
-      const ix = await programs.tokenGate.methods
-        .verifyTokenAccess()
-        .accounts({
-          accessControl: accessControlPda,
-          verification: verificationPda,
-          userTokenAccount: tokenAccountPubkey,
-          user: payerPubkey,
-          systemProgram: SystemProgram.programId,
-        })
-        .instruction();
-
-      tx.add(ix);
+    if (!programs.tokenGate || !programIds.tokenGate) {
+      throw new Error('Token gate program not available — cannot verify token access');
     }
+
+    const [accessControlPda] = pdaDerivation.accessControl(postPubkey);
+    const [verificationPda] = pdaDerivation.accessVerification(payerPubkey, postPubkey);
+
+    const ix = await programs.tokenGate.methods
+      .verifyTokenAccess()
+      .accounts({
+        accessControl: accessControlPda,
+        verification: verificationPda,
+        userTokenAccount: tokenAccountPubkey,
+        user: payerPubkey,
+        systemProgram: SystemProgram.programId,
+      })
+      .instruction();
+
+    tx.add(ix);
 
     return finalizeTx(tx, blockhash, lastValidBlockHeight);
   },
@@ -579,30 +583,32 @@ export const solanaService = {
     const nftTokenAccountPubkey = new PublicKey(nftTokenAccount);
     const nftMintPubkey = new PublicKey(nftMint);
 
-    if (programs.tokenGate && programIds.tokenGate) {
-      const [accessControlPda] = pdaDerivation.accessControl(postPubkey);
-      const [verificationPda] = pdaDerivation.accessVerification(payerPubkey, postPubkey);
-
-      const [nftMetadataPubkey] = PublicKey.findProgramAddressSync(
-        [Buffer.from("metadata"), METAPLEX_PROGRAM_ID.toBuffer(), nftMintPubkey.toBuffer()],
-        METAPLEX_PROGRAM_ID
-      );
-
-      const ix = await programs.tokenGate.methods
-        .verifyNftAccess()
-        .accounts({
-          accessControl: accessControlPda,
-          verification: verificationPda,
-          nftTokenAccount: nftTokenAccountPubkey,
-          nftMint: nftMintPubkey,
-          nftMetadata: nftMetadataPubkey,
-          user: payerPubkey,
-          systemProgram: SystemProgram.programId,
-        })
-        .instruction();
-
-      tx.add(ix);
+    if (!programs.tokenGate || !programIds.tokenGate) {
+      throw new Error('Token gate program not available — cannot verify NFT access');
     }
+
+    const [accessControlPda] = pdaDerivation.accessControl(postPubkey);
+    const [verificationPda] = pdaDerivation.accessVerification(payerPubkey, postPubkey);
+
+    const [nftMetadataPubkey] = PublicKey.findProgramAddressSync(
+      [Buffer.from("metadata"), METAPLEX_PROGRAM_ID.toBuffer(), nftMintPubkey.toBuffer()],
+      METAPLEX_PROGRAM_ID
+    );
+
+    const ix = await programs.tokenGate.methods
+      .verifyNftAccess()
+      .accounts({
+        accessControl: accessControlPda,
+        verification: verificationPda,
+        nftTokenAccount: nftTokenAccountPubkey,
+        nftMint: nftMintPubkey,
+        nftMetadata: nftMetadataPubkey,
+        user: payerPubkey,
+        systemProgram: SystemProgram.programId,
+      })
+      .instruction();
+
+    tx.add(ix);
 
     return finalizeTx(tx, blockhash, lastValidBlockHeight);
   },

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bell } from "lucide-react";
+import { Bell, RefreshCw } from "lucide-react";
 
 import { NotificationItem } from "@/components/NotificationItem";
 import { Button } from "@/components/ui/button";
@@ -50,10 +50,13 @@ export default function NotificationsPage() {
   const {
     data,
     isLoading,
+    isError,
     hasNextPage,
     fetchNextPage,
     isFetchingNextPage,
   } = useNotifications(filter);
+
+  const [paginationError, setPaginationError] = useState(false);
   const { data: unreadData } = useUnreadCount();
   const markRead = useMarkRead();
   const markAllRead = useMarkAllRead();
@@ -66,11 +69,11 @@ export default function NotificationsPage() {
   const handleObserver = useCallback(
     (entries: IntersectionObserverEntry[]) => {
       const target = entries[0];
-      if (target?.isIntersecting && hasNextPage && !isFetchingNextPage) {
-        fetchNextPage();
+      if (target?.isIntersecting && hasNextPage && !isFetchingNextPage && !paginationError) {
+        fetchNextPage().catch(() => setPaginationError(true));
       }
     },
-    [fetchNextPage, hasNextPage, isFetchingNextPage]
+    [fetchNextPage, hasNextPage, isFetchingNextPage, paginationError]
   );
 
   useEffect(() => {
@@ -122,7 +125,17 @@ export default function NotificationsPage() {
 
       {isLoading && <NotificationSkeleton />}
 
-      {!isLoading && notifications.length === 0 && (
+      {!isLoading && isError && (
+        <Card className="border-border/70 bg-destructive/10">
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <p className="text-sm text-destructive">
+              Failed to load notifications. Please try refreshing the page.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {!isLoading && !isError && notifications.length === 0 && (
         <Card className="border-border/70 bg-card/70">
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <div className="mb-4 rounded-full bg-muted p-3">
@@ -138,7 +151,7 @@ export default function NotificationsPage() {
         </Card>
       )}
 
-      {!isLoading && notifications.length > 0 && (
+      {!isLoading && !isError && notifications.length > 0 && (
         <div className="space-y-3">
           {notifications.map((n) => (
             <NotificationItem
@@ -149,6 +162,22 @@ export default function NotificationsPage() {
           ))}
           <div ref={sentinelRef} className="h-1" />
           {isFetchingNextPage && <NotificationSkeleton />}
+          {paginationError && (
+            <div className="flex justify-center py-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setPaginationError(false);
+                  fetchNextPage().catch(() => setPaginationError(true));
+                }}
+                className="gap-2"
+              >
+                <RefreshCw className="h-3 w-3" />
+                Retry loading more
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>

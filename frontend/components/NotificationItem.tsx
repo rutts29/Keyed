@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {
+  Bell,
   Coins,
   FileText,
   Gift,
@@ -44,6 +45,8 @@ function getHref(notification: Notification): string {
       return "/dashboard";
     case "airdrop_received":
       return "/airdrops";
+    default:
+      return "/notifications";
   }
 }
 
@@ -56,8 +59,8 @@ export function NotificationItem({
   notification,
   onMarkRead,
 }: NotificationItemProps) {
-  const Icon = iconMap[notification.type];
-  const action = actionText[notification.type];
+  const Icon = iconMap[notification.type] ?? Bell;
+  const action = actionText[notification.type] ?? "interacted with you";
   const href = getHref(notification);
   const displayName =
     notification.from_user?.username ??
@@ -70,7 +73,7 @@ export function NotificationItem({
   };
 
   return (
-    <Link href={href} onClick={handleClick}>
+    <Link href={href} onClick={handleClick} aria-label={`${displayName} ${action}`}>
       <Card
         className={`border-border/70 transition-colors hover:bg-muted/50 ${
           notification.read ? "bg-card/50" : "border-l-2 border-l-blue-500 bg-card/70"
@@ -96,7 +99,7 @@ export function NotificationItem({
             </p>
           </div>
           {!notification.read && (
-            <div className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />
+            <div className="h-2 w-2 shrink-0 rounded-full bg-blue-500" role="img" aria-label="Unread" />
           )}
         </CardContent>
       </Card>

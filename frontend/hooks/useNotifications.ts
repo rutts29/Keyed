@@ -6,6 +6,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { api } from "@/lib/api";
 import { queryKeys } from "@/lib/queryClient";
@@ -87,6 +88,7 @@ export function useUnreadCount() {
 
 export function useMarkRead() {
   const queryClient = useQueryClient();
+  const decrementNotifications = useUIStore((state) => state.decrementNotifications);
 
   return useMutation({
     mutationFn: async (notificationId: string) => {
@@ -96,7 +98,40 @@ export function useMarkRead() {
       if (!data.data) throw new Error("Failed to mark notification as read");
       return data.data;
     },
-    onSuccess: () => {
+    onMutate: async (notificationId) => {
+      await queryClient.cancelQueries({ queryKey: ["notifications"] });
+
+      const previousData = queryClient.getQueriesData({ queryKey: ["notifications", "list"] });
+
+      queryClient.setQueriesData(
+        { queryKey: ["notifications", "list"] },
+        (old: unknown) => {
+          if (!old || typeof old !== "object") return old;
+          const data = old as { pages: NotificationsResponse[]; pageParams: unknown[] };
+          return {
+            ...data,
+            pages: data.pages.map((page) => ({
+              ...page,
+              notifications: page.notifications.map((n) =>
+                n.id === notificationId ? { ...n, read: true } : n
+              ),
+            })),
+          };
+        }
+      );
+
+      decrementNotifications();
+      return { previousData };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previousData) {
+        for (const [key, data] of context.previousData) {
+          queryClient.setQueryData(key, data);
+        }
+      }
+      toast.error("Failed to mark notification as read");
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
@@ -117,6 +152,9 @@ export function useMarkAllRead() {
     onSuccess: () => {
       resetNotifications();
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+    onError: () => {
+      toast.error("Failed to mark all notifications as read");
     },
   });
 }
