@@ -242,6 +242,7 @@ export interface ChatRoom {
   isActive: boolean;
   createdAt: string;
   chatMembers?: { count: number }[];
+  isMember?: boolean;
 }
 
 export interface ChatMessage {

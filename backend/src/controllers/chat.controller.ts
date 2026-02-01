@@ -89,6 +89,7 @@ export const chatController = {
   },
 
   async getRoom(req: AuthenticatedRequest, res: Response) {
+    const wallet = req.wallet;
     const { id } = req.params;
 
     const { data: room, error } = await supabase
@@ -101,7 +102,19 @@ export const chatController = {
       throw new AppError(404, 'NOT_FOUND', 'Room not found');
     }
 
-    res.json({ success: true, data: room });
+    // Check if the requesting user is a member
+    let isMember = false;
+    if (wallet) {
+      const { data: member } = await supabase
+        .from('chat_members')
+        .select('wallet')
+        .eq('room_id', id)
+        .eq('wallet', wallet)
+        .single();
+      isMember = Boolean(member);
+    }
+
+    res.json({ success: true, data: { ...room, is_member: isMember } });
   },
 
   async getMyRooms(req: AuthenticatedRequest, res: Response) {
