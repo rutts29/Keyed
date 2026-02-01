@@ -9,7 +9,7 @@ import {
 } from "@tanstack/react-query";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
-import { api } from "@/lib/api";
+import { api, transformKeys } from "@/lib/api";
 import { queryKeys } from "@/lib/queryClient";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
@@ -234,19 +234,20 @@ export function useChatRealtime(roomId: string) {
         config: { presence: { key: wallet } },
       })
       .on("broadcast", { event: "chat:message" }, (payload) => {
-        const msg = payload.payload;
+        const raw = payload.payload;
+        const msg = transformKeys(raw) as Record<string, unknown>;
         // Validate payload before treating as ChatMessage
         if (
           msg &&
           typeof msg === "object" &&
           typeof msg.id === "string" &&
           typeof msg.content === "string" &&
-          typeof msg.sender_wallet === "string" &&
-          typeof msg.room_id === "string"
+          typeof msg.senderWallet === "string" &&
+          typeof msg.roomId === "string"
         ) {
           // Avoid duplicating own messages (already added by mutation)
-          if (msg.sender_wallet !== wallet) {
-            appendMessage(msg as ChatMessage);
+          if (msg.senderWallet !== wallet) {
+            appendMessage(msg as unknown as ChatMessage);
           }
         }
       })

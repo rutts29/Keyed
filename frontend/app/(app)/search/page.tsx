@@ -84,7 +84,7 @@ function CreatorCard({ user }: { user: UserProfile }) {
               )}
             </div>
             <p className="text-xs text-muted-foreground truncate">
-              {user.followerCount.toLocaleString()} followers · {user.postCount} posts
+              {(user.followerCount ?? 0).toLocaleString()} {user.followerCount === 1 ? "follower" : "followers"} · {user.postCount ?? 0} {user.postCount === 1 ? "post" : "posts"}
             </p>
           </div>
           <Button variant="secondary" size="sm" className="shrink-0" asChild>
@@ -116,7 +116,7 @@ function TagCard({
               <span className="block truncate font-semibold text-foreground">#{tag}</span>
               {postCount !== undefined && (
                 <p className="text-xs text-muted-foreground">
-                  {postCount.toLocaleString()} posts
+                  {postCount.toLocaleString()} {postCount === 1 ? "post" : "posts"}
                 </p>
               )}
             </div>

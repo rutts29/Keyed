@@ -38,9 +38,9 @@ function getHref(notification: Notification): string {
     case "like":
     case "comment":
     case "new_post":
-      return notification.post_id ? `/post/${notification.post_id}` : "/app";
+      return notification.postId ? `/post/${notification.postId}` : "/app";
     case "follow":
-      return `/profile/${notification.from_wallet}`;
+      return `/profile/${notification.fromWallet}`;
     case "tip":
       return "/dashboard";
     case "airdrop_received":
@@ -63,8 +63,8 @@ export function NotificationItem({
   const action = actionText[notification.type] ?? "interacted with you";
   const href = getHref(notification);
   const displayName =
-    notification.from_user?.username ??
-    formatWallet(notification.from_wallet);
+    notification.fromUser?.username ??
+    formatWallet(notification.fromWallet);
 
   const handleClick = () => {
     if (!notification.read) {
@@ -95,7 +95,7 @@ export function NotificationItem({
               )}
             </p>
             <p className="text-xs text-muted-foreground">
-              {formatTimestamp(notification.created_at)}
+              {formatTimestamp(notification.createdAt)}
             </p>
           </div>
           {!notification.read && (

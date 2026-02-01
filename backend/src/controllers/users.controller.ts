@@ -98,7 +98,7 @@ export const usersController = {
 
   async createOrUpdateProfile(req: AuthenticatedRequest, res: Response) {
     const wallet = req.wallet!;
-    const { username, bio, profileImageUri } = req.body;
+    const { username, bio, profileImageUri, subscriptionPrice } = req.body;
 
     // Check if profile already exists in DB
     const { data: existingUser } = await supabase
@@ -127,13 +127,17 @@ export const usersController = {
     }
 
     // Upsert in database
-    const { error } = await supabase.from('users').upsert({
+    const upsertData: Record<string, unknown> = {
       wallet,
       username: username || existingUser?.username,
       bio: bio ?? existingUser?.bio ?? null,
       profile_image_uri: profileImageUri ?? existingUser?.profile_image_uri ?? null,
       last_synced: new Date().toISOString(),
-    });
+    };
+    if (subscriptionPrice !== undefined) {
+      upsertData.subscription_price = subscriptionPrice;
+    }
+    const { error } = await supabase.from('users').upsert(upsertData);
 
     if (error) {
       logger.error({ error, wallet }, 'Profile upsert failed');
@@ -367,7 +371,7 @@ export const usersController = {
     // Use created_at as a stable, unique cursor for pagination
     let query = supabase
       .from('users')
-      .select('wallet, username, bio, profile_image_uri, follower_count, following_count, post_count, created_at, is_verified')
+      .select('wallet, username, bio, profile_image_uri, follower_count, following_count, post_count, created_at, is_verified, subscription_price')
       .order('created_at', { ascending: false })
       .limit(limit);
 

@@ -18,6 +18,7 @@ export interface UserProfile {
   postCount: number;
   createdAt: string | null;
   isVerified: boolean;
+  subscriptionPrice: number | null;
 }
 
 export interface UserWithRelation extends UserProfile {
@@ -195,23 +196,23 @@ export interface PrivateTipRequest {
 export interface PrivateTipReceived {
   id: string;
   amount: number;
-  tx_signature: string;
-  post_id: string | null;
+  txSignature: string;
+  postId: string | null;
   timestamp: string;
 }
 
 export interface PrivateTipSent {
   signature: string;
-  to_wallet: string;
+  toWallet: string;
   amount: number;
-  post_id: string | null;
+  postId: string | null;
   timestamp: string;
   status: TransactionStatus;
 }
 
 export interface PrivacySettings {
   wallet: string;
-  default_private_tips: boolean;
+  defaultPrivateTips: boolean;
 }
 
 export interface PrivacyPoolInfo {
@@ -230,29 +231,29 @@ export type ChatGateType = "token" | "nft" | "both" | "open";
 
 export interface ChatRoom {
   id: string;
-  creator_wallet: string;
+  creatorWallet: string;
   name: string;
   description: string | null;
-  required_token: string | null;
-  minimum_balance: number;
-  required_nft_collection: string | null;
-  gate_type: ChatGateType;
-  max_members: number;
-  is_active: boolean;
-  created_at: string;
-  chat_members?: { count: number }[];
+  requiredToken: string | null;
+  minimumBalance: number;
+  requiredNftCollection: string | null;
+  gateType: ChatGateType;
+  maxMembers: number;
+  isActive: boolean;
+  createdAt: string;
+  chatMembers?: { count: number }[];
 }
 
 export interface ChatMessage {
   id: string;
-  room_id: string;
-  sender_wallet: string;
+  roomId: string;
+  senderWallet: string;
   content: string;
-  created_at: string;
+  createdAt: string;
   users?: {
     wallet: string;
     username: string | null;
-    profile_image_uri: string | null;
+    profileImageUri: string | null;
   };
 }
 
@@ -275,34 +276,34 @@ export type AirdropStatus =
 
 export interface AirdropCampaign {
   id: string;
-  creator_wallet: string;
+  creatorWallet: string;
   name: string;
   description: string | null;
   type: AirdropType;
-  token_mint: string | null;
-  amount_per_recipient: number | null;
-  metadata_uri: string | null;
-  collection_mint: string | null;
-  audience_type: AirdropAudienceType;
-  audience_filter: Record<string, unknown> | null;
+  tokenMint: string | null;
+  amountPerRecipient: number | null;
+  metadataUri: string | null;
+  collectionMint: string | null;
+  audienceType: AirdropAudienceType;
+  audienceFilter: Record<string, unknown> | null;
   status: AirdropStatus;
-  total_recipients: number;
-  successful_transfers: number;
-  failed_transfers: number;
-  escrow_pubkey: string | null;
-  fund_tx_signature: string | null;
-  created_at: string;
-  completed_at: string | null;
+  totalRecipients: number;
+  successfulTransfers: number;
+  failedTransfers: number;
+  escrowPubkey: string | null;
+  fundTxSignature: string | null;
+  createdAt: string;
+  completedAt: string | null;
 }
 
 export type AirdropRecipientStatus = "pending" | "sent" | "failed";
 
 export interface AirdropRecipient {
   id: string;
-  campaign_id: string;
+  campaignId: string;
   wallet: string;
   status: AirdropRecipientStatus;
-  tx_signature: string | null;
-  error_message: string | null;
-  created_at: string;
+  txSignature: string | null;
+  errorMessage: string | null;
+  createdAt: string;
 }

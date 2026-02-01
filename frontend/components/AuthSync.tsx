@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useSafeDynamicContext } from "@/hooks/useSafeDynamicContext";
 
 import { useAuth } from "@/hooks/useAuth";
+import { usePrefetchCore } from "@/hooks/usePrefetchCore";
 import { useAuthStore } from "@/store/authStore";
 
 export function AuthSync() {
@@ -14,7 +15,9 @@ export function AuthSync() {
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const setAuthReady = useAuthStore((state) => state.setAuthReady);
   const { login } = useAuth();
+  const prefetchCore = usePrefetchCore();
   const lastWalletRef = useRef<string | null>(null);
+  const prefetchedRef = useRef(false);
   const isAuthenticating = useRef(false);
 
   // Always sync wallet address from Dynamic context
@@ -42,6 +45,10 @@ export function AuthSync() {
 
     // Wallet is connected and we already have a token — session is valid
     if (token) {
+      if (!prefetchedRef.current) {
+        prefetchCore(primaryWallet.address);
+        prefetchedRef.current = true;
+      }
       setAuthReady();
       return;
     }
@@ -58,12 +65,18 @@ export function AuthSync() {
     lastWalletRef.current = primaryWallet.address;
     isAuthenticating.current = true;
 
-    login().catch(() => {
-      // Backend unavailable — wallet address is already stored above
-      setAuthReady();
-    }).finally(() => {
-      isAuthenticating.current = false;
-    });
+    login()
+      .then(() => {
+        prefetchCore(primaryWallet.address);
+        prefetchedRef.current = true;
+      })
+      .catch(() => {
+        // Backend unavailable — wallet address is already stored above
+        setAuthReady();
+      })
+      .finally(() => {
+        isAuthenticating.current = false;
+      });
   }, [clearAuth, login, primaryWallet, sdkHasLoaded, setAuthReady, token]);
 
   return null;

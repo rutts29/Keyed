@@ -26,16 +26,16 @@ export interface Notification {
   id: string;
   recipient: string;
   type: NotificationType;
-  from_wallet: string;
-  post_id: string | null;
-  comment_id: string | null;
+  fromWallet: string;
+  postId: string | null;
+  commentId: string | null;
   amount: number | null;
   read: boolean;
-  created_at: string;
-  from_user?: {
+  createdAt: string;
+  fromUser?: {
     wallet: string;
     username: string | null;
-    profile_image_uri: string | null;
+    profileImageUri: string | null;
   };
 }
 

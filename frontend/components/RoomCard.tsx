@@ -13,7 +13,7 @@ type RoomCardProps = {
 };
 
 export function RoomCard({ room }: RoomCardProps) {
-  const memberCount = room.chat_members?.[0]?.count ?? 0;
+  const memberCount = room.chatMembers?.[0]?.count ?? 0;
 
   return (
     <Link href={`/rooms/${room.id}`}>
@@ -30,15 +30,15 @@ export function RoomCard({ room }: RoomCardProps) {
                 </p>
               )}
             </div>
-            <RoomGateBadge gateType={room.gate_type} />
+            <RoomGateBadge gateType={room.gateType} />
           </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <Users className="h-3 w-3" />
               {memberCount}
             </span>
-            <span>{formatWallet(room.creator_wallet, 4)}</span>
-            <span>{formatTimestamp(room.created_at)}</span>
+            <span>{formatWallet(room.creatorWallet, 4)}</span>
+            <span>{formatTimestamp(room.createdAt)}</span>
           </div>
         </CardContent>
       </Card>

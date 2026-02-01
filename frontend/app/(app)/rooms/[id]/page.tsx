@@ -24,8 +24,8 @@ export default function RoomPage({ params }: RoomPageProps) {
   const { mutateAsync: leaveRoom, isPending: isLeaving } =
     useLeaveRoom(roomId);
 
-  const memberCount = room?.chat_members?.[0]?.count ?? 0;
-  const isCreator = room?.creator_wallet === wallet;
+  const memberCount = room?.chatMembers?.[0]?.count ?? 0;
+  const isCreator = room?.creatorWallet === wallet;
 
   // Check if current user is a member (simple heuristic: if we can load messages, we're in)
   // The actual membership is enforced server-side on message load
@@ -93,7 +93,7 @@ export default function RoomPage({ params }: RoomPageProps) {
               <h1 className="text-sm font-semibold text-foreground">
                 {room.name}
               </h1>
-              <RoomGateBadge gateType={room.gate_type} />
+              <RoomGateBadge gateType={room.gateType} />
             </div>
             <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
               <Users className="h-3 w-3" />

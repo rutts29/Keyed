@@ -57,7 +57,7 @@ export function TrendingPanel() {
                 <TrendIcon trend={topic.trend} />
               </div>
               <p className="text-xs text-muted-foreground pl-5">
-                {`${formatCompactCount(topic.postCount)} posts`}
+                {`${formatCompactCount(topic.postCount)} ${topic.postCount === 1 ? "post" : "posts"}`}
               </p>
             </Link>
           ))}

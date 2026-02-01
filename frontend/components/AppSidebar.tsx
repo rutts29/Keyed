@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useSafeDynamicContext } from "@/hooks/useSafeDynamicContext";
 
 import { PrivacyBalance } from "@/components/PrivacyBalance";
@@ -44,7 +44,6 @@ const navItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const { handleLogOut } = useSafeDynamicContext();
   const wallet = useAuthStore((state) => state.wallet);
   const clearAuth = useAuthStore((state) => state.clearAuth);
@@ -58,7 +57,7 @@ export function AppSidebar() {
       // Ignore logout errors
     }
     clearAuth();
-    router.push("/");
+    window.location.href = "/";
   };
 
   return (
@@ -119,36 +118,36 @@ export function AppSidebar() {
           <Link href="/create">Post update</Link>
         </Button>
       </div>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left"
-          >
-            <div className="flex items-center gap-3">
-              <Avatar className="h-9 w-9">
-                <AvatarFallback>
-                  {wallet ? wallet.slice(0, 2).toUpperCase() : "KD"}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="text-sm font-medium text-foreground">
-                  {wallet ? `${wallet.slice(0, 4)}...${wallet.slice(-4)}` : "Keyed Labs"}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {wallet ? "Connected" : "@keyed"}
-                </p>
+      {wallet ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left"
+            >
+              <div className="flex items-center gap-3">
+                <Avatar className="h-9 w-9">
+                  <AvatarFallback>
+                    {wallet.slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {`${wallet.slice(0, 4)}...${wallet.slice(-4)}`}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Connected</p>
+                </div>
               </div>
-            </div>
-            <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-44">
-          <DropdownMenuItem onClick={handleSignOut}>
-            Sign out
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+              <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuItem onClick={handleSignOut}>
+              Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : null}
     </div>
   );
 }

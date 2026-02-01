@@ -32,7 +32,7 @@ export default function CampaignDetailPage({ params }: CampaignPageProps) {
   const { mutateAsync: cancelCampaign, isPending: isCancelling } =
     useCancelCampaign(id);
 
-  const isCreator = campaign?.creator_wallet === wallet;
+  const isCreator = campaign?.creatorWallet === wallet;
 
   const handleStart = async () => {
     try {
@@ -79,9 +79,9 @@ export default function CampaignDetailPage({ params }: CampaignPageProps) {
 
   const status = statusConfig[campaign.status];
   const pending =
-    campaign.total_recipients -
-    campaign.successful_transfers -
-    campaign.failed_transfers;
+    campaign.totalRecipients -
+    campaign.successfulTransfers -
+    campaign.failedTransfers;
 
   return (
     <div className="space-y-5">
@@ -113,9 +113,9 @@ export default function CampaignDetailPage({ params }: CampaignPageProps) {
         <Card className="border-border/70 bg-card/70">
           <CardContent className="p-4">
             <AirdropProgress
-              total={campaign.total_recipients}
-              sent={campaign.successful_transfers}
-              failed={campaign.failed_transfers}
+              total={campaign.totalRecipients}
+              sent={campaign.successfulTransfers}
+              failed={campaign.failedTransfers}
               pending={pending}
             />
           </CardContent>
@@ -137,48 +137,48 @@ export default function CampaignDetailPage({ params }: CampaignPageProps) {
             <div className="flex justify-between">
               <span className="text-muted-foreground">Audience</span>
               <span className="text-foreground capitalize">
-                {campaign.audience_type.replaceAll("_", " ")}
+                {campaign.audienceType.replaceAll("_", " ")}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Recipients</span>
               <span className="text-foreground">
-                {campaign.total_recipients}
+                {campaign.totalRecipients}
               </span>
             </div>
-            {campaign.token_mint && (
+            {campaign.tokenMint && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Token</span>
                 <span className="text-foreground font-mono text-xs">
-                  {formatWallet(campaign.token_mint, 6)}
+                  {formatWallet(campaign.tokenMint, 6)}
                 </span>
               </div>
             )}
-            {campaign.amount_per_recipient && (
+            {campaign.amountPerRecipient && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Amount each</span>
                 <span className="text-foreground">
-                  {campaign.amount_per_recipient}
+                  {campaign.amountPerRecipient}
                 </span>
               </div>
             )}
             <div className="flex justify-between">
               <span className="text-muted-foreground">Creator</span>
               <span className="text-foreground font-mono text-xs">
-                {formatWallet(campaign.creator_wallet, 6)}
+                {formatWallet(campaign.creatorWallet, 6)}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Created</span>
               <span className="text-foreground">
-                {formatTimestamp(campaign.created_at)}
+                {formatTimestamp(campaign.createdAt)}
               </span>
             </div>
-            {campaign.completed_at && (
+            {campaign.completedAt && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Completed</span>
                 <span className="text-foreground">
-                  {formatTimestamp(campaign.completed_at)}
+                  {formatTimestamp(campaign.completedAt)}
                 </span>
               </div>
             )}

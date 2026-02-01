@@ -99,4 +99,5 @@ FIX_REVIEW_REPORT.md
 # ============================================
 .cursor/
 .claude/
+.agents/
 .worktrees/

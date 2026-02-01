@@ -44,20 +44,20 @@ export function AirdropCard({ campaign }: AirdropCardProps) {
 
           {(campaign.status === "processing" || campaign.status === "completed") && (
             <AirdropProgress
-              total={campaign.total_recipients}
-              sent={campaign.successful_transfers}
-              failed={campaign.failed_transfers}
+              total={campaign.totalRecipients}
+              sent={campaign.successfulTransfers}
+              failed={campaign.failedTransfers}
               pending={
-                campaign.total_recipients -
-                campaign.successful_transfers -
-                campaign.failed_transfers
+                campaign.totalRecipients -
+                campaign.successfulTransfers -
+                campaign.failedTransfers
               }
             />
           )}
 
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <span>{campaign.total_recipients} recipients</span>
-            <span>{formatTimestamp(campaign.created_at)}</span>
+            <span>{campaign.totalRecipients} recipients</span>
+            <span>{formatTimestamp(campaign.createdAt)}</span>
           </div>
         </CardContent>
       </Card>

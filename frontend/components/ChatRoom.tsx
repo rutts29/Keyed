@@ -120,7 +120,7 @@ export function ChatRoomView({ roomId }: ChatRoomProps) {
           <ChatMessageBubble
             key={msg.id}
             message={msg}
-            isOwnMessage={msg.sender_wallet === wallet}
+            isOwnMessage={msg.senderWallet === wallet}
           />
         ))}
 
