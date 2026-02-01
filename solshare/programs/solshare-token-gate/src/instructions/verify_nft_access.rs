@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::TokenAccount;
+use mpl_token_metadata::accounts::Metadata;
 use crate::state::{AccessControl, AccessVerification};
 use crate::error::TokenGateError;
 use crate::events::AccessVerified;
@@ -29,7 +30,10 @@ pub struct VerifyNftAccess<'info> {
     
     /// CHECK: NFT mint account - verified by token account mint check
     pub nft_mint: AccountInfo<'info>,
-    
+
+    /// CHECK: Metaplex metadata account — validated via PDA derivation and deserialization in handler
+    pub nft_metadata: AccountInfo<'info>,
+
     #[account(mut)]
     pub user: Signer<'info>,
     
@@ -63,10 +67,37 @@ pub fn handler(ctx: Context<VerifyNftAccess>) -> Result<()> {
         TokenGateError::NftNotOwned
     );
 
-    // Note: In production, you would verify the NFT's collection metadata
-    // using the Metaplex metadata program. For this implementation,
-    // we verify the user holds an NFT and trust the frontend/backend
-    // to pass correct NFT mints from the required collection.
+    // Verify Metaplex metadata PDA derivation
+    let metadata_program_id = mpl_token_metadata::ID;
+    let (expected_metadata_key, _) = Pubkey::find_program_address(
+        &[
+            b"metadata",
+            metadata_program_id.as_ref(),
+            ctx.accounts.nft_mint.key().as_ref(),
+        ],
+        &metadata_program_id,
+    );
+    require!(
+        ctx.accounts.nft_metadata.key() == expected_metadata_key,
+        TokenGateError::InvalidNftCollection
+    );
+
+    // Deserialize metadata and verify NFT belongs to required collection
+    let metadata = Metadata::safe_deserialize(&ctx.accounts.nft_metadata.data.borrow())
+        .map_err(|_| error!(TokenGateError::InvalidNftCollection))?;
+
+    let required_collection = access_control
+        .required_nft_collection
+        .ok_or(error!(TokenGateError::NftCollectionRequired))?;
+
+    let collection = metadata
+        .collection
+        .ok_or(error!(TokenGateError::InvalidNftCollection))?;
+
+    require!(
+        collection.key == required_collection && collection.verified,
+        TokenGateError::InvalidNftCollection
+    );
 
     verification.user = ctx.accounts.user.key();
     verification.post = access_control.post;

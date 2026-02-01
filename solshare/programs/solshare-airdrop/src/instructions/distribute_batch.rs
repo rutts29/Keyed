@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_lang::AccountDeserialize;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer};
 
 use crate::state::{CampaignState, CampaignStatus};
@@ -61,11 +62,20 @@ pub fn handler<'info>(
     let mut distributed_this_batch: u64 = 0;
 
     for i in 0..recipient_count as usize {
-        let recipient_ata = &ctx.remaining_accounts[i];
+        let recipient_ata_info = &ctx.remaining_accounts[i];
+
+        // Validate recipient ATA has correct mint
+        let recipient_ata_data = TokenAccount::try_deserialize(
+            &mut &recipient_ata_info.data.borrow()[..]
+        ).map_err(|_| AirdropError::InvalidRecipientMint)?;
+        require!(
+            recipient_ata_data.mint == campaign.token_mint,
+            AirdropError::InvalidRecipientMint
+        );
 
         let cpi_accounts = Transfer {
             from: ctx.accounts.escrow_ata.to_account_info(),
-            to: recipient_ata.to_account_info(),
+            to: recipient_ata_info.to_account_info(),
             authority: ctx.accounts.campaign.to_account_info(),
         };
         let cpi_ctx = CpiContext::new_with_signer(

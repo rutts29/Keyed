@@ -32,7 +32,8 @@ pub struct UnfollowUser<'info> {
     #[account(mut)]
     pub follower: Signer<'info>,
     
-    /// CHECK: We only need this for authority constraint
+    /// CHECK: Authority pubkey — constrained by has_one = authority on follower_profile.
+    /// This ensures authority matches the profile's stored authority field.
     pub authority: AccountInfo<'info>,
 }
 

@@ -6,7 +6,7 @@ pub mod state;
 use anchor_lang::prelude::*;
 use instructions::*;
 
-declare_id!("AirD1111111111111111111111111111111111111111");
+declare_id!("BDz31MWVhr9GHkQq3q8BL4Sp2tcEWqoss2zjNz5dhZKw");
 
 #[program]
 pub mod solshare_airdrop {
@@ -16,9 +16,10 @@ pub mod solshare_airdrop {
         ctx: Context<CreateCampaign>,
         campaign_id: [u8; 16],
         amount_per_recipient: u64,
+        total_recipients: u32,
         crank_authority: Pubkey,
     ) -> Result<()> {
-        create_campaign::handler(ctx, campaign_id, amount_per_recipient, crank_authority)
+        create_campaign::handler(ctx, campaign_id, amount_per_recipient, total_recipients, crank_authority)
     }
 
     pub fn fund_campaign(ctx: Context<FundCampaign>, amount: u64) -> Result<()> {

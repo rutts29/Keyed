@@ -30,4 +30,6 @@ pub enum SocialError {
     Unauthorized,
     #[msg("Username cannot be empty")]
     UsernameEmpty,
+    #[msg("Arithmetic overflow")]
+    ArithmeticOverflow,
 }

@@ -30,21 +30,11 @@ pub struct Subscribe<'info> {
     
     #[account(mut)]
     pub subscriber: Signer<'info>,
-    
-    /// Creator wallet to receive subscription payment
-    /// SECURITY: This MUST be validated against creator_vault.creator to prevent
-    /// subscription payments from being sent to an attacker's wallet while
-    /// crediting a different vault
-    #[account(
-        mut,
-        address = creator_vault.creator @ PaymentError::InvalidCreatorAccount
-    )]
-    pub creator: SystemAccount<'info>,
-    
-    /// CHECK: Fee recipient
+
+    /// CHECK: Fee recipient — validated against platform config
     #[account(mut, address = config.fee_recipient)]
     pub fee_recipient: AccountInfo<'info>,
-    
+
     pub system_program: Program<'info, System>,
 }
 
@@ -56,8 +46,6 @@ pub fn handler(ctx: Context<Subscribe>, amount_per_month: u64) -> Result<()> {
     );
 
     let config = &ctx.accounts.config;
-    let vault = &mut ctx.accounts.creator_vault;
-    let subscription = &mut ctx.accounts.subscription;
     let clock = Clock::get()?;
 
     let fee = amount_per_month
@@ -65,7 +53,7 @@ pub fn handler(ctx: Context<Subscribe>, amount_per_month: u64) -> Result<()> {
         .ok_or(PaymentError::ArithmeticOverflow)?
         .checked_div(10000)
         .ok_or(PaymentError::ArithmeticOverflow)?;
-    
+
     let creator_amount = amount_per_month.checked_sub(fee).ok_or(PaymentError::ArithmeticOverflow)?;
 
     // Transfer first month's fee
@@ -82,23 +70,26 @@ pub fn handler(ctx: Context<Subscribe>, amount_per_month: u64) -> Result<()> {
         )?;
     }
 
-    // Transfer first month's payment to creator
+    // Transfer first month's payment to creator vault (escrow)
     transfer(
         CpiContext::new(
             ctx.accounts.system_program.to_account_info(),
             Transfer {
                 from: ctx.accounts.subscriber.to_account_info(),
-                to: ctx.accounts.creator.to_account_info(),
+                to: ctx.accounts.creator_vault.to_account_info(),
             },
         ),
         creator_amount,
     )?;
 
+    // Update vault stats after transfers are complete
+    let vault = &mut ctx.accounts.creator_vault;
     vault.total_earned = vault.total_earned
         .checked_add(creator_amount)
         .ok_or(PaymentError::ArithmeticOverflow)?;
     vault.subscribers = vault.subscribers.checked_add(1).ok_or(PaymentError::ArithmeticOverflow)?;
 
+    let subscription = &mut ctx.accounts.subscription;
     subscription.subscriber = ctx.accounts.subscriber.key();
     subscription.creator = vault.creator;
     subscription.amount_per_month = amount_per_month;

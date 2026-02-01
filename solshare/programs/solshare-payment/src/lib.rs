@@ -6,7 +6,7 @@ pub mod state;
 use anchor_lang::prelude::*;
 use instructions::*;
 
-declare_id!("H5FgabhipaFijiP2HQxtsDd1papEtC9rvvQANsm1fc8t");
+declare_id!("8ABx4UuH35a3V6VPyg5BmjkZVn7YYJq2a7VeCjdpWuzM");
 
 #[program]
 pub mod solshare_payment {

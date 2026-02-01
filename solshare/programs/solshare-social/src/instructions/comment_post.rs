@@ -37,7 +37,7 @@ pub fn handler(ctx: Context<CommentPost>, comment_text: String) -> Result<()> {
     comment.comment_index = post.comments;
     comment.bump = ctx.bumps.comment;
 
-    post.comments = post.comments.checked_add(1).unwrap();
+    post.comments = post.comments.checked_add(1).ok_or(SocialError::ArithmeticOverflow)?;
 
     emit!(PostCommented {
         post: post.key(),

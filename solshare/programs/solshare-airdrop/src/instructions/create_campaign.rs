@@ -6,7 +6,7 @@ use crate::state::{CampaignState, CampaignStatus};
 use crate::events::CampaignCreated;
 
 #[derive(Accounts)]
-#[instruction(campaign_id: [u8; 16], amount_per_recipient: u64, crank_authority: Pubkey)]
+#[instruction(campaign_id: [u8; 16], amount_per_recipient: u64, total_recipients: u32, crank_authority: Pubkey)]
 pub struct CreateCampaign<'info> {
     #[account(mut)]
     pub creator: Signer<'info>,
@@ -39,6 +39,7 @@ pub fn handler(
     ctx: Context<CreateCampaign>,
     campaign_id: [u8; 16],
     amount_per_recipient: u64,
+    total_recipients: u32,
     crank_authority: Pubkey,
 ) -> Result<()> {
     let campaign = &mut ctx.accounts.campaign;
@@ -49,7 +50,7 @@ pub fn handler(
     campaign.amount_per_recipient = amount_per_recipient;
     campaign.total_amount = 0;
     campaign.distributed_amount = 0;
-    campaign.total_recipients = 0;
+    campaign.total_recipients = total_recipients;
     campaign.distributed_count = 0;
     campaign.status = CampaignStatus::Draft;
     campaign.crank_authority = crank_authority;

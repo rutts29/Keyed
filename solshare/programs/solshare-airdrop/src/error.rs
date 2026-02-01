@@ -14,4 +14,6 @@ pub enum AirdropError {
     AlreadyCompleted,
     #[msg("Arithmetic overflow")]
     Overflow,
+    #[msg("Recipient ATA has incorrect mint")]
+    InvalidRecipientMint,
 }

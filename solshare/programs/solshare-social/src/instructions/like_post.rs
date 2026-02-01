@@ -35,7 +35,7 @@ pub fn handler(ctx: Context<LikePost>) -> Result<()> {
     like.timestamp = clock.unix_timestamp;
     like.bump = ctx.bumps.like;
 
-    post.likes = post.likes.checked_add(1).unwrap();
+    post.likes = post.likes.checked_add(1).ok_or(SocialError::ArithmeticOverflow)?;
 
     emit!(PostLiked {
         post: post.key(),

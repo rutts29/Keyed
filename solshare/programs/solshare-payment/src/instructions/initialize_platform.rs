@@ -17,7 +17,9 @@ pub struct InitializePlatform<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
     
-    /// CHECK: Fee recipient wallet
+    /// CHECK: Fee recipient wallet address — intentionally unconstrained.
+    /// The platform authority (signer) chooses where fees are sent.
+    /// This is set once during initialization and stored in PlatformConfig.
     pub fee_recipient: AccountInfo<'info>,
     
     pub system_program: Program<'info, System>,

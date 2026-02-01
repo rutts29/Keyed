@@ -56,7 +56,7 @@ pub fn handler(
     post.post_index = profile.post_count;
     post.bump = ctx.bumps.post;
 
-    profile.post_count = profile.post_count.checked_add(1).unwrap();
+    profile.post_count = profile.post_count.checked_add(1).ok_or(SocialError::ArithmeticOverflow)?;
 
     emit!(PostCreated {
         post: post.key(),

@@ -6,7 +6,7 @@ pub mod state;
 use anchor_lang::prelude::*;
 use instructions::*;
 
-declare_id!("EXVqoivgZKebHm8VeQNBEFYZLRjJ61ZWNieXg3Npy4Hi");
+declare_id!("EeK73A5QDEmBCGVntKgRNYEtPRbKCkHAi2yfBLuMTQAz");
 
 #[program]
 pub mod solshare_token_gate {
@@ -18,8 +18,9 @@ pub mod solshare_token_gate {
         required_token: Option<Pubkey>,
         minimum_balance: u64,
         required_nft_collection: Option<Pubkey>,
+        post_index: u64,
     ) -> Result<()> {
-        set_access_requirements::handler(ctx, post, required_token, minimum_balance, required_nft_collection)
+        set_access_requirements::handler(ctx, post, required_token, minimum_balance, required_nft_collection, post_index)
     }
 
     pub fn verify_token_access(ctx: Context<VerifyTokenAccess>) -> Result<()> {

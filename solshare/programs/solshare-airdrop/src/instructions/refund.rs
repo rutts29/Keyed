@@ -13,7 +13,7 @@ pub struct Refund<'info> {
     #[account(
         mut,
         has_one = creator,
-        constraint = campaign.status != CampaignStatus::Completed @ AirdropError::AlreadyCompleted,
+        constraint = campaign.status != CampaignStatus::Cancelled @ AirdropError::AlreadyCompleted,
     )]
     pub campaign: Account<'info, CampaignState>,
 

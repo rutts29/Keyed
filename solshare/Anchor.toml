@@ -6,16 +6,16 @@ resolution = true
 skip-lint = false
 
 [programs.devnet]
-solshare_payment = "H5FgabhipaFijiP2HQxtsDd1papEtC9rvvQANsm1fc8t"
-solshare_social = "G2USoTtbNw78NYvPJSeuYVZQS9oVQNLrLE5zJb7wsM3L"
-solshare_token_gate = "EXVqoivgZKebHm8VeQNBEFYZLRjJ61ZWNieXg3Npy4Hi"
-solshare_airdrop = "AirD1111111111111111111111111111111111111111"
+solshare_airdrop = "BDz31MWVhr9GHkQq3q8BL4Sp2tcEWqoss2zjNz5dhZKw"
+solshare_payment = "8ABx4UuH35a3V6VPyg5BmjkZVn7YYJq2a7VeCjdpWuzM"
+solshare_social = "sGLNkcQKvfTVYvhJX8KVo4RrzEZL32UTo8ruwpFEHmG"
+solshare_token_gate = "EeK73A5QDEmBCGVntKgRNYEtPRbKCkHAi2yfBLuMTQAz"
 
 [programs.localnet]
-solshare_payment = "H5FgabhipaFijiP2HQxtsDd1papEtC9rvvQANsm1fc8t"
-solshare_social = "G2USoTtbNw78NYvPJSeuYVZQS9oVQNLrLE5zJb7wsM3L"
-solshare_token_gate = "EXVqoivgZKebHm8VeQNBEFYZLRjJ61ZWNieXg3Npy4Hi"
-solshare_airdrop = "AirD1111111111111111111111111111111111111111"
+solshare_airdrop = "BDz31MWVhr9GHkQq3q8BL4Sp2tcEWqoss2zjNz5dhZKw"
+solshare_payment = "8ABx4UuH35a3V6VPyg5BmjkZVn7YYJq2a7VeCjdpWuzM"
+solshare_social = "sGLNkcQKvfTVYvhJX8KVo4RrzEZL32UTo8ruwpFEHmG"
+solshare_token_gate = "EeK73A5QDEmBCGVntKgRNYEtPRbKCkHAi2yfBLuMTQAz"
 
 [registry]
 url = "https://api.apr.dev"
@@ -26,5 +26,3 @@ wallet = "~/.config/solana/id.json"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
-
-[hooks]

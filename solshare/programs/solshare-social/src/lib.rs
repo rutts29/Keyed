@@ -7,7 +7,7 @@ use anchor_lang::prelude::*;
 use instructions::*;
 use state::ContentType;
 
-declare_id!("G2USoTtbNw78NYvPJSeuYVZQS9oVQNLrLE5zJb7wsM3L");
+declare_id!("sGLNkcQKvfTVYvhJX8KVo4RrzEZL32UTo8ruwpFEHmG");
 
 #[program]
 pub mod solshare_social {

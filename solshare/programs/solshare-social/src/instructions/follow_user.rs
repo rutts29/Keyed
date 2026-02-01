@@ -32,7 +32,8 @@ pub struct FollowUser<'info> {
     #[account(mut)]
     pub follower: Signer<'info>,
     
-    /// CHECK: We only need this for authority constraint
+    /// CHECK: Authority pubkey — constrained by has_one = authority on follower_profile.
+    /// This ensures authority matches the profile's stored authority field.
     pub authority: AccountInfo<'info>,
     
     pub system_program: Program<'info, System>,
@@ -54,8 +55,8 @@ pub fn handler(ctx: Context<FollowUser>) -> Result<()> {
     follow.timestamp = clock.unix_timestamp;
     follow.bump = ctx.bumps.follow;
 
-    follower_profile.following_count = follower_profile.following_count.checked_add(1).unwrap();
-    following_profile.follower_count = following_profile.follower_count.checked_add(1).unwrap();
+    follower_profile.following_count = follower_profile.following_count.checked_add(1).ok_or(SocialError::ArithmeticOverflow)?;
+    following_profile.follower_count = following_profile.follower_count.checked_add(1).ok_or(SocialError::ArithmeticOverflow)?;
 
     emit!(UserFollowed {
         follower: follower_key,

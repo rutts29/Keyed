@@ -31,20 +31,11 @@ pub struct TipCreator<'info> {
     
     #[account(mut)]
     pub tipper: Signer<'info>,
-    
-    /// Creator wallet to receive tip
-    /// SECURITY: This MUST be validated against creator_vault.creator to prevent
-    /// funds from being sent to an attacker's wallet while crediting a different vault
-    #[account(
-        mut,
-        address = creator_vault.creator @ PaymentError::InvalidCreatorAccount
-    )]
-    pub creator: SystemAccount<'info>,
-    
-    /// CHECK: Fee recipient
+
+    /// CHECK: Fee recipient — validated against platform config
     #[account(mut, address = config.fee_recipient)]
     pub fee_recipient: AccountInfo<'info>,
-    
+
     pub system_program: Program<'info, System>,
 }
 
@@ -56,8 +47,6 @@ pub fn handler(ctx: Context<TipCreator>, amount: u64, post: Option<Pubkey>, _tip
     );
 
     let config = &ctx.accounts.config;
-    let vault = &mut ctx.accounts.creator_vault;
-    let tip_record = &mut ctx.accounts.tip_record;
     let clock = Clock::get()?;
 
     let fee = amount
@@ -65,7 +54,7 @@ pub fn handler(ctx: Context<TipCreator>, amount: u64, post: Option<Pubkey>, _tip
         .ok_or(PaymentError::ArithmeticOverflow)?
         .checked_div(10000)
         .ok_or(PaymentError::ArithmeticOverflow)?;
-    
+
     let creator_amount = amount.checked_sub(fee).ok_or(PaymentError::ArithmeticOverflow)?;
 
     // Transfer fee to platform
@@ -82,28 +71,28 @@ pub fn handler(ctx: Context<TipCreator>, amount: u64, post: Option<Pubkey>, _tip
         )?;
     }
 
-    // Transfer to creator
+    // Transfer to creator vault (escrow)
     transfer(
         CpiContext::new(
             ctx.accounts.system_program.to_account_info(),
             Transfer {
                 from: ctx.accounts.tipper.to_account_info(),
-                to: ctx.accounts.creator.to_account_info(),
+                to: ctx.accounts.creator_vault.to_account_info(),
             },
         ),
         creator_amount,
     )?;
 
-    // Update vault stats - tracks net amount received by creator
+    // Update vault stats after transfers are complete
+    let vault = &mut ctx.accounts.creator_vault;
     vault.total_earned = vault.total_earned
         .checked_add(creator_amount)
         .ok_or(PaymentError::ArithmeticOverflow)?;
 
-    // Record tip with net amount (after fee) for consistency with vault accounting
-    // Note: The TipSent event below includes both gross amount and fee for full audit trail
+    let tip_record = &mut ctx.accounts.tip_record;
     tip_record.from = ctx.accounts.tipper.key();
     tip_record.to = vault.creator;
-    tip_record.amount = creator_amount;  // Store net amount to match vault.total_earned
+    tip_record.amount = creator_amount;
     tip_record.post = post;
     tip_record.timestamp = clock.unix_timestamp;
     tip_record.bump = ctx.bumps.tip_record;
