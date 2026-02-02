@@ -6,7 +6,6 @@ import { useSignedMutation } from "./useSignedMutation"
 
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/queryClient"
-import { solToLamports } from "@/lib/solana"
 import { useAuthStore } from "@/store/authStore"
 import type { ApiResponse, CreatorVault, Transaction, TransactionResponse } from "@/types"
 
@@ -26,10 +25,10 @@ export function useTip() {
     mutationFn: ({ creatorWallet, amountInSol, postId }) =>
       api.post<ApiResponse<TransactionResponse>>("/payments/tip", {
         creatorWallet,
-        amount: solToLamports(amountInSol),
+        amount: amountInSol,
         postId,
       }),
-    invalidateKeys: [queryKeys.earnings()],
+    invalidateKeys: [queryKeys.earnings(), queryKeys.walletBalance()],
   })
 }
 
@@ -41,9 +40,9 @@ export function useSubscribe() {
     mutationFn: ({ creatorWallet, amountInSol }) =>
       api.post<ApiResponse<TransactionResponse>>("/payments/subscribe", {
         creatorWallet,
-        amountPerMonth: solToLamports(amountInSol),
+        amountPerMonth: amountInSol,
       }),
-    invalidateKeys: [queryKeys.earnings()],
+    invalidateKeys: [queryKeys.earnings(), queryKeys.walletBalance()],
   })
 }
 
@@ -53,7 +52,7 @@ export function useCancelSubscription(creatorWallet: string) {
       api.delete<ApiResponse<TransactionResponse>>(
         `/payments/subscribe/${creatorWallet}`
       ),
-    invalidateKeys: [queryKeys.earnings()],
+    invalidateKeys: [queryKeys.earnings(), queryKeys.walletBalance()],
   })
 }
 
@@ -61,9 +60,9 @@ export function useWithdrawEarnings() {
   return useSignedMutation<number>({
     mutationFn: (amountInSol) =>
       api.post<ApiResponse<TransactionResponse>>("/payments/withdraw", {
-        amount: solToLamports(amountInSol),
+        amount: amountInSol,
       }),
-    invalidateKeys: [queryKeys.vault(), queryKeys.earnings()],
+    invalidateKeys: [queryKeys.vault(), queryKeys.earnings(), queryKeys.walletBalance()],
   })
 }
 

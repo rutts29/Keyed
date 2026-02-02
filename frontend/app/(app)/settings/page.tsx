@@ -60,6 +60,7 @@ export default function SettingsPage() {
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
   const [profileImageUri, setProfileImageUri] = useState("");
+  const [subscriptionPrice, setSubscriptionPrice] = useState("");
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -82,31 +83,40 @@ export default function SettingsPage() {
       setUsername(profileData.username ?? "");
       setBio(profileData.bio ?? "");
       setProfileImageUri(profileData.profileImageUri ?? "");
+      setSubscriptionPrice(
+        profileData.subscriptionPrice != null
+          ? profileData.subscriptionPrice.toString()
+          : ""
+      );
     }
   }, [profileData]);
 
   // Initialize privacy settings
   useEffect(() => {
     if (privacySettingsData) {
-      setDefaultPrivateTips(privacySettingsData.default_private_tips);
+      setDefaultPrivateTips(privacySettingsData.defaultPrivateTips);
     }
   }, [privacySettingsData]);
 
   // Check if profile has unsaved changes
   const hasProfileChanges = useMemo(() => {
     if (!profileData) return false;
+    const currentPrice = profileData.subscriptionPrice != null
+      ? profileData.subscriptionPrice.toString()
+      : "";
     return (
       username !== (profileData.username ?? "") ||
       bio !== (profileData.bio ?? "") ||
       profileImageUri !== (profileData.profileImageUri ?? "") ||
-      avatarFile !== null
+      avatarFile !== null ||
+      subscriptionPrice !== currentPrice
     );
-  }, [profileData, username, bio, profileImageUri, avatarFile]);
+  }, [profileData, username, bio, profileImageUri, avatarFile, subscriptionPrice]);
 
   // Check if privacy settings have unsaved changes
   const hasPrivacyChanges = useMemo(() => {
     if (!privacySettingsData) return false;
-    return defaultPrivateTips !== privacySettingsData.default_private_tips;
+    return defaultPrivateTips !== privacySettingsData.defaultPrivateTips;
   }, [privacySettingsData, defaultPrivateTips]);
 
   // Handle username change with validation
@@ -203,10 +213,18 @@ export default function SettingsPage() {
       }
 
       // Build payload, omitting empty/null fields so Zod validation passes
-      const payload: Record<string, string> = {};
+      const payload: Record<string, unknown> = {};
       if (username) payload.username = username;
       if (bio) payload.bio = bio;
       if (finalImageUri) payload.profileImageUri = finalImageUri;
+      if (subscriptionPrice !== "") {
+        const price = Number.parseFloat(subscriptionPrice);
+        if (!Number.isNaN(price) && price >= 0) {
+          payload.subscriptionPrice = price;
+        }
+      } else {
+        payload.subscriptionPrice = null;
+      }
 
       await api.post("/users/profile", payload);
       toast.success("Profile updated successfully");
@@ -410,6 +428,25 @@ export default function SettingsPage() {
                 </p>
               </div>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="subscription-price" className="text-sm text-muted-foreground">
+              Monthly Subscription Price (SOL)
+            </Label>
+            <Input
+              id="subscription-price"
+              type="number"
+              min="0"
+              step="0.1"
+              placeholder="e.g. 1.5 — leave empty to disable subscriptions"
+              value={subscriptionPrice}
+              onChange={(e) => setSubscriptionPrice(e.target.value)}
+              disabled={isLoadingProfile || isSavingProfile}
+            />
+            <p className="text-xs text-muted-foreground">
+              Set the price fans pay to subscribe monthly. Leave empty to disable.
+            </p>
           </div>
 
           <div className="flex justify-end">

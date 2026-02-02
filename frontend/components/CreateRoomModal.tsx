@@ -57,6 +57,11 @@ export function CreateRoomModal() {
       return;
     }
 
+    if (!description.trim()) {
+      toast.error("Add a short description so people know what this room is about");
+      return;
+    }
+
     try {
       await createRoom({
         name: name.trim(),
@@ -104,12 +109,13 @@ export function CreateRoomModal() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="room-desc">Description (optional)</Label>
+            <Label htmlFor="room-desc">Description</Label>
             <Textarea
               id="room-desc"
-              placeholder="What is this room about?"
+              placeholder="A short description so people know what this room is about"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              maxLength={200}
               className="min-h-[72px]"
             />
           </div>
@@ -170,7 +176,7 @@ export function CreateRoomModal() {
             <Button variant="secondary" onClick={handleClose}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit} disabled={isPending || !name.trim()}>
+            <Button onClick={handleSubmit} disabled={isPending || !name.trim() || !description.trim()}>
               {isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

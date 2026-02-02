@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SolShare",
-  description: "Social layer for creators on Solana.",
+  title: "Keyed",
+  description: "The minimal, premium home for Solana creators.",
 };
 
 export default function RootLayout({

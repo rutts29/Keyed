@@ -89,8 +89,15 @@ frontend/playwright-report
 cursor\ transcripts/
 
 # ============================================
+# Technical Specs (local only)
+# ============================================
+FRONTEND_SPEC.md
+FIX_REVIEW_REPORT.md
+
+# ============================================
 # AI / IDE Session Files
 # ============================================
 .cursor/
 .claude/
+.agents/
 .worktrees/

@@ -11,8 +11,8 @@ type ChatMessageProps = {
 
 export function ChatMessageBubble({ message, isOwnMessage }: ChatMessageProps) {
   const username = message.users?.username;
-  const wallet = message.sender_wallet;
-  const avatarUri = message.users?.profile_image_uri;
+  const wallet = message.senderWallet;
+  const avatarUri = message.users?.profileImageUri;
 
   return (
     <div className={`flex gap-2 ${isOwnMessage ? "flex-row-reverse" : ""}`}>
@@ -29,7 +29,7 @@ export function ChatMessageBubble({ message, isOwnMessage }: ChatMessageProps) {
           <span className="font-medium">
             {username ?? formatWallet(wallet, 4)}
           </span>
-          <span>{formatTimestamp(message.created_at)}</span>
+          <span>{formatTimestamp(message.createdAt)}</span>
         </div>
         <div
           className={`rounded-xl px-3 py-1.5 text-sm ${

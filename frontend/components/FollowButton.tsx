@@ -9,11 +9,13 @@ import { useFollowUser, useUnfollowUser } from "@/hooks/useInteractions"
 type FollowButtonProps = {
   wallet: string
   initialFollowing?: boolean
+  className?: string
 }
 
 export function FollowButton({
   wallet,
   initialFollowing = false,
+  className,
 }: FollowButtonProps) {
   const [isFollowing, setIsFollowing] = useState(initialFollowing)
   const { mutateAsync: followUser } = useFollowUser(wallet)
@@ -40,7 +42,7 @@ export function FollowButton({
     <Button
       type="button"
       variant={isFollowing ? "secondary" : "default"}
-      className="h-9"
+      className={`h-9${className ? ` ${className}` : ""}`}
       onClick={handleClick}
     >
       {isFollowing ? "Following" : "Follow"}

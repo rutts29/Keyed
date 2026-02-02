@@ -122,10 +122,10 @@ export default function AirdropsPage() {
                   <CardContent className="flex items-center justify-between p-4">
                     <div className="space-y-1">
                       <p className="text-sm font-medium text-foreground">
-                        {drop.airdrop_campaigns.name}
+                        {drop.airdropCampaigns.name}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {formatTimestamp(drop.created_at)}
+                        {formatTimestamp(drop.createdAt)}
                       </p>
                     </div>
                     <Badge

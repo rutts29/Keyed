@@ -203,13 +203,14 @@ export default function PostPage({ params }: PostPageProps) {
     return <PostNotFound />;
   }
 
+  const creator = post.creator ?? { username: null, wallet: post.creatorWallet ?? "unknown", profileImageUri: null, isVerified: false };
   const imageUrl = resolveImageUrl(post.contentUri);
-  const authorName = post.creator.username ?? post.creator.wallet;
-  const authorHandle = post.creator.username
-    ? `@${post.creator.username}`
-    : post.creator.wallet.slice(0, 8) + "...";
-  const initials = getInitials(post.creator.username, post.creator.wallet);
-  const avatarUrl = resolveImageUrl(post.creator.profileImageUri);
+  const authorName = creator.username ?? creator.wallet;
+  const authorHandle = creator.username
+    ? `@${creator.username}`
+    : creator.wallet.slice(0, 8) + "...";
+  const initials = getInitials(creator.username, creator.wallet);
+  const avatarUrl = resolveImageUrl(creator.profileImageUri);
 
   // Determine if content should be hidden
   const shouldBlurContent = isTokenGated && !hasAccess;
@@ -228,7 +229,7 @@ export default function PostPage({ params }: PostPageProps) {
           {/* Creator header */}
           <div className="flex items-start justify-between gap-3">
             <Link
-              href={`/profile/${post.creator.wallet}`}
+              href={`/profile/${creator.wallet}`}
               className="flex items-start gap-3 hover:opacity-80"
             >
               <Avatar className="h-12 w-12">
@@ -238,7 +239,7 @@ export default function PostPage({ params }: PostPageProps) {
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-foreground">{authorName}</span>
-                  {post.creator.isVerified ? (
+                  {creator.isVerified ? (
                     <CheckCircle className="h-4 w-4 text-primary" />
                   ) : null}
                 </div>
@@ -246,7 +247,7 @@ export default function PostPage({ params }: PostPageProps) {
               </div>
             </Link>
             <FollowButton
-              wallet={post.creator.wallet}
+              wallet={creator.wallet}
               initialFollowing={post.isFollowing}
             />
           </div>

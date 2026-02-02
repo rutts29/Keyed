@@ -17,7 +17,7 @@ function CreatorCard({ user }: { user: UserProfile }) {
   const imageUrl = resolveImageUrl(user.profileImageUri);
 
   return (
-    <Card className="border-border/70 bg-card/70 transition-colors hover:bg-muted/60 hover:border-border">
+    <Card className="overflow-hidden border-border/70 bg-card/70 transition-colors hover:bg-muted/60 hover:border-border">
       <CardContent className="p-5">
         <div className="flex items-start gap-4">
           <Link href={`/profile/${user.wallet}`} className="shrink-0">
@@ -34,7 +34,7 @@ function CreatorCard({ user }: { user: UserProfile }) {
             <div className="flex items-center justify-between gap-2">
               <Link
                 href={`/profile/${user.wallet}`}
-                className="flex items-center gap-1.5 transition-opacity hover:opacity-80"
+                className="flex min-w-0 items-center gap-1.5 transition-opacity hover:opacity-80"
               >
                 <span className="truncate text-sm font-semibold text-foreground">
                   {user.username ?? formatWallet(user.wallet)}
@@ -43,7 +43,7 @@ function CreatorCard({ user }: { user: UserProfile }) {
                   <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-primary" />
                 )}
               </Link>
-              <FollowButton wallet={user.wallet} />
+              <FollowButton wallet={user.wallet} className="shrink-0" />
             </div>
             {user.username && (
               <p className="text-xs text-muted-foreground">
@@ -58,13 +58,13 @@ function CreatorCard({ user }: { user: UserProfile }) {
             <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
               <span>
                 <span className="font-semibold text-foreground">
-                  {formatCompactCount(user.followerCount)}
+                  {formatCompactCount(user.followerCount ?? 0)}
                 </span>{" "}
                 followers
               </span>
               <span>
                 <span className="font-semibold text-foreground">
-                  {formatCompactCount(user.postCount)}
+                  {formatCompactCount(user.postCount ?? 0)}
                 </span>{" "}
                 posts
               </span>

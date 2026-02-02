@@ -32,7 +32,7 @@ export function TipModal() {
 
   const isPrivate = hasManualPrivate
     ? manualPrivate
-    : privacySettings?.default_private_tips ?? false
+    : privacySettings?.defaultPrivateTips ?? false
 
   const resetState = () => {
     setAmount("0.1")

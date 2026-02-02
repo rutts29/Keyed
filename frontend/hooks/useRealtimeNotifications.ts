@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
+import { transformKeys } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useUIStore } from "@/store/uiStore";
@@ -38,12 +39,11 @@ export function useRealtimeNotifications(
 
   const handleLike = useCallback(
     (payload: Record<string, unknown>) => {
-      const postId = payload.new && typeof payload.new === "object"
-        ? (payload.new as Record<string, unknown>).post_id
+      const raw = payload.new && typeof payload.new === "object"
+        ? transformKeys(payload.new) as Record<string, unknown>
         : undefined;
-      const likerWallet = payload.new && typeof payload.new === "object"
-        ? (payload.new as Record<string, unknown>).liker_wallet
-        : undefined;
+      const postId = raw?.postId;
+      const likerWallet = raw?.likerWallet;
 
       // Don't notify for own likes
       if (likerWallet === wallet) return;
@@ -78,9 +78,10 @@ export function useRealtimeNotifications(
 
   const handleFollow = useCallback(
     (payload: Record<string, unknown>) => {
-      const followerWallet = payload.new && typeof payload.new === "object"
-        ? (payload.new as Record<string, unknown>).follower_wallet
+      const raw = payload.new && typeof payload.new === "object"
+        ? transformKeys(payload.new) as Record<string, unknown>
         : undefined;
+      const followerWallet = raw?.followerWallet;
 
       setLastEvent({
         type: "follow",
@@ -113,12 +114,11 @@ export function useRealtimeNotifications(
 
   const handleComment = useCallback(
     (payload: Record<string, unknown>) => {
-      const postId = payload.new && typeof payload.new === "object"
-        ? (payload.new as Record<string, unknown>).post_id
+      const raw = payload.new && typeof payload.new === "object"
+        ? transformKeys(payload.new) as Record<string, unknown>
         : undefined;
-      const commenterWallet = payload.new && typeof payload.new === "object"
-        ? (payload.new as Record<string, unknown>).commenter_wallet
-        : undefined;
+      const postId = raw?.postId;
+      const commenterWallet = raw?.commenterWallet;
 
       // Don't notify for own comments
       if (commenterWallet === wallet) return;
@@ -181,10 +181,8 @@ export function useRealtimeNotifications(
           table: "likes",
         },
         (payload) => {
-          // The backend should set post_creator_wallet on likes,
-          // or we check if the post belongs to the user
-          const newData = payload.new as Record<string, unknown>;
-          const postCreator = newData.post_creator_wallet;
+          const newData = transformKeys(payload.new) as Record<string, unknown>;
+          const postCreator = newData.postCreatorWallet;
           if (postCreator === wallet) {
             handleLike(payload);
           }
@@ -224,10 +222,8 @@ export function useRealtimeNotifications(
           table: "comments",
         },
         (payload) => {
-          // The backend should set post_creator_wallet on comments,
-          // or we check if the post belongs to the user
-          const newData = payload.new as Record<string, unknown>;
-          const postCreator = newData.post_creator_wallet;
+          const newData = transformKeys(payload.new) as Record<string, unknown>;
+          const postCreator = newData.postCreatorWallet;
           if (postCreator === wallet) {
             handleComment(payload);
           }

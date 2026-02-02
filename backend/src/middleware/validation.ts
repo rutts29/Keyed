@@ -88,6 +88,7 @@ export const schemas = {
     username: z.string().min(1).max(32).nullable().optional(),
     bio: z.string().max(256).nullable().optional(),
     profileImageUri: z.string().url().nullable().optional(),
+    subscriptionPrice: z.number().min(0).nullable().optional(),
   }),
 
   updateProfile: z.object({

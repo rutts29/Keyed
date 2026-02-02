@@ -14,6 +14,7 @@ interface UIState {
   openSubscribeModal: (wallet: string) => void;
   closeSubscribeModal: () => void;
   incrementNotifications: () => void;
+  decrementNotifications: () => void;
   resetNotifications: () => void;
 }
 
@@ -35,5 +36,7 @@ export const useUIStore = create<UIState>((set) => ({
     set({ isSubscribeModalOpen: false, subscribeTarget: null }),
   incrementNotifications: () =>
     set((state) => ({ notificationsCount: state.notificationsCount + 1 })),
+  decrementNotifications: () =>
+    set((state) => ({ notificationsCount: Math.max(0, state.notificationsCount - 1) })),
   resetNotifications: () => set({ notificationsCount: 0 }),
 }));

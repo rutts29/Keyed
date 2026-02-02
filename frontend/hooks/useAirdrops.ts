@@ -42,7 +42,7 @@ export function useReceivedDrops() {
     queryFn: async () => {
       const { data } = await api.get<
         ApiResponse<{
-          drops: (AirdropRecipient & { airdrop_campaigns: AirdropCampaign })[];
+          drops: (AirdropRecipient & { airdropCampaigns: AirdropCampaign })[];
         }>
       >("/airdrops/received");
       if (!data.data) throw new Error("Failed to load drops");

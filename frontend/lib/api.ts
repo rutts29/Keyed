@@ -2,6 +2,23 @@ import axios from "axios";
 
 import { useAuthStore } from "@/store/authStore";
 
+function snakeToCamel(str: string): string {
+  return str.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+}
+
+function transformKeys(data: unknown): unknown {
+  if (Array.isArray(data)) return data.map(transformKeys);
+  if (data !== null && typeof data === "object" && !(data instanceof Date)) {
+    return Object.fromEntries(
+      Object.entries(data as Record<string, unknown>).map(([key, value]) => [
+        snakeToCamel(key),
+        transformKeys(value),
+      ])
+    );
+  }
+  return data;
+}
+
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
   headers: {
@@ -18,7 +35,12 @@ api.interceptors.request.use((config) => {
 });
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (response.data) {
+      response.data = transformKeys(response.data);
+    }
+    return response;
+  },
   (error) => {
     if (error.response?.status === 401) {
       const store = useAuthStore.getState();
@@ -36,4 +58,4 @@ api.interceptors.response.use(
   }
 );
 
-export { api };
+export { api, transformKeys };

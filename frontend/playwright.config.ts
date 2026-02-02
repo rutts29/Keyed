@@ -25,6 +25,18 @@ export default defineConfig({
       name: "mobile-chrome",
       use: { ...devices["Pixel 5"] },
     },
+    {
+      name: "integration",
+      testDir: "./e2e/integration",
+      globalSetup: "./e2e/integration/global-setup.ts",
+      fullyParallel: false,
+      workers: 1,
+      timeout: 120000,
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: process.env.TEST_FRONTEND_URL || "http://localhost:3000",
+      },
+    },
   ],
 
   webServer: {

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useSafeDynamicContext } from "@/hooks/useSafeDynamicContext";
 
 import { PrivacyBalance } from "@/components/PrivacyBalance";
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import {
+  Bell,
   Gem,
   Gift,
   Home,
@@ -27,11 +28,13 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuthStore } from "@/store/authStore";
+import { useUIStore } from "@/store/uiStore";
 
 const navItems = [
   { label: "Home", icon: Home, href: "/app" },
   { label: "Discover", icon: Zap, href: "/explore" },
   { label: "Search", icon: Search, href: "/search" },
+  { label: "Notifications", icon: Bell, href: "/notifications", match: "/notifications" },
   { label: "Rooms", icon: MessageSquare, href: "/rooms", match: "/rooms" },
   { label: "Airdrops", icon: Gift, href: "/airdrops", match: "/airdrops", badge: "New" },
   { label: "Creator Hub", icon: Gem, href: "/dashboard" },
@@ -41,10 +44,10 @@ const navItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const { handleLogOut } = useSafeDynamicContext();
   const wallet = useAuthStore((state) => state.wallet);
   const clearAuth = useAuthStore((state) => state.clearAuth);
+  const notificationsCount = useUIStore((state) => state.notificationsCount);
   const profileHref = wallet ? `/profile/${wallet}` : "/profile/me";
 
   const handleSignOut = async () => {
@@ -54,7 +57,7 @@ export function AppSidebar() {
       // Ignore logout errors
     }
     clearAuth();
-    router.push("/");
+    window.location.href = "/";
   };
 
   return (
@@ -62,10 +65,10 @@ export function AppSidebar() {
       <div className="space-y-6">
         <div className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/20 text-primary">
-            <span className="text-sm font-semibold">S</span>
+            <span className="text-sm font-semibold">K</span>
           </div>
           <div>
-            <p className="text-sm font-semibold text-foreground">SolShare</p>
+            <p className="text-sm font-semibold text-foreground">Keyed</p>
             <p className="text-xs text-muted-foreground">Creator network</p>
           </div>
         </div>
@@ -86,7 +89,11 @@ export function AppSidebar() {
               <>
                 <Icon className="h-4 w-4" />
                 <span className="flex-1 text-left">{item.label}</span>
-                {item.badge ? (
+                {item.label === "Notifications" && notificationsCount > 0 ? (
+                  <Badge variant="secondary" className="text-[10px]">
+                    {notificationsCount > 99 ? "99+" : notificationsCount}
+                  </Badge>
+                ) : item.badge ? (
                   <Badge variant="secondary" className="text-[10px]">
                     {item.badge}
                   </Badge>
@@ -111,36 +118,36 @@ export function AppSidebar() {
           <Link href="/create">Post update</Link>
         </Button>
       </div>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left"
-          >
-            <div className="flex items-center gap-3">
-              <Avatar className="h-9 w-9">
-                <AvatarFallback>
-                  {wallet ? wallet.slice(0, 2).toUpperCase() : "SS"}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="text-sm font-medium text-foreground">
-                  {wallet ? `${wallet.slice(0, 4)}...${wallet.slice(-4)}` : "SolShare Labs"}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {wallet ? "Connected" : "@solshare"}
-                </p>
+      {wallet ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left"
+            >
+              <div className="flex items-center gap-3">
+                <Avatar className="h-9 w-9">
+                  <AvatarFallback>
+                    {wallet.slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {`${wallet.slice(0, 4)}...${wallet.slice(-4)}`}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Connected</p>
+                </div>
               </div>
-            </div>
-            <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-44">
-          <DropdownMenuItem onClick={handleSignOut}>
-            Sign out
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+              <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuItem onClick={handleSignOut}>
+              Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : null}
     </div>
   );
 }

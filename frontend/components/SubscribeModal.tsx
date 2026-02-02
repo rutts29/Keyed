@@ -1,30 +1,32 @@
 "use client"
 
-import { useState } from "react"
+import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { useSubscribe } from "@/hooks/usePayments"
+import { useUserProfile } from "@/hooks/useUserProfile"
+import { formatWallet } from "@/lib/format"
 import { useUIStore } from "@/store/uiStore"
-
-const presets = [1, 2.5, 5]
 
 export function SubscribeModal() {
   const isOpen = useUIStore((state) => state.isSubscribeModalOpen)
   const subscribeTarget = useUIStore((state) => state.subscribeTarget)
   const closeSubscribeModal = useUIStore((state) => state.closeSubscribeModal)
-  const [amount, setAmount] = useState("1")
   const { mutateAsync, isPending } = useSubscribe()
 
-  const recipient = subscribeTarget?.wallet ?? "creator"
+  const creatorWallet = subscribeTarget?.wallet ?? ""
+  const { data: creator, isLoading: isLoadingCreator } = useUserProfile(
+    isOpen ? creatorWallet : ""
+  )
+
+  const price = creator?.subscriptionPrice
+  const displayName = creator?.username ?? formatWallet(creatorWallet, 6)
 
   const handleSubmit = async () => {
-    const value = Number.parseFloat(amount)
-    if (!value || value <= 0) {
-      toast.error("Enter a valid amount")
+    if (!price || price <= 0) {
+      toast.error("This creator hasn't set a subscription price")
       return
     }
     if (!subscribeTarget) {
@@ -33,7 +35,7 @@ export function SubscribeModal() {
     }
 
     try {
-      await mutateAsync({ creatorWallet: subscribeTarget.wallet, amountInSol: value })
+      await mutateAsync({ creatorWallet: subscribeTarget.wallet, amountInSol: price })
       toast.success("Subscription activated")
       closeSubscribeModal()
     } catch (error) {
@@ -53,37 +55,44 @@ export function SubscribeModal() {
           <DialogTitle>Subscribe</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 text-sm text-muted-foreground">
-          <p>Support {recipient} with a monthly subscription.</p>
-          <div className="space-y-2">
-            <Label htmlFor="subscribe-amount">Amount (SOL / month)</Label>
-            <Input
-              id="subscribe-amount"
-              type="number"
-              min="0"
-              step="0.1"
-              value={amount}
-              onChange={(event) => setAmount(event.target.value)}
-            />
-            <div className="flex flex-wrap gap-2">
-              {presets.map((preset) => (
-                <Button
-                  key={preset}
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setAmount(preset.toString())}
-                >
-                  {preset} SOL
-                </Button>
-              ))}
+          {isLoadingCreator ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
-          </div>
+          ) : price != null && price > 0 ? (
+            <>
+              <p>
+                Subscribe to <span className="font-medium text-foreground">{displayName}</span> for:
+              </p>
+              <div className="rounded-lg border border-border/70 bg-muted/40 p-4 text-center">
+                <p className="text-2xl font-semibold text-foreground">{price} SOL</p>
+                <p className="text-xs text-muted-foreground mt-1">per month</p>
+              </div>
+            </>
+          ) : (
+            <div className="py-4 text-center">
+              <p className="text-sm text-muted-foreground">
+                This creator hasn&apos;t set a subscription price yet.
+              </p>
+            </div>
+          )}
+
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={closeSubscribeModal}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit} disabled={isPending}>
-              Subscribe
+            <Button
+              onClick={handleSubmit}
+              disabled={isPending || isLoadingCreator || !price || price <= 0}
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Subscribing...
+                </>
+              ) : (
+                "Subscribe"
+              )}
             </Button>
           </div>
         </div>

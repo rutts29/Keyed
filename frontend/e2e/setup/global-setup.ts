@@ -11,7 +11,7 @@ async function globalSetup(config: FullConfig): Promise<void> {
   const isMockMode = process.env.MOCK_MODE !== "false";
 
   console.log("\n========================================");
-  console.log("  SolShare E2E Test Suite");
+  console.log("  Keyed E2E Test Suite");
   console.log(`  Mode: ${isMockMode ? "MOCK" : "INTEGRATION"}`);
   console.log(`  Base URL: ${config.projects[0]?.use?.baseURL}`);
   console.log("========================================\n");
@@ -24,7 +24,8 @@ async function globalSetup(config: FullConfig): Promise<void> {
     // Verify backend is accessible
     const apiUrl = process.env.TEST_API_URL || "http://localhost:3001/api";
     try {
-      const response = await fetch(`${apiUrl}/health`);
+      const healthUrl = (process.env.TEST_API_URL || "http://localhost:3001") + "/health";
+      const response = await fetch(healthUrl);
       if (!response.ok) {
         throw new Error(`Backend health check failed: ${response.status}`);
       }

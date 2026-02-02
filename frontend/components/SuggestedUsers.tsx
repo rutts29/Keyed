@@ -80,7 +80,7 @@ export function SuggestedUsers() {
                 )}
               </Link>
               <p className="text-xs text-muted-foreground">
-                {`${formatCompactCount(user.followerCount)} followers`}
+                {`${formatCompactCount(user.followerCount)} ${user.followerCount === 1 ? "follower" : "followers"}`}
               </p>
               {user.bio && (
                 <p className="line-clamp-2 text-xs text-muted-foreground">

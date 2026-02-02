@@ -18,7 +18,7 @@ export const testUsers: Record<string, UserProfile> = {
   creator: {
     wallet: TEST_WALLETS.creator.address,
     username: "testcreator",
-    bio: "I create amazing content on SolShare",
+    bio: "I create amazing content on Keyed",
     profileImageUri: "https://picsum.photos/seed/creator/200",
     followerCount: 1250,
     followingCount: 42,
@@ -85,7 +85,7 @@ export const testPosts: Post[] = [
     comments: 12,
     tipsReceived: 2.1,
     isTokenGated: true,
-    requiredToken: "SolShareCreatorToken",
+    requiredToken: "KeyedCreatorToken",
     llmDescription: "Premium exclusive content for token holders",
     autoTags: ["exclusive", "premium", "token-gated"],
     sceneType: "promotional",
