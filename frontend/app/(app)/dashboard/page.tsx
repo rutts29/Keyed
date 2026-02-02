@@ -466,7 +466,7 @@ export default function DashboardPage() {
         />
         <StatCard
           title="Available balance"
-          value={vault ? lamportsToSol(vault.availableBalance).toFixed(2) : "--"}
+          value={vault?.availableBalance != null ? lamportsToSol(vault.availableBalance).toFixed(2) : "--"}
           suffix="SOL"
           isLoading={vaultLoading}
           icon={<CreditCard className="h-4 w-4" />}
@@ -544,7 +544,7 @@ export default function DashboardPage() {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Available: {vault ? lamportsToSol(vault.availableBalance).toFixed(4) : "--"} SOL
+              Available: {vault?.availableBalance != null ? lamportsToSol(vault.availableBalance).toFixed(4) : "--"} SOL
             </p>
           </CardContent>
         </Card>
