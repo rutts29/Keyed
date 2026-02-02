@@ -20,11 +20,12 @@ type PostCardProps = {
 
 export function PostCard({ post }: PostCardProps) {
   const openTipModal = useUIStore((state) => state.openTipModal);
-  const authorName = post.creator.username ?? post.creator.wallet;
-  const authorHandle = post.creator.username
-    ? `@${post.creator.username}`
-    : post.creator.wallet;
-  const initials = getInitials(post.creator.username, post.creator.wallet);
+  const creator = post.creator ?? { username: null, wallet: post.creatorWallet ?? "unknown" };
+  const authorName = creator.username ?? creator.wallet;
+  const authorHandle = creator.username
+    ? `@${creator.username}`
+    : creator.wallet;
+  const initials = getInitials(creator.username, creator.wallet);
   const createdAt = formatTimestamp(post.timestamp);
   const content = post.caption ?? post.llmDescription ?? "New post";
   const tags = post.autoTags ?? [];
