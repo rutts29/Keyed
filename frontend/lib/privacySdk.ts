@@ -10,7 +10,11 @@ let encryptionService: EncryptionServiceType | null = null
 let lightWasm: any = null
 
 function getConnection(): Connection {
-  const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL
+  // Privacy Cash SDK requires mainnet — use dedicated mainnet RPC if available,
+  // otherwise fall back to the app's default RPC URL.
+  const rpcUrl =
+    process.env.NEXT_PUBLIC_PRIVACY_RPC_URL ||
+    process.env.NEXT_PUBLIC_SOLANA_RPC_URL
   if (!rpcUrl) throw new Error("Solana RPC URL is not configured")
   return new Connection(rpcUrl, "confirmed")
 }

@@ -39,14 +39,19 @@ The entire codebase is open source for transparency and trust.
    +----v----+     +-----v-----+    +-----v-----+   +----v-----+
    | Supabase|     |Cloudflare |    |  Qdrant   |   |  Devnet  |
    |PostgreSQL|    |  R2/IPFS  |    | (Vectors) |   | (Anchor) |
-   +---------+     +-----------+    +-----------+   +----------+
+   +---------+     +-----------+    +-----------+   +----+-----+
+                                                         |
+                                                    +----v-----+
+                                                    |  Mainnet  |
+                                                    | (Privacy) |
+                                                    +----------+
 ```
 
 ### Tech Stack
 
 | Layer | Technologies |
 |-------|--------------|
-| **Blockchain** | Solana, Anchor (Rust), SPL Tokens, Helius RPC |
+| **Blockchain** | Solana (Devnet + Mainnet), Anchor (Rust), SPL Tokens, Helius RPC |
 | **Backend** | Express.js, TypeScript, BullMQ, Zod |
 | **AI/ML** | FastAPI, OpenAI GPT-5.2, Voyage AI 3.5 (1024-dim embeddings) |
 | **Database** | Supabase (PostgreSQL), Qdrant (Vector DB), Redis |
@@ -84,7 +89,7 @@ Four on-chain programs deployed on Devnet:
 - AI service isolated on internal network
 - Parameterized queries prevent SQL injection
 - Zod input validation on all endpoints
-- Zero-knowledge proofs for anonymous tipping (no tipper identity stored)
+- Zero-knowledge proofs for anonymous tipping on mainnet (no tipper identity stored)
 
 See the [Security Audit Report](docs/SECURITY_AUDIT_REPORT.md) for the full assessment.
 
@@ -107,17 +112,32 @@ keyed/
 └── docs/              # Technical documentation
 ```
 
+## Network Architecture
+
+Keyed uses a **hybrid devnet/mainnet** deployment strategy as the platform evolves toward full mainnet launch:
+
+| Network | What runs there | Why |
+|---------|----------------|-----|
+| **Devnet** | Social graph, payments, token gating, airdrops (4 custom Anchor programs) | Rapid iteration on core social features without transaction costs during development |
+| **Mainnet** | Privacy-preserving anonymous tips (Privacy Cash ZK proofs) | The Privacy Cash protocol and its relayer are mainnet-only — ZK proof verification and the shielded pool operate exclusively on mainnet |
+
+The privacy layer is **fully independent** from the social/payment programs. It uses the [Privacy Cash](https://privacycash.org) SDK to generate client-side zero-knowledge proofs, shield SOL into a privacy pool, and withdraw to recipients without linking sender and receiver on-chain. This architecture allows anonymous tipping to work today on mainnet while the rest of the platform continues iterating on devnet ahead of a full mainnet deployment.
+
 ## Status
 
-Deployed on **Solana Devnet**:
-- Wallet authentication
+**Core platform (Devnet):**
+- Wallet authentication (Dynamic.xyz)
 - Content creation with AI analysis
 - Semantic search and personalized feed
 - Creator payments (tips, subscriptions, withdrawals)
 - Token-gated content and chat rooms
 - Real-time notifications
-- Privacy-preserving anonymous tipping
 - Airdrop campaigns with on-chain distribution
+
+**Privacy layer (Mainnet):**
+- Anonymous tipping via zero-knowledge proofs
+- Client-side ZK proof generation (no server-side trust)
+- Shielded SOL pool with encrypted UTXO scanning
 
 ## Documentation
 
