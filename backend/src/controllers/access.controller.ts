@@ -2,9 +2,9 @@ import { Response } from 'express';
 import { PublicKey } from '@solana/web3.js';
 import { AuthenticatedRequest } from '../types/index.js';
 import { supabase } from '../config/supabase.js';
-import { 
-  programs, 
-  pdaDerivation, 
+import {
+  programs,
+  pdaDerivation,
   connection,
   fetchAccessControl,
   fetchAccessVerification,
@@ -12,6 +12,7 @@ import {
 import { solanaService } from '../services/solana.service.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { logger } from '../utils/logger.js';
+import { cacheService } from '../services/cache.service.js';
 
 export const accessController = {
   async verifyAccess(req: AuthenticatedRequest, res: Response) {
@@ -22,6 +23,17 @@ export const accessController = {
       throw new AppError(400, 'MISSING_PARAM', 'postId is required');
     }
 
+    // 1. Check cache FIRST
+    const cached = await cacheService.getTokenAccess(wallet, postId);
+    if (cached) {
+      res.json({
+        success: true,
+        data: cached,
+      });
+      return;
+    }
+
+    // 2. Fetch post from DB
     const { data: post } = await supabase
       .from('posts')
       .select('is_token_gated, required_token, creator_wallet')
@@ -32,25 +44,62 @@ export const accessController = {
       throw new AppError(404, 'NOT_FOUND', 'Post not found');
     }
 
-    // Public post - everyone has access
+    // 3. If public - cache + return
     if (!post.is_token_gated) {
+      const result = { hasAccess: true, reason: 'public' };
+      await cacheService.setTokenAccess(wallet, postId, result);
       res.json({
         success: true,
-        data: { hasAccess: true, reason: 'public' },
+        data: result,
       });
       return;
     }
 
-    // Creator always has access to their own content
+    // 4. If owner - cache + return
     if (post.creator_wallet === wallet) {
+      const result = { hasAccess: true, reason: 'owner' };
+      await cacheService.setTokenAccess(wallet, postId, result);
       res.json({
         success: true,
-        data: { hasAccess: true, reason: 'owner' },
+        data: result,
       });
       return;
     }
 
-    // Check on-chain verification status
+    // 5. RPC token check (primary) - cache + return if holds token
+    if (post.required_token) {
+      try {
+        const userPubkey = new PublicKey(wallet);
+        const tokenMint = new PublicKey(post.required_token);
+
+        // Get token accounts for the user
+        const tokenAccounts = await connection.getTokenAccountsByOwner(userPubkey, {
+          mint: tokenMint,
+        });
+
+        if (tokenAccounts.value.length > 0) {
+          // User holds the token - they should verify on-chain to cache access
+          const result = {
+            hasAccess: true,
+            reason: 'token_holder',
+            message: 'You hold the required token. Verify on-chain to cache access.',
+          };
+          await cacheService.setTokenAccess(wallet, postId, result);
+          res.json({
+            success: true,
+            data: {
+              ...result,
+              tokenAccounts: tokenAccounts.value.map(ta => ta.pubkey.toBase58()),
+            },
+          });
+          return;
+        }
+      } catch (error) {
+        logger.warn({ error, wallet, postId }, 'Error checking token balance — falling back to on-chain verification');
+      }
+    }
+
+    // 6. On-chain verification (fallback) - cache + return if verified
     if (programs.tokenGate) {
       try {
         const userPubkey = new PublicKey(wallet);
@@ -66,11 +115,15 @@ export const accessController = {
 
           // Grant access if no expiration or not yet expired
           if (!expiresAt || expiresAt > new Date()) {
+            const result = {
+              hasAccess: true,
+              reason: 'verified',
+            };
+            await cacheService.setTokenAccess(wallet, postId, result);
             res.json({
               success: true,
               data: {
-                hasAccess: true,
-                reason: 'verified',
+                ...result,
                 verifiedAt: new Date(Number(verification.verifiedAt) * 1000),
                 ...(expiresAt && { expiresAt }),
               },
@@ -81,8 +134,9 @@ export const accessController = {
 
         // Get access requirements
         const accessControl = await fetchAccessControl(postPubkey);
-        
+
         if (accessControl) {
+          // Don't cache negative results
           res.json({
             success: true,
             data: {
@@ -99,40 +153,11 @@ export const accessController = {
           return;
         }
       } catch (error) {
-        logger.error({ error, wallet, postId }, 'Error checking on-chain access — falling back to RPC balance check');
+        logger.error({ error, wallet, postId }, 'Error checking on-chain access');
       }
     }
 
-    // Fallback: Check if user holds the required token using RPC
-    if (post.required_token) {
-      try {
-        const userPubkey = new PublicKey(wallet);
-        const tokenMint = new PublicKey(post.required_token);
-        
-        // Get token accounts for the user
-        const tokenAccounts = await connection.getTokenAccountsByOwner(userPubkey, {
-          mint: tokenMint,
-        });
-
-        if (tokenAccounts.value.length > 0) {
-          // User holds the token - they should verify on-chain to cache access
-          res.json({
-            success: true,
-            data: {
-              hasAccess: true,
-              reason: 'token_holder',
-              message: 'You hold the required token. Verify on-chain to cache access.',
-              tokenAccounts: tokenAccounts.value.map(ta => ta.pubkey.toBase58()),
-            },
-          });
-          return;
-        }
-      } catch (error) {
-        logger.warn({ error, wallet, postId }, 'Error checking token balance');
-      }
-    }
-
-    // No access
+    // 7. Deny access (don't cache negatives)
     res.json({
       success: true,
       data: {

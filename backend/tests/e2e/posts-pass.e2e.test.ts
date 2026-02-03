@@ -79,13 +79,10 @@ describe('Posts E2E -- post lifecycle', () => {
     expect(res.ok).toBe(true);
     expect(res.status).toBe(200);
     expect(res.data.success).toBe(true);
-    expect(res.data.data.metadata).toBeDefined();
-    expect(res.data.data.metadata.postId).toBeDefined();
-    expect(res.data.data.transaction).toBeDefined();
-    expect(res.data.data.blockhash).toBeDefined();
-    expect(res.data.data.lastValidBlockHeight).toBeDefined();
+    expect(res.data.data.postId).toBeDefined();
+    // Post creation no longer returns transaction data (DB-only operation)
 
-    createdPostId = res.data.data.metadata.postId;
+    createdPostId = res.data.data.postId;
   }, 15_000);
 
   // ── 3. Get post ──────────────────────────────────────────────────────

@@ -2,13 +2,9 @@
 
 import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query"
 
-import { useSafeDynamicContext } from "./useSafeDynamicContext"
-import { useSignedMutation } from "./useSignedMutation"
-
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/queryClient"
-import { signAndSubmitTransaction } from "@/lib/solana"
-import type { ApiResponse, Comment, FeedItem, TransactionResponse } from "@/types"
+import type { ApiResponse, Comment, FeedItem } from "@/types"
 
 type CommentsResponse = {
   comments: Comment[]
@@ -58,21 +54,16 @@ export function useInfiniteComments(postId: string, limit = 10) {
 
 export function useAddComment(postId: string) {
   const queryClient = useQueryClient()
-  const { primaryWallet } = useSafeDynamicContext()
 
   return useMutation({
     mutationFn: async (text: string) => {
-      if (!primaryWallet) {
-        throw new Error("Connect your wallet")
-      }
-      const { data } = await api.post<ApiResponse<TransactionResponse>>(
+      const { data } = await api.post<ApiResponse<{ commentId: string }>>(
         `/posts/${postId}/comments`,
         { text }
       )
-      if (!data.data) {
+      if (!data.success) {
         throw new Error("Comment failed")
       }
-      await signAndSubmitTransaction(data.data.transaction, primaryWallet)
       return data.data
     },
     onSuccess: () => {
@@ -88,33 +79,83 @@ const feedInvalidateKeys = [
 ] as const
 
 export function useLikePost(postId: string) {
-  return useSignedMutation({
-    mutationFn: () =>
-      api.post<ApiResponse<TransactionResponse>>(`/posts/${postId}/like`),
-    invalidateKeys: [queryKeys.post(postId), ...feedInvalidateKeys],
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await api.post<ApiResponse<{ liked: boolean }>>(
+        `/posts/${postId}/like`
+      )
+      if (!data.success) {
+        throw new Error("Like failed")
+      }
+      return data.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.post(postId) })
+      feedInvalidateKeys.forEach((key) => {
+        queryClient.invalidateQueries({ queryKey: key })
+      })
+    },
   })
 }
 
 export function useUnlikePost(postId: string) {
-  return useSignedMutation({
-    mutationFn: () =>
-      api.delete<ApiResponse<TransactionResponse>>(`/posts/${postId}/like`),
-    invalidateKeys: [queryKeys.post(postId), ...feedInvalidateKeys],
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await api.delete<ApiResponse<{ unliked: boolean }>>(
+        `/posts/${postId}/like`
+      )
+      if (!data.success) {
+        throw new Error("Unlike failed")
+      }
+      return data.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.post(postId) })
+      feedInvalidateKeys.forEach((key) => {
+        queryClient.invalidateQueries({ queryKey: key })
+      })
+    },
   })
 }
 
 export function useFollowUser(wallet: string) {
-  return useSignedMutation({
-    mutationFn: () =>
-      api.post<ApiResponse<TransactionResponse>>(`/users/${wallet}/follow`),
-    invalidateKeys: [queryKeys.user(wallet)],
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await api.post<ApiResponse<{ followed: boolean }>>(
+        `/users/${wallet}/follow`
+      )
+      if (!data.success) {
+        throw new Error("Follow failed")
+      }
+      return data.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.user(wallet) })
+    },
   })
 }
 
 export function useUnfollowUser(wallet: string) {
-  return useSignedMutation({
-    mutationFn: () =>
-      api.delete<ApiResponse<TransactionResponse>>(`/users/${wallet}/follow`),
-    invalidateKeys: [queryKeys.user(wallet)],
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await api.delete<ApiResponse<{ unfollowed: boolean }>>(
+        `/users/${wallet}/follow`
+      )
+      if (!data.success) {
+        throw new Error("Unfollow failed")
+      }
+      return data.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.user(wallet) })
+    },
   })
 }

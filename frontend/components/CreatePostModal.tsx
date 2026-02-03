@@ -15,10 +15,9 @@ import { Progress } from "@/components/ui/progress"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { api } from "@/lib/api"
-import { signAndSubmitTransaction } from "@/lib/solana"
 import { useAuthStore } from "@/store/authStore"
 import { useUIStore } from "@/store/uiStore"
-import type { ApiResponse, AIAnalysis, ModerationResult, TransactionResponse } from "@/types"
+import type { ApiResponse, ModerationResult } from "@/types"
 
 type UploadResponse = {
   contentUri: string
@@ -39,7 +38,6 @@ export function CreatePostModal() {
   const [stage, setStage] = useState<Stage>("idle")
   const [contentUri, setContentUri] = useState<string | null>(null)
   const [moderation, setModeration] = useState<ModerationResult | null>(null)
-  const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis | null>(null)
   const [postId, setPostId] = useState<string | null>(null)
 
   const resetState = () => {
@@ -50,7 +48,6 @@ export function CreatePostModal() {
     setStage("idle")
     setContentUri(null)
     setModeration(null)
-    setAiAnalysis(null)
     setPostId(null)
   }
 
@@ -91,7 +88,7 @@ export function CreatePostModal() {
       if (!contentUri && !caption.trim()) {
         throw new Error("Add an image or write something")
       }
-      const { data } = await api.post<ApiResponse<TransactionResponse>>(
+      const { data } = await api.post<ApiResponse<{ postId: string }>>(
         "/posts/create",
         {
           contentUri: contentUri || undefined,
@@ -147,10 +144,9 @@ export function CreatePostModal() {
 
     setStage("posting")
     try {
-      const transaction = await createMutation.mutateAsync()
-      setAiAnalysis(transaction.metadata?.aiAnalysis ?? null)
-      setPostId(transaction.metadata?.postId ?? null)
-      await signAndSubmitTransaction(transaction.transaction, primaryWallet)
+      // Posts go directly to database - no transaction signing required
+      const result = await createMutation.mutateAsync()
+      setPostId(result.postId)
       setStage("success")
       toast.success("Post published")
     } catch (error) {
@@ -264,23 +260,14 @@ export function CreatePostModal() {
             <div className="space-y-2">
               <Progress value={80} />
               <p className="text-xs text-muted-foreground">
-                Preparing on-chain transaction...
+                Publishing your post...
               </p>
             </div>
           ) : null}
           {stage === "success" ? (
             <div className="rounded-lg border border-border/70 bg-muted/40 p-3 text-xs">
-              <p className="font-semibold text-foreground">Post published</p>
-              {postId ? <p className="mt-1">Post ID: {postId}</p> : null}
-              {aiAnalysis ? (
-                <div className="mt-3 space-y-1">
-                  <p>Description: {aiAnalysis.description}</p>
-                  <p>Scene: {aiAnalysis.sceneType}</p>
-                  <p>Mood: {aiAnalysis.mood}</p>
-                  <p>Alt text: {aiAnalysis.altText}</p>
-                  <p>Tags: {aiAnalysis.tags.join(", ")}</p>
-                </div>
-              ) : null}
+              <p className="font-semibold text-foreground">Post published!</p>
+              <p className="mt-1 text-muted-foreground">Your post is now live.</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {postId ? (
                   <Button size="sm" variant="secondary" asChild>

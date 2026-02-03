@@ -83,20 +83,12 @@ export const postsController = {
     const { contentUri, contentType, caption, isTokenGated, requiredToken } = req.body;
 
     // Generate a 32-character hex ID from UUID v4 (without dashes)
-    // Note: This is an internal database ID, not a Solana address
     const postId = uuidv4().replace(/-/g, '');
 
-    // For text-only posts, contentUri is optional (pass empty string to Solana)
-    const txResponse = await solanaService.buildCreatePostTx(
-      wallet,
-      contentUri || '',
-      contentType,
-      caption || '',
-      isTokenGated,
-      requiredToken
-    );
-
-    await supabase.from('posts').insert({
+    // Posts go directly to database - no blockchain transaction required
+    // This provides better UX (no wallet signing for every post)
+    // Blockchain is used for monetization features (tips, subscriptions) only
+    const { error } = await supabase.from('posts').insert({
       id: postId,
       creator_wallet: wallet,
       content_uri: contentUri || null,
@@ -106,17 +98,21 @@ export const postsController = {
       is_token_gated: isTokenGated,
       required_token: requiredToken,
     });
-    
+
+    if (error) {
+      throw new AppError(500, 'DB_ERROR', 'Failed to create post');
+    }
+
     await supabase.rpc('increment_user_stat', { wallet_addr: wallet, stat_name: 'post_count' });
-    
+
     await addJob('ai-analysis' as const, { postId, contentUri, caption, creatorWallet: wallet });
     await addJob('notification' as const, { type: 'new_post', postId, creatorWallet: wallet });
-    
+
     await cacheService.invalidateUser(wallet);
-    
+
     res.json({
       success: true,
-      data: { ...txResponse, metadata: { postId } },
+      data: { postId },
     });
   },
 
@@ -186,19 +182,17 @@ export const postsController = {
       throw new AppError(400, 'ALREADY_LIKED', 'You have already liked this post');
     }
     
-    const txResponse = await solanaService.buildLikeTx(wallet, postId);
-    
     // Use upsert with onConflict to handle race conditions gracefully
     const { error: insertError } = await supabase.from('likes').upsert({
       user_wallet: wallet,
       post_id: postId,
     }, { onConflict: 'user_wallet,post_id', ignoreDuplicates: true });
-    
+
     // Only increment if insert was successful (not a duplicate)
     if (!insertError) {
       // Atomically increment likes counter using RPC
       await supabase.rpc('increment_post_likes', { post_id: postId });
-      
+
       await cacheService.invalidatePost(postId);
       await addJob('notification', {
         type: 'like',
@@ -207,28 +201,26 @@ export const postsController = {
         fromWallet: wallet,
       });
     }
-    
-    res.json({ success: true, data: txResponse });
+
+    res.json({ success: true, data: { liked: true } });
   },
 
   async unlike(req: AuthenticatedRequest, res: Response) {
     const wallet = req.wallet!;
     const { postId } = req.params;
     
-    const txResponse = await solanaService.buildUnlikeTx(wallet, postId);
-    
     await supabase
       .from('likes')
       .delete()
       .eq('user_wallet', wallet)
       .eq('post_id', postId);
-    
+
     // Atomically decrement likes counter using RPC
     await supabase.rpc('decrement_post_likes', { post_id: postId });
-    
+
     await cacheService.invalidatePost(postId);
-    
-    res.json({ success: true, data: txResponse });
+
+    res.json({ success: true, data: { unliked: true } });
   },
 
   async getComments(req: AuthenticatedRequest, res: Response) {
@@ -279,8 +271,6 @@ export const postsController = {
     // Generate a 32-character hex ID from UUID v4 (without dashes)
     const commentId = uuidv4().replace(/-/g, '');
     
-    const txResponse = await solanaService.buildCommentTx(wallet, postId, text);
-    
     const { data: comment } = await supabase
       .from('comments')
       .insert({
@@ -291,10 +281,10 @@ export const postsController = {
       })
       .select('*')
       .single();
-    
+
     // Atomically increment comments counter using RPC
     await supabase.rpc('increment_post_comments', { post_id: postId });
-    
+
     await cacheService.invalidatePost(postId);
     await addJob('notification', {
       type: 'comment',
@@ -302,10 +292,10 @@ export const postsController = {
       targetWallet: post.creator_wallet,
       fromWallet: wallet,
     });
-    
+
     res.json({
       success: true,
-      data: { ...txResponse, metadata: { commentId } },
+      data: { commentId },
     });
   },
 

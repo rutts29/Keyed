@@ -289,8 +289,6 @@ export const usersController = {
       throw new AppError(400, 'ALREADY_FOLLOWING', 'Already following this user');
     }
 
-    const txResponse = await solanaService.buildFollowTx(wallet, targetWallet);
-
     await supabase.from('follows').insert({
       follower_wallet: wallet,
       following_wallet: targetWallet,
@@ -309,9 +307,9 @@ export const usersController = {
       fromWallet: wallet,
     });
 
-    logger.info({ wallet, targetWallet }, 'Built follow transaction');
+    logger.info({ wallet, targetWallet }, 'Follow recorded');
 
-    res.json({ success: true, data: txResponse });
+    res.json({ success: true, data: { followed: true } });
   },
 
   async unfollow(req: AuthenticatedRequest, res: Response) {
@@ -330,8 +328,6 @@ export const usersController = {
       throw new AppError(400, 'NOT_FOLLOWING', 'Not following this user');
     }
 
-    const txResponse = await solanaService.buildUnfollowTx(wallet, targetWallet);
-
     await supabase
       .from('follows')
       .delete()
@@ -345,9 +341,9 @@ export const usersController = {
     await cacheService.invalidateUser(wallet);
     await cacheService.invalidateUser(targetWallet);
 
-    logger.info({ wallet, targetWallet }, 'Built unfollow transaction');
+    logger.info({ wallet, targetWallet }, 'Unfollow recorded');
 
-    res.json({ success: true, data: txResponse });
+    res.json({ success: true, data: { unfollowed: true } });
   },
 
   async checkProfileExists(req: AuthenticatedRequest, res: Response) {

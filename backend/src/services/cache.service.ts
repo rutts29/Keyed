@@ -8,6 +8,7 @@ const TTL = {
   FOLLOWING: 300,
   SEARCH: 120,
   TRENDING: 60,
+  TOKEN_ACCESS: 300, // 5 minutes
 };
 
 const REDIS_TIMEOUT = 2000;
@@ -132,5 +133,14 @@ export const cacheService = {
 
   async setSuggestions(prefix: string, suggestions: unknown) {
     await safeSet(`suggestions:${prefix.toLowerCase()}`, TTL.SEARCH, JSON.stringify(suggestions));
+  },
+
+  async getTokenAccess(wallet: string, postId: string): Promise<{ hasAccess: boolean; reason: string; message?: string } | null> {
+    const data = await safeGet(`token-access:${wallet}:${postId}`);
+    return data ? JSON.parse(data) : null;
+  },
+
+  async setTokenAccess(wallet: string, postId: string, result: { hasAccess: boolean; reason: string; message?: string }): Promise<void> {
+    await safeSet(`token-access:${wallet}:${postId}`, TTL.TOKEN_ACCESS, JSON.stringify(result));
   },
 };
