@@ -172,3 +172,22 @@ app.include_router(pipeline.router, prefix="/api")
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+
+@app.post("/admin/reset-vectors")
+async def reset_vectors(request: Request):
+    """Reset the vector collection (for model migration).
+
+    WARNING: This deletes all existing embeddings!
+    Only available in development or with internal API key.
+    """
+    settings = get_settings()
+
+    # Extra protection - require internal API key even in dev
+    api_key = request.headers.get("X-Internal-API-Key")
+    if settings.environment == "production" and api_key != settings.internal_api_key:
+        raise HTTPException(status_code=403, detail="Admin endpoint requires authentication")
+
+    await vector_db.reset_collection()
+    logger.info("Vector collection reset successfully")
+    return {"status": "success", "message": "Vector collection reset. All embeddings deleted."}

@@ -21,6 +21,33 @@ async def get_client() -> AsyncQdrantClient:
     return _client
 
 
+async def reset_collection():
+    """Delete and recreate the collection (for model migration)."""
+    client = await get_client()
+    settings = get_settings()
+
+    # Delete if exists
+    collections = await client.get_collections()
+    exists = any(c.name == settings.qdrant_collection for c in collections.collections)
+    if exists:
+        await client.delete_collection(settings.qdrant_collection)
+
+    # Recreate with fresh config
+    await client.create_collection(
+        collection_name=settings.qdrant_collection,
+        vectors_config=VectorParams(size=settings.voyage_dimensions, distance=Distance.COSINE),
+    )
+    await client.create_payload_index(
+        settings.qdrant_collection, "creator_wallet", PayloadSchemaType.KEYWORD
+    )
+    await client.create_payload_index(
+        settings.qdrant_collection, "scene_type", PayloadSchemaType.KEYWORD
+    )
+    await client.create_payload_index(
+        settings.qdrant_collection, "timestamp", PayloadSchemaType.INTEGER
+    )
+
+
 async def ensure_collection():
     """Create collection if it doesn't exist."""
     client = await get_client()
@@ -45,6 +72,17 @@ async def ensure_collection():
         )
 
 
+def _to_uuid(hex_id: str) -> str:
+    """Convert 32-char hex ID to UUID format for Qdrant."""
+    # If already has dashes, return as-is
+    if '-' in hex_id:
+        return hex_id
+    # Insert dashes: 8-4-4-4-12
+    if len(hex_id) == 32:
+        return f"{hex_id[:8]}-{hex_id[8:12]}-{hex_id[12:16]}-{hex_id[16:20]}-{hex_id[20:]}"
+    return hex_id
+
+
 async def upsert_post(
     post_id: str,
     embedding: list[float],
@@ -54,9 +92,12 @@ async def upsert_post(
     client = await get_client()
     settings = get_settings()
 
+    # Convert hex ID to UUID format for Qdrant
+    uuid_id = _to_uuid(post_id)
+
     await client.upsert(
         collection_name=settings.qdrant_collection,
-        points=[PointStruct(id=post_id, vector=embedding, payload=payload)],
+        points=[PointStruct(id=uuid_id, vector=embedding, payload=payload)],
     )
 
 
@@ -86,9 +127,10 @@ async def search_similar(
         with_payload=True,
     )
 
-    exclude_set = set(exclude_ids or [])
+    # Convert exclude_ids to UUID format for comparison
+    exclude_set = set(_to_uuid(eid) for eid in (exclude_ids or []))
     return [
-        {"post_id": str(r.id), "score": r.score, **(r.payload or {})}
+        {"post_id": str(r.id).replace("-", ""), "score": r.score, **(r.payload or {})}
         for r in response.points
         if str(r.id) not in exclude_set
     ][:limit]
@@ -102,14 +144,17 @@ async def get_posts_by_ids(post_ids: list[str]) -> list[dict]:
     client = await get_client()
     settings = get_settings()
 
+    # Convert hex IDs to UUID format for Qdrant
+    uuid_ids = [_to_uuid(pid) for pid in post_ids]
+
     results = await client.retrieve(
         collection_name=settings.qdrant_collection,
-        ids=post_ids,
+        ids=uuid_ids,
         with_payload=True,
         with_vectors=True,
     )
 
     return [
-        {"post_id": str(r.id), "embedding": r.vector, **(r.payload or {})}
+        {"post_id": str(r.id).replace("-", ""), "embedding": r.vector, **(r.payload or {})}
         for r in results
     ]

@@ -18,8 +18,13 @@ async def search(query: str, limit: int = 50, rerank: bool = True) -> SearchResp
     await vector_db.ensure_collection()
     candidates = await vector_db.search_similar(embedding, limit=limit * 2 if rerank else limit)
 
-    if rerank and candidates:
-        candidates = await llm.rerank_results(query, candidates, top_k=limit)
+    # Use Voyage AI reranker instead of Gemini LLM
+    if rerank and len(candidates) > 0:
+        descriptions = [c.get("description", "") for c in candidates]
+        reranked_indices = await embeddings.rerank(query, descriptions, top_k=limit)
+        candidates = [candidates[i] for i in reranked_indices]
+    else:
+        candidates = candidates[:limit]
 
     results = [
         SearchResult(

@@ -113,7 +113,9 @@ services:
     environment:
       # Gemini AI
       - GEMINI_API_KEY=${GEMINI_API_KEY}
-      # Voyage AI (Embeddings)
+      # OpenAI (Moderation - FREE)
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      # Voyage AI (Embeddings + Reranking)
       - VOYAGE_API_KEY=${VOYAGE_API_KEY}
       # Qdrant Vector DB
       - QDRANT_URL=${QDRANT_URL}

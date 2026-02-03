@@ -1,19 +1,10 @@
-from app.services import llm, embeddings, vector_db
+import logging
+from app.services import embeddings, vector_db
 from app.models.schemas import AnalyzeResponse
-from app.utils.image import download_image, image_to_base64
+from app.utils.image import download_image
 from app.config import get_settings
 
-ANALYSIS_PROMPT = """Analyze this image for social media indexing. Provide JSON:
-{
-  "description": "2-3 sentence description",
-  "tags": ["5-10 relevant tags"],
-  "scene_type": "indoor/outdoor/urban/nature/portrait/food/etc",
-  "objects": ["main objects visible"],
-  "mood": "emotional tone/atmosphere",
-  "colors": ["dominant colors"],
-  "safety_score": 0-10 (0=unsafe, 10=safe),
-  "alt_text": "accessibility description"
-}"""
+logger = logging.getLogger(__name__)
 
 
 async def analyze_content(
@@ -22,46 +13,68 @@ async def analyze_content(
     post_id: str | None = None,
     creator_wallet: str | None = None,
 ) -> AnalyzeResponse:
-    """Full content analysis pipeline."""
+    """Analyze content using Voyage AI multimodal embeddings.
+
+    Downloads the image and generates a combined image+text embedding
+    using voyage-multimodal-3.5 for semantic search.
+    """
     settings = get_settings()
+    description = caption or "Image content"
+    embedding = None
 
-    image_bytes = await download_image(content_uri, settings.ipfs_gateway)
-    image_base64 = image_to_base64(image_bytes)
+    # Download image and generate multimodal embedding
+    if content_uri:
+        try:
+            image_bytes = await download_image(content_uri, settings.ipfs_gateway)
+            embedding = await embeddings.generate_multimodal_embedding(
+                image_bytes=image_bytes,
+                caption=caption,
+            )
+            logger.info(f"Generated multimodal embedding for post {post_id}")
+        except Exception as e:
+            logger.warning(f"Multimodal embedding failed: {e}, trying text-only")
+            # Fallback to text embedding if image processing fails
+            if caption:
+                try:
+                    embedding = await embeddings.generate_embedding(caption)
+                except Exception as e2:
+                    logger.warning(f"Text embedding also failed: {e2}")
+    elif caption:
+        # Text-only post - use text embedding
+        try:
+            embedding = await embeddings.generate_embedding(caption)
+        except Exception as e:
+            logger.warning(f"Failed to generate text embedding: {e}")
 
-    prompt = ANALYSIS_PROMPT
-    if caption:
-        prompt += f"\n\nCaption: {caption}"
-
-    result = await llm.analyze_image(image_base64, prompt, use_thinking=False)
-
-    description = result.get("description", "")
-    embed_text = f"{description} {caption or ''}".strip()
-    embedding = await embeddings.generate_embedding(embed_text)
-
-    if post_id:
-        await vector_db.ensure_collection()
-        await vector_db.upsert_post(
-            post_id=post_id,
-            embedding=embedding,
-            payload={
-                "description": description,
-                "caption": caption,
-                "tags": result.get("tags", []),
-                "scene_type": result.get("scene_type", "unknown"),
-                "mood": result.get("mood", ""),
-                "creator_wallet": creator_wallet,
-                "timestamp": 0,
-            },
-        )
+    # Store in vector DB if post_id provided and we have an embedding
+    if post_id and embedding:
+        try:
+            await vector_db.ensure_collection()
+            await vector_db.upsert_post(
+                post_id=post_id,
+                embedding=embedding,
+                payload={
+                    "description": description,
+                    "caption": caption,
+                    "tags": [],
+                    "scene_type": "unknown",
+                    "mood": "neutral",
+                    "creator_wallet": creator_wallet,
+                    "timestamp": 0,
+                },
+            )
+            logger.info(f"Stored embedding for post {post_id} in Qdrant")
+        except Exception as e:
+            logger.warning(f"Failed to store in vector DB: {e}")
 
     return AnalyzeResponse(
         description=description,
-        tags=result.get("tags", []),
-        scene_type=result.get("scene_type", "unknown"),
-        objects=result.get("objects", []),
-        mood=result.get("mood", ""),
-        colors=result.get("colors", []),
-        safety_score=result.get("safety_score", 10),
-        alt_text=result.get("alt_text", ""),
+        tags=[],
+        scene_type="unknown",
+        objects=[],
+        mood="neutral",
+        colors=[],
+        safety_score=10,
+        alt_text=caption or "Image",
         embedding=embedding,
     )
