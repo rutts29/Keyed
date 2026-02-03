@@ -88,14 +88,14 @@ export function CreatePostModal() {
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      if (!contentUri) {
-        throw new Error("Missing upload")
+      if (!contentUri && !caption.trim()) {
+        throw new Error("Add an image or write something")
       }
       const { data } = await api.post<ApiResponse<TransactionResponse>>(
         "/posts/create",
         {
-          contentUri,
-          contentType: "image",
+          contentUri: contentUri || undefined,
+          contentType: contentUri ? "image" : "text",
           caption: caption || undefined,
           isTokenGated,
           requiredToken: isTokenGated ? requiredToken : undefined,
@@ -136,8 +136,8 @@ export function CreatePostModal() {
       toast.error("Connect your wallet to post")
       return
     }
-    if (!contentUri) {
-      toast.error("Upload an image first")
+    if (!contentUri && !caption.trim()) {
+      toast.error("Add an image or write something")
       return
     }
     if (isTokenGated && !requiredToken.trim()) {
@@ -155,7 +155,7 @@ export function CreatePostModal() {
       toast.success("Post published")
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Post failed")
-      setStage("preview")
+      setStage(contentUri ? "preview" : "idle")
     }
   }
 
@@ -171,20 +171,39 @@ export function CreatePostModal() {
           <DialogTitle>Create a post</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 text-sm text-muted-foreground">
-          <div className="space-y-2">
-            <Label htmlFor="upload">Upload image</Label>
-            <Input
-              id="upload"
-              type="file"
-              accept="image/png,image/jpeg,image/gif,image/webp"
-              onChange={handleFileChange}
-            />
-          </div>
+          {/* Caption - always visible */}
+          {stage !== "success" && stage !== "posting" && stage !== "uploading" ? (
+            <div className="space-y-2">
+              <Label htmlFor="caption">What's on your mind?</Label>
+              <Textarea
+                id="caption"
+                value={caption}
+                onChange={(event) => setCaption(event.target.value)}
+                placeholder="Share a thought, update, or announcement..."
+                rows={3}
+              />
+            </div>
+          ) : null}
+
+          {/* Image upload - optional */}
+          {stage !== "success" && stage !== "posting" ? (
+            <div className="space-y-2">
+              <Label htmlFor="upload">Add image (optional)</Label>
+              <Input
+                id="upload"
+                type="file"
+                accept="image/png,image/jpeg,image/gif,image/webp"
+                onChange={handleFileChange}
+              />
+            </div>
+          ) : null}
+
           {previewUrl ? (
             <div className="overflow-hidden rounded-xl border border-border/70">
               <img src={previewUrl} alt="" className="h-auto w-full" />
             </div>
           ) : null}
+
           {stage === "uploading" ? (
             <div className="space-y-2">
               <Progress value={50} />
@@ -193,17 +212,9 @@ export function CreatePostModal() {
               </p>
             </div>
           ) : null}
-          {stage === "preview" ? (
+
+          {(stage === "idle" || stage === "preview") ? (
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="caption">Caption</Label>
-                <Textarea
-                  id="caption"
-                  value={caption}
-                  onChange={(event) => setCaption(event.target.value)}
-                  placeholder="Write a caption..."
-                />
-              </div>
               <div className="flex items-center justify-between gap-3 rounded-lg border border-border/70 bg-muted/40 p-3">
                 <div>
                   <Label>Token gated</Label>
@@ -240,7 +251,10 @@ export function CreatePostModal() {
                 <Button variant="secondary" onClick={handleClose}>
                   Cancel
                 </Button>
-                <Button onClick={handleCreate} disabled={createMutation.isPending}>
+                <Button
+                  onClick={handleCreate}
+                  disabled={createMutation.isPending || (!contentUri && !caption.trim())}
+                >
                   Publish
                 </Button>
               </div>
