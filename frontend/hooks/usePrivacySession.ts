@@ -40,6 +40,8 @@ export function usePrivacySession() {
         return signed.signature
       })
       setSessionInitialized(true)
+    } catch (err) {
+      console.error("[PrivacySession] Failed to initialize:", err)
     } finally {
       setInitializingSession(false)
     }

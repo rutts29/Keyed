@@ -4,6 +4,10 @@
 
 A decentralized social media platform built on Solana with AI-powered content discovery and creator monetization.
 
+**Live Demo:** [https://frontend-beryl-omega-38.vercel.app](https://frontend-beryl-omega-38.vercel.app)
+
+> **Privacy Hack Hackathon Note:** Privacy Cash features (anonymous tipping, shielded balances) run on **Solana Mainnet** via zero-knowledge proofs. All other features (social graph, payments, token gating, airdrops) run on **Devnet** for rapid iteration.
+
 ## What is Keyed?
 
 Keyed reimagines social media for Web3 — combining decentralized technology with modern AI to create a platform where **creators own their content and monetize directly**. No middlemen, no data harvesting, no algorithmic suppression.

@@ -38,7 +38,8 @@ const envSchema = z.object({
   // Internal API key for AI service communication (optional in dev, recommended in production)
   AI_SERVICE_API_KEY: z.string().optional(),
 
-  FRONTEND_URL: z.string().url(),
+  // Can be comma-separated for multiple origins (e.g., "http://localhost:3000,https://app.keyed.io")
+  FRONTEND_URL: z.string().min(1),
 });
 
 export type Env = z.infer<typeof envSchema>;
