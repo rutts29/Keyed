@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Suspense, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Eye,
   Hash,
@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SearchFilters, type SearchFilter } from "@/components/SearchFilters";
 import { useSemanticSearch } from "@/hooks/useSearch";
@@ -305,50 +306,76 @@ function LoadingState() {
 }
 
 function SearchContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const query = searchParams.get("q")?.trim() ?? "";
+  const [searchInput, setSearchInput] = useState(query);
   const [activeFilter, setActiveFilter] = useState<SearchFilter>("all");
   const { data, isLoading, isError } = useSemanticSearch(query);
   const { users: suggestedUsers } = useSuggestedUsers();
   const { topics: trendingTopics } = useTrendingTopics();
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchInput.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchInput.trim())}`);
+    }
+  };
+
   const searchResults = useMemo(() => data?.results ?? [], [data?.results]);
+  const matchingUsers = useMemo(() => (data as { users?: UserProfile[] })?.users ?? [], [data]);
   const expandedQuery = data?.expandedQuery;
+
+  // Use matching users from search when query exists, otherwise use suggested users
+  const displayUsers = query ? matchingUsers : suggestedUsers;
 
   // Get result count based on filter
   const getResultCount = () => {
     switch (activeFilter) {
       case "posts":
-      case "all":
         return searchResults.length;
       case "creators":
-        return suggestedUsers.length;
+        return displayUsers.length;
       case "tags":
         return trendingTopics.length;
+      case "all":
+        return searchResults.length + displayUsers.length;
       default:
         return 0;
     }
   };
 
   const resultCount = getResultCount();
-  const hasResults = resultCount > 0;
+  const hasResults = searchResults.length > 0 || displayUsers.length > 0;
 
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-            Search
-          </p>
-          <h1 className="text-2xl font-semibold text-foreground">
-            {query ? `Results for "${query}"` : "Search Keyed"}
-          </h1>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="space-y-1">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              Search
+            </p>
+            <h1 className="text-2xl font-semibold text-foreground">
+              {query ? `Results for "${query}"` : "Search Keyed"}
+            </h1>
+          </div>
+          <Badge variant="secondary" className="gap-1.5">
+            <Sparkles className="h-3 w-3" />
+            Semantic search
+          </Badge>
         </div>
-        <Badge variant="secondary" className="gap-1.5">
-          <Sparkles className="h-3 w-3" />
-          Semantic search
-        </Badge>
+        {/* Search input */}
+        <form onSubmit={handleSearch} className="relative">
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search creators, posts, or topics..."
+            className="h-12 pl-12 text-base"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+          />
+        </form>
       </div>
 
       {/* Filters - only show when there's a query */}
@@ -404,9 +431,9 @@ function SearchContent() {
 
             {/* Results based on filter */}
             {activeFilter === "creators" ? (
-              // Creator results from API
+              // Creator results from search
               <div className="grid gap-3 sm:grid-cols-2">
-                {suggestedUsers.map((creator) => (
+                {displayUsers.map((creator) => (
                   <CreatorCard key={creator.wallet} user={creator} />
                 ))}
               </div>
@@ -417,8 +444,8 @@ function SearchContent() {
                   <TagCard key={topic.name} tag={topic.name} postCount={topic.postCount} />
                 ))}
               </div>
-            ) : (
-              // API search results
+            ) : activeFilter === "posts" ? (
+              // Posts only
               searchResults.map((result) => (
                 <SearchResultCard
                   key={result.postId}
@@ -428,6 +455,40 @@ function SearchContent() {
                   creatorWallet={result.creatorWallet}
                 />
               ))
+            ) : (
+              // "All" - show users first, then posts
+              <>
+                {displayUsers.length > 0 && (
+                  <div className="space-y-3">
+                    <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      Matching users
+                    </p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {displayUsers.slice(0, 4).map((creator) => (
+                        <CreatorCard key={creator.wallet} user={creator} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {searchResults.length > 0 && (
+                  <div className="space-y-3">
+                    <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
+                      <Search className="h-4 w-4" />
+                      Matching posts
+                    </p>
+                    {searchResults.map((result) => (
+                      <SearchResultCard
+                        key={result.postId}
+                        postId={result.postId}
+                        score={result.score}
+                        description={result.description}
+                        creatorWallet={result.creatorWallet}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

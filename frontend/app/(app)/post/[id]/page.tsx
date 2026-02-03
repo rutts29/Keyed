@@ -81,7 +81,7 @@ function PostSkeleton() {
 function PostNotFound() {
   return (
     <div className="space-y-5">
-      <Link href="/home" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+      <Link href="/app" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4" />
         Back to feed
       </Link>
@@ -97,7 +97,7 @@ function PostNotFound() {
             </p>
           </div>
           <Button asChild>
-            <Link href="/home">Return to feed</Link>
+            <Link href="/app">Return to feed</Link>
           </Button>
         </CardContent>
       </Card>
@@ -108,7 +108,7 @@ function PostNotFound() {
 function NetworkError({ onRetry }: { onRetry: () => void }) {
   return (
     <div className="space-y-5">
-      <Link href="/home" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+      <Link href="/app" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4" />
         Back to feed
       </Link>
@@ -218,7 +218,7 @@ export default function PostPage({ params }: PostPageProps) {
   return (
     <div className="space-y-5">
       {/* Back navigation */}
-      <Link href="/home" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+      <Link href="/app" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4" />
         Back to feed
       </Link>

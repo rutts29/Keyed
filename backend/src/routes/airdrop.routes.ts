@@ -18,5 +18,6 @@ router.post('/:id/prepare', authMiddleware, rateLimitPost, asyncHandler<Authenti
 router.post('/:id/fund', authMiddleware, rateLimitPost, asyncHandler<AuthenticatedRequest>(airdropController.fundCampaign));
 router.post('/:id/start', authMiddleware, rateLimitPost, asyncHandler<AuthenticatedRequest>(airdropController.startCampaign));
 router.post('/:id/cancel', authMiddleware, rateLimitPost, asyncHandler<AuthenticatedRequest>(airdropController.cancelCampaign));
+router.delete('/:id', authMiddleware, rateLimitPost, asyncHandler<AuthenticatedRequest>(airdropController.deleteCampaign));
 
 export default router;

@@ -6,13 +6,11 @@ import { AuthSync } from "@/components/AuthSync";
 import { ClientOnly } from "@/components/ClientOnly";
 import { RealtimeSync } from "@/components/RealtimeSync";
 import { CreatePostModal } from "@/components/CreatePostModal";
-import { SearchBar } from "@/components/SearchBar";
+import { RightSidebar } from "@/components/RightSidebar";
 import { ShieldModal } from "@/components/ShieldModal";
 import { SubscribeModal } from "@/components/SubscribeModal";
 import { TipModal } from "@/components/TipModal";
-import { SuggestedUsers } from "@/components/SuggestedUsers";
 import { TopNav } from "@/components/TopNav";
-import { TrendingPanel } from "@/components/TrendingPanel";
 
 type AppLayoutProps = {
   children: ReactNode;
@@ -44,11 +42,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 <TopNav />
                 <div className="flex-1 space-y-5 px-5 py-6">{children}</div>
               </div>
-              <aside className="hidden w-80 flex-col gap-4 py-6 xl:flex">
-                <SearchBar />
-                <TrendingPanel />
-                <SuggestedUsers />
-              </aside>
+              <RightSidebar />
             </div>
           </div>
         </AuthGuard>

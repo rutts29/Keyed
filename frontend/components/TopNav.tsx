@@ -1,8 +1,4 @@
-import Link from "next/link";
-
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
 
 export function TopNav() {
   return (
@@ -19,12 +15,6 @@ export function TopNav() {
             </Badge>
           </div>
         </div>
-        <div className="flex-1" />
-        <Button variant="secondary" size="icon" className="h-9 w-9" asChild>
-          <Link href="/create">
-            <Plus className="h-4 w-4" />
-          </Link>
-        </Button>
       </div>
     </div>
   );

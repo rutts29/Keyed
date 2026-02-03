@@ -197,3 +197,20 @@ export function useCancelCampaign(id: string) {
     },
   });
 }
+
+export function useDeleteCampaign(id: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await api.delete<ApiResponse<{ deleted: true }>>(
+        `/airdrops/${id}`
+      );
+      if (!data.data) throw new Error("Failed to delete campaign");
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.airdrops() });
+    },
+  });
+}

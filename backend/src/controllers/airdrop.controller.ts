@@ -338,4 +338,44 @@ export const airdropController = {
 
     res.json({ success: true, data: { cancelled: true } });
   },
+
+  async deleteCampaign(req: AuthenticatedRequest, res: Response) {
+    const wallet = req.wallet!;
+    const { id } = req.params;
+
+    const { data: campaign } = await supabase
+      .from('airdrop_campaigns')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (!campaign) {
+      throw new AppError(404, 'NOT_FOUND', 'Campaign not found');
+    }
+
+    if (campaign.creator_wallet !== wallet) {
+      throw new AppError(403, 'FORBIDDEN', 'Not the campaign owner');
+    }
+
+    // Only allow deleting draft campaigns
+    if (campaign.status !== 'draft') {
+      throw new AppError(400, 'INVALID_STATUS', 'Only draft campaigns can be deleted');
+    }
+
+    // Delete recipients first (foreign key constraint)
+    await supabase.from('airdrop_recipients').delete().eq('campaign_id', id);
+
+    // Delete the campaign
+    const { error } = await supabase
+      .from('airdrop_campaigns')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      logger.error({ error }, 'Failed to delete campaign');
+      throw new AppError(500, 'DELETE_FAILED', 'Failed to delete campaign');
+    }
+
+    res.json({ success: true, data: { deleted: true } });
+  },
 };

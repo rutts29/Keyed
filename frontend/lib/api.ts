@@ -54,6 +54,11 @@ api.interceptors.response.use(
         }
       }
     }
+    // Extract API error message for better error handling
+    const apiMessage = error.response?.data?.error?.message;
+    if (apiMessage) {
+      error.message = apiMessage;
+    }
     return Promise.reject(error);
   }
 );

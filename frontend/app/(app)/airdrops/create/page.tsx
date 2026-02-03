@@ -70,26 +70,30 @@ export default function CreateAirdropPage() {
     }
 
     try {
-      // Create campaign
-      const campaign = await createCampaign({
-        name: name.trim(),
-        description: description.trim() || undefined,
-        type: airdropType,
-        tokenMint: airdropType === "spl_token" ? tokenMint.trim() || undefined : undefined,
-        amountPerRecipient: amountPerRecipient
-          ? Number(amountPerRecipient)
-          : undefined,
-        metadataUri: airdropType === "cnft" ? metadataUri.trim() || undefined : undefined,
-        collectionMint: airdropType === "cnft" ? collectionMint.trim() || undefined : undefined,
-        audienceType,
-        audienceFilter:
-          Object.keys(audienceFilter).length > 0 ? audienceFilter : undefined,
-      });
+      let id = campaignId;
 
-      setCampaignId(campaign.id);
+      // Only create if we don't already have a campaign (avoids duplicates on retry)
+      if (!id) {
+        const campaign = await createCampaign({
+          name: name.trim(),
+          description: description.trim() || undefined,
+          type: airdropType,
+          tokenMint: airdropType === "spl_token" ? tokenMint.trim() || undefined : undefined,
+          amountPerRecipient: amountPerRecipient
+            ? Number(amountPerRecipient)
+            : undefined,
+          metadataUri: airdropType === "cnft" ? metadataUri.trim() || undefined : undefined,
+          collectionMint: airdropType === "cnft" ? collectionMint.trim() || undefined : undefined,
+          audienceType,
+          audienceFilter:
+            Object.keys(audienceFilter).length > 0 ? audienceFilter : undefined,
+        });
+        id = campaign.id;
+        setCampaignId(id);
+      }
 
-      // Prepare (resolve audience, build fund tx) — pass ID directly to avoid stale closure
-      const result = await prepare(campaign.id);
+      // Prepare (resolve audience, build fund tx)
+      const result = await prepare(id);
       setPrepareResult(result);
 
       toast.success(`Found ${result.recipientCount} recipients`);

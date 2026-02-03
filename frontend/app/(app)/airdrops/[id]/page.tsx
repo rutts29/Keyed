@@ -1,8 +1,9 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Play, XCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Loader2, Play, Rocket, Trash2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { AirdropProgress } from "@/components/AirdropProgress";
@@ -13,6 +14,9 @@ import { Separator } from "@/components/ui/separator";
 import {
   useCampaign,
   useCancelCampaign,
+  useDeleteCampaign,
+  useFundCampaign,
+  usePrepareCampaign,
   useStartCampaign,
 } from "@/hooks/useAirdrops";
 import { statusConfig } from "@/lib/airdrop-config";
@@ -25,12 +29,26 @@ type CampaignPageProps = {
 
 export default function CampaignDetailPage({ params }: CampaignPageProps) {
   const { id } = use(params);
+  const router = useRouter();
   const wallet = useAuthStore((state) => state.wallet);
   const { data: campaign, isLoading, error } = useCampaign(id);
   const { mutateAsync: startCampaign, isPending: isStarting } =
     useStartCampaign();
   const { mutateAsync: cancelCampaign, isPending: isCancelling } =
     useCancelCampaign(id);
+  const { mutateAsync: deleteCampaign, isPending: isDeleting } =
+    useDeleteCampaign(id);
+  const { mutateAsync: prepareCampaign, isPending: isPreparing } =
+    usePrepareCampaign();
+  const { mutateAsync: fundCampaign, isPending: isFunding } =
+    useFundCampaign();
+
+  const [prepareResult, setPrepareResult] = useState<{
+    recipientCount: number;
+    totalTokensNeeded: number;
+    estimatedFeeSOL: number;
+    fundTransaction: string;
+  } | null>(null);
 
   const isCreator = campaign?.creatorWallet === wallet;
 
@@ -52,6 +70,44 @@ export default function CampaignDetailPage({ params }: CampaignPageProps) {
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to cancel"
+      );
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      await deleteCampaign();
+      toast.success("Campaign deleted");
+      router.push("/airdrops");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete"
+      );
+    }
+  };
+
+  const handlePrepare = async () => {
+    try {
+      const result = await prepareCampaign(id);
+      setPrepareResult(result);
+      toast.success(`Found ${result.recipientCount} recipients`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to prepare"
+      );
+    }
+  };
+
+  const handleFundAndStart = async () => {
+    if (!prepareResult) return;
+    try {
+      await fundCampaign({ id, fundTransaction: prepareResult.fundTransaction });
+      toast.success("Campaign funded");
+      await startCampaign(id);
+      toast.success("Airdrop started!");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to fund"
       );
     }
   };
@@ -186,6 +242,30 @@ export default function CampaignDetailPage({ params }: CampaignPageProps) {
         </CardContent>
       </Card>
 
+      {/* Prepare result for draft campaigns */}
+      {campaign.status === "draft" && prepareResult && (
+        <Card className="border-border/70 bg-card/70">
+          <CardContent className="space-y-3 p-4">
+            <p className="text-sm font-semibold text-foreground">Ready to send</p>
+            <Separator className="bg-border/70" />
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Recipients</span>
+                <span className="text-foreground">{prepareResult.recipientCount}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total tokens</span>
+                <span className="text-foreground">{prepareResult.totalTokensNeeded}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Est. fee</span>
+                <span className="text-foreground">{prepareResult.estimatedFeeSOL.toFixed(4)} SOL</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Actions */}
       {isCreator && (
         <div className="flex gap-2">
@@ -203,8 +283,7 @@ export default function CampaignDetailPage({ params }: CampaignPageProps) {
               Start Airdrop
             </Button>
           )}
-          {(campaign.status === "draft" ||
-            campaign.status === "funded") && (
+          {campaign.status === "funded" && (
             <Button
               variant="destructive"
               className="gap-2"
@@ -217,6 +296,49 @@ export default function CampaignDetailPage({ params }: CampaignPageProps) {
                 <XCircle className="h-4 w-4" />
               )}
               Cancel
+            </Button>
+          )}
+          {campaign.status === "draft" && !prepareResult && (
+            <Button
+              className="flex-1 gap-2"
+              onClick={handlePrepare}
+              disabled={isPreparing}
+            >
+              {isPreparing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Rocket className="h-4 w-4" />
+              )}
+              Prepare
+            </Button>
+          )}
+          {campaign.status === "draft" && prepareResult && (
+            <Button
+              className="flex-1 gap-2"
+              onClick={handleFundAndStart}
+              disabled={isFunding || isStarting}
+            >
+              {isFunding || isStarting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Rocket className="h-4 w-4" />
+              )}
+              Fund & Start
+            </Button>
+          )}
+          {campaign.status === "draft" && (
+            <Button
+              variant="destructive"
+              className="gap-2"
+              onClick={handleDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+              Delete
             </Button>
           )}
         </div>
