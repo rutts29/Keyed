@@ -97,12 +97,15 @@ export const schemas = {
   }),
   
   createPost: z.object({
-    contentUri: z.string().min(1),
-    contentType: z.enum(['image', 'video', 'text', 'multi']).default('image'),
+    contentUri: z.string().min(1).optional(),
+    contentType: z.enum(['image', 'video', 'text', 'multi']).default('text'),
     caption: z.string().max(2000).optional(),
     isTokenGated: z.boolean().default(false),
     requiredToken: z.string().optional(),
-  }),
+  }).refine(
+    (data) => data.contentUri || data.caption,
+    { message: 'Either contentUri or caption is required' }
+  ),
   
   comment: z.object({
     text: z.string().min(1).max(500),

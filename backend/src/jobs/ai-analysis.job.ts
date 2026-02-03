@@ -6,7 +6,7 @@ import { addJob } from './queues.js';
 
 interface AIAnalysisData {
   postId: string;
-  contentUri: string;
+  contentUri?: string;
   caption?: string;
   creatorWallet?: string;
 }

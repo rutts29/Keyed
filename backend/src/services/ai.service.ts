@@ -163,18 +163,23 @@ export const aiService = {
    * Generates description, tags, embedding, etc.
    */
   async analyzeContent(
-    contentUri: string, 
-    caption?: string, 
-    postId?: string, 
+    contentUri?: string,
+    caption?: string,
+    postId?: string,
     creatorWallet?: string
   ): Promise<AIAnalysis> {
+    // For text-only posts without media, return stub analysis based on caption
+    if (!contentUri) {
+      return createStubAnalysis(caption);
+    }
+
     try {
       const response = await fetchWithTimeout(`${env.AI_SERVICE_URL}/api/analyze/content`, {
         method: 'POST',
         headers: getAIServiceHeaders(),
-        body: JSON.stringify({ 
-          content_uri: contentUri, 
-          caption: caption || null, 
+        body: JSON.stringify({
+          content_uri: contentUri,
+          caption: caption || null,
           post_id: postId || null,
           creator_wallet: creatorWallet || null,
         }),

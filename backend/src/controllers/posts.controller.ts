@@ -81,24 +81,25 @@ export const postsController = {
   async create(req: AuthenticatedRequest, res: Response) {
     const wallet = req.wallet!;
     const { contentUri, contentType, caption, isTokenGated, requiredToken } = req.body;
-    
+
     // Generate a 32-character hex ID from UUID v4 (without dashes)
     // Note: This is an internal database ID, not a Solana address
     const postId = uuidv4().replace(/-/g, '');
-    
+
+    // For text-only posts, contentUri is optional (pass empty string to Solana)
     const txResponse = await solanaService.buildCreatePostTx(
       wallet,
-      contentUri,
+      contentUri || '',
       contentType,
       caption || '',
       isTokenGated,
       requiredToken
     );
-    
+
     await supabase.from('posts').insert({
       id: postId,
       creator_wallet: wallet,
-      content_uri: contentUri,
+      content_uri: contentUri || null,
       content_type: contentType,
       caption,
       timestamp: new Date().toISOString(),
