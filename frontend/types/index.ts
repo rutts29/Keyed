@@ -269,6 +269,7 @@ export type AirdropAudienceType =
   | "custom";
 export type AirdropStatus =
   | "draft"
+  | "created"  // On-chain campaign created, awaiting funding
   | "funded"
   | "processing"
   | "completed"

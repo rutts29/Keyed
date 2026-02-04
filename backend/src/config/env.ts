@@ -22,6 +22,11 @@ const envSchema = z.object({
   SOCIAL_PROGRAM_ID: z.string().optional(),
   PAYMENT_PROGRAM_ID: z.string().optional(),
   TOKEN_GATE_PROGRAM_ID: z.string().optional(),
+  AIRDROP_PROGRAM_ID: z.string().optional(),
+
+  // Crank authority for airdrop distribution (base58 encoded private key)
+  // The backend uses this keypair to sign distribute_batch transactions
+  AIRDROP_CRANK_PRIVATE_KEY: z.string().optional(),
 
   // Privacy Cash configuration (optional - for private tipping)
   PRIVACY_CASH_RELAYER_URL: z.string().url().optional(),

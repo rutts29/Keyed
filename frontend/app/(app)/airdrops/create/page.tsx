@@ -11,12 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  useCreateCampaign,
-  useFundCampaign,
-  usePrepareCampaign,
-  useStartCampaign,
-} from "@/hooks/useAirdrops";
+import { useCreateCampaign } from "@/hooks/useAirdrops";
 import type { AirdropAudienceType, AirdropType } from "@/types";
 
 const STEPS = ["Details", "Token Config", "Audience", "Review"] as const;
@@ -43,80 +38,39 @@ export default function CreateAirdropPage() {
     Record<string, unknown>
   >({});
 
-  // Step 4: Prepare result
-  const [campaignId, setCampaignId] = useState<string | null>(null);
-  const [prepareResult, setPrepareResult] = useState<{
-    recipientCount: number;
-    totalTokensNeeded: number;
-    estimatedFeeSOL: number;
-    fundTransaction: string;
-  } | null>(null);
-
   const { mutateAsync: createCampaign, isPending: isCreating } =
     useCreateCampaign();
-  const { mutateAsync: prepare, isPending: isPreparing } =
-    usePrepareCampaign();
-  const { mutateAsync: fund, isPending: isFunding } =
-    useFundCampaign();
-  const { mutateAsync: start, isPending: isStarting } =
-    useStartCampaign();
 
-  const isBusy = isCreating || isPreparing || isFunding || isStarting;
-
-  const handleCreateAndPrepare = async () => {
+  const handleCreate = async () => {
     if (!name.trim()) {
       toast.error("Campaign name is required");
       return;
     }
 
     try {
-      let id = campaignId;
+      const campaign = await createCampaign({
+        name: name.trim(),
+        description: description.trim() || undefined,
+        type: airdropType,
+        tokenMint:
+          airdropType === "spl_token" ? tokenMint.trim() || undefined : undefined,
+        amountPerRecipient: amountPerRecipient
+          ? Number(amountPerRecipient)
+          : undefined,
+        metadataUri:
+          airdropType === "cnft" ? metadataUri.trim() || undefined : undefined,
+        collectionMint:
+          airdropType === "cnft" ? collectionMint.trim() || undefined : undefined,
+        audienceType,
+        audienceFilter:
+          Object.keys(audienceFilter).length > 0 ? audienceFilter : undefined,
+      });
 
-      // Only create if we don't already have a campaign (avoids duplicates on retry)
-      if (!id) {
-        const campaign = await createCampaign({
-          name: name.trim(),
-          description: description.trim() || undefined,
-          type: airdropType,
-          tokenMint: airdropType === "spl_token" ? tokenMint.trim() || undefined : undefined,
-          amountPerRecipient: amountPerRecipient
-            ? Number(amountPerRecipient)
-            : undefined,
-          metadataUri: airdropType === "cnft" ? metadataUri.trim() || undefined : undefined,
-          collectionMint: airdropType === "cnft" ? collectionMint.trim() || undefined : undefined,
-          audienceType,
-          audienceFilter:
-            Object.keys(audienceFilter).length > 0 ? audienceFilter : undefined,
-        });
-        id = campaign.id;
-        setCampaignId(id);
-      }
-
-      // Prepare (resolve audience, build fund tx)
-      const result = await prepare(id);
-      setPrepareResult(result);
-
-      toast.success(`Found ${result.recipientCount} recipients`);
+      toast.success("Campaign created as draft");
+      router.push(`/airdrops/${campaign.id}`);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to prepare campaign"
-      );
-    }
-  };
-
-  const handleFundAndStart = async () => {
-    if (!prepareResult || !campaignId) return;
-
-    try {
-      await fund({ id: campaignId, fundTransaction: prepareResult.fundTransaction });
-      toast.success("Campaign funded");
-
-      await start(campaignId);
-      toast.success("Airdrop started!");
-      router.push(`/airdrops/${campaignId}`);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to fund campaign"
+        error instanceof Error ? error.message : "Failed to create campaign"
       );
     }
   };
@@ -302,60 +256,28 @@ export default function CreateAirdropPage() {
                 {amountPerRecipient && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Amount each</span>
-                    <span className="text-foreground">
-                      {amountPerRecipient}
-                    </span>
+                    <span className="text-foreground">{amountPerRecipient}</span>
                   </div>
                 )}
               </div>
 
-              {prepareResult && (
-                <div className="rounded-lg border border-border/70 bg-muted/40 p-4 space-y-2">
-                  <p className="text-sm font-medium text-foreground">
-                    Ready to send
-                  </p>
-                  <div className="text-xs text-muted-foreground space-y-1">
-                    <p>Recipients: {prepareResult.recipientCount}</p>
-                    <p>
-                      Total tokens: {prepareResult.totalTokensNeeded}
-                    </p>
-                    <p>
-                      Est. fee: {prepareResult.estimatedFeeSOL.toFixed(4)} SOL
-                    </p>
-                  </div>
-                </div>
-              )}
+              <p className="text-xs text-muted-foreground">
+                This will create a draft campaign. You can then prepare and fund
+                it to start distribution.
+              </p>
 
-              <div className="flex gap-2">
-                {!prepareResult && (
-                  <Button
-                    className="flex-1 gap-2"
-                    onClick={handleCreateAndPrepare}
-                    disabled={isBusy}
-                  >
-                    {isCreating || isPreparing ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Rocket className="h-4 w-4" />
-                    )}
-                    Prepare
-                  </Button>
+              <Button
+                className="w-full gap-2"
+                onClick={handleCreate}
+                disabled={isCreating}
+              >
+                {isCreating ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Rocket className="h-4 w-4" />
                 )}
-                {prepareResult && (
-                  <Button
-                    className="flex-1 gap-2"
-                    onClick={handleFundAndStart}
-                    disabled={isBusy}
-                  >
-                    {isFunding || isStarting ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Rocket className="h-4 w-4" />
-                    )}
-                    Fund &amp; Start
-                  </Button>
-                )}
-              </div>
+                Create Draft
+              </Button>
             </div>
           )}
 

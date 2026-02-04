@@ -1,24 +1,53 @@
-import { PublicKey, Transaction, SystemProgram, Keypair } from '@solana/web3.js';
+import { PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
 import {
   getAssociatedTokenAddressSync,
-  createTransferInstruction,
-  createAssociatedTokenAccountInstruction,
   getAccount,
   TOKEN_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
+import { BN } from '@coral-xyz/anchor';
 import { supabase } from '../config/supabase.js';
-import { connection, getRecentBlockhash } from '../config/solana.js';
+import {
+  connection,
+  getRecentBlockhash,
+  programs,
+  programIds,
+  pdaDerivation,
+  fetchCampaignState,
+} from '../config/solana.js';
 import { logger } from '../utils/logger.js';
-import { addJob } from '../jobs/queues.js';
+import * as crypto from 'crypto';
 
 const BATCH_SIZE = 8;
-const LAMPORTS_PER_SOL = 1_000_000_000;
 
 // Estimated SOL fee per transfer (rent + tx fee)
 const ESTIMATED_FEE_PER_TRANSFER = 0.005;
 
 export const airdropService = {
+  /**
+   * Check if airdrop program is available
+   */
+  isProgramAvailable(): boolean {
+    return Boolean(programs.airdrop && programIds.airdrop);
+  },
+
+  /**
+   * Generate a unique campaign ID (16 bytes)
+   */
+  generateCampaignId(): Buffer {
+    return crypto.randomBytes(16);
+  },
+
+  /**
+   * Derive campaign PDA from creator and campaign ID
+   */
+  deriveCampaignPda(creator: PublicKey, campaignId: Buffer): [PublicKey, number] {
+    return pdaDerivation.airdropCampaign(creator, campaignId);
+  },
+
+  /**
+   * Resolve audience wallets based on audience type
+   */
   async resolveAudience(
     creatorWallet: string,
     audienceType: string,
@@ -93,12 +122,263 @@ export const airdropService = {
     return unique;
   },
 
+  /**
+   * Build transaction to create a campaign on-chain
+   */
+  async buildCreateCampaignTx(
+    creatorWallet: string,
+    campaignId: Buffer,
+    tokenMint: string,
+    amountPerRecipient: number,
+    totalRecipients: number,
+    crankAuthority: string
+  ): Promise<{ transaction: string; campaignPda: string; escrowAta: string }> {
+    if (!programs.airdrop || !programIds.airdrop) {
+      throw new Error('Airdrop program not available');
+    }
+
+    const creator = new PublicKey(creatorWallet);
+    const mint = new PublicKey(tokenMint);
+    const crank = new PublicKey(crankAuthority);
+
+    const [campaignPda] = this.deriveCampaignPda(creator, campaignId);
+    const escrowAta = getAssociatedTokenAddressSync(mint, campaignPda, true);
+
+    const { blockhash, lastValidBlockHeight } = await getRecentBlockhash();
+
+    const ix = await programs.airdrop.methods
+      .createCampaign(
+        Array.from(campaignId),
+        new BN(amountPerRecipient),
+        totalRecipients,
+        crank
+      )
+      .accounts({
+        creator,
+        campaign: campaignPda,
+        tokenMint: mint,
+        escrowAta,
+        systemProgram: SystemProgram.programId,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+      })
+      .instruction();
+
+    const tx = new Transaction({ blockhash, lastValidBlockHeight, feePayer: creator });
+    tx.add(ix);
+
+    const serialized = tx.serialize({ requireAllSignatures: false }).toString('base64');
+
+    return {
+      transaction: serialized,
+      campaignPda: campaignPda.toBase58(),
+      escrowAta: escrowAta.toBase58(),
+    };
+  },
+
+  /**
+   * Build transaction to fund a campaign
+   */
+  async buildFundCampaignTx(
+    creatorWallet: string,
+    campaignPda: string,
+    tokenMint: string,
+    amount: number
+  ): Promise<{ transaction: string }> {
+    if (!programs.airdrop || !programIds.airdrop) {
+      throw new Error('Airdrop program not available');
+    }
+
+    const creator = new PublicKey(creatorWallet);
+    const campaign = new PublicKey(campaignPda);
+    const mint = new PublicKey(tokenMint);
+
+    const creatorAta = getAssociatedTokenAddressSync(mint, creator);
+    const escrowAta = getAssociatedTokenAddressSync(mint, campaign, true);
+
+    const { blockhash, lastValidBlockHeight } = await getRecentBlockhash();
+
+    const ix = await programs.airdrop.methods
+      .fundCampaign(new BN(amount))
+      .accounts({
+        creator,
+        campaign,
+        creatorAta,
+        escrowAta,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .instruction();
+
+    const tx = new Transaction({ blockhash, lastValidBlockHeight, feePayer: creator });
+    tx.add(ix);
+
+    const serialized = tx.serialize({ requireAllSignatures: false }).toString('base64');
+
+    return { transaction: serialized };
+  },
+
+  /**
+   * Build transaction to distribute tokens to a batch of recipients
+   * This is called by the crank (backend service)
+   */
+  async buildDistributeBatchTx(
+    crankAuthorityWallet: string,
+    campaignPda: string,
+    tokenMint: string,
+    recipientWallets: string[]
+  ): Promise<{ transaction: string }> {
+    if (!programs.airdrop || !programIds.airdrop) {
+      throw new Error('Airdrop program not available');
+    }
+
+    const crankAuthority = new PublicKey(crankAuthorityWallet);
+    const campaign = new PublicKey(campaignPda);
+    const mint = new PublicKey(tokenMint);
+
+    const escrowAta = getAssociatedTokenAddressSync(mint, campaign, true);
+
+    // Build remaining accounts for recipient ATAs
+    const remainingAccounts = recipientWallets.map(wallet => ({
+      pubkey: getAssociatedTokenAddressSync(mint, new PublicKey(wallet)),
+      isWritable: true,
+      isSigner: false,
+    }));
+
+    const { blockhash, lastValidBlockHeight } = await getRecentBlockhash();
+
+    const ix = await programs.airdrop.methods
+      .distributeBatch(recipientWallets.length)
+      .accounts({
+        crankAuthority,
+        campaign,
+        escrowAta,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .remainingAccounts(remainingAccounts)
+      .instruction();
+
+    const tx = new Transaction({ blockhash, lastValidBlockHeight, feePayer: crankAuthority });
+    tx.add(ix);
+
+    const serialized = tx.serialize({ requireAllSignatures: false }).toString('base64');
+
+    return { transaction: serialized };
+  },
+
+  /**
+   * Build transaction to refund remaining tokens to creator
+   */
+  async buildRefundTx(
+    creatorWallet: string,
+    campaignPda: string,
+    tokenMint: string
+  ): Promise<{ transaction: string }> {
+    if (!programs.airdrop || !programIds.airdrop) {
+      throw new Error('Airdrop program not available');
+    }
+
+    const creator = new PublicKey(creatorWallet);
+    const campaign = new PublicKey(campaignPda);
+    const mint = new PublicKey(tokenMint);
+
+    const creatorAta = getAssociatedTokenAddressSync(mint, creator);
+    const escrowAta = getAssociatedTokenAddressSync(mint, campaign, true);
+
+    const { blockhash, lastValidBlockHeight } = await getRecentBlockhash();
+
+    const ix = await programs.airdrop.methods
+      .refund()
+      .accounts({
+        creator,
+        campaign,
+        creatorAta,
+        escrowAta,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .instruction();
+
+    const tx = new Transaction({ blockhash, lastValidBlockHeight, feePayer: creator });
+    tx.add(ix);
+
+    const serialized = tx.serialize({ requireAllSignatures: false }).toString('base64');
+
+    return { transaction: serialized };
+  },
+
+  /**
+   * Get token balance for a wallet
+   */
+  async getTokenBalance(walletAddress: string, tokenMint: string): Promise<number> {
+    try {
+      const wallet = new PublicKey(walletAddress);
+      const mint = new PublicKey(tokenMint);
+      const ata = getAssociatedTokenAddressSync(mint, wallet);
+      const account = await getAccount(connection, ata);
+      return Number(account.amount);
+    } catch {
+      return 0;
+    }
+  },
+
+  /**
+   * Fetch campaign state from on-chain
+   */
+  async getCampaignState(campaignPda: string) {
+    return fetchCampaignState(new PublicKey(campaignPda));
+  },
+
+  /**
+   * Check if recipient ATAs exist, create if needed
+   * Returns list of wallets that need ATAs created
+   */
+  async checkRecipientATAs(
+    tokenMint: string,
+    recipientWallets: string[]
+  ): Promise<{ existing: string[]; needsCreation: string[] }> {
+    const mint = new PublicKey(tokenMint);
+    const existing: string[] = [];
+    const needsCreation: string[] = [];
+
+    for (const wallet of recipientWallets) {
+      try {
+        const ata = getAssociatedTokenAddressSync(mint, new PublicKey(wallet));
+        await getAccount(connection, ata);
+        existing.push(wallet);
+      } catch {
+        needsCreation.push(wallet);
+      }
+    }
+
+    return { existing, needsCreation };
+  },
+
+  getBatchSize(): number {
+    return BATCH_SIZE;
+  },
+
+  estimateFees(recipientCount: number): number {
+    return recipientCount * ESTIMATED_FEE_PER_TRANSFER;
+  },
+
+  // ============================================================
+  // DEPRECATED: Legacy methods for backward compatibility
+  // These will be removed once controller is updated to use program
+  // ============================================================
+
+  /**
+   * @deprecated Use buildFundCampaignTx instead - this bypasses the program
+   */
   async buildFundEscrowTx(
     creatorWallet: string,
     tokenMint: string,
     totalAmount: number,
     escrowWallet: string
   ): Promise<{ transaction: string; blockhash: string; lastValidBlockHeight: number }> {
+    logger.warn('Using deprecated buildFundEscrowTx - should migrate to program-based flow');
+
+    const { Transaction } = await import('@solana/web3.js');
+    const { createTransferInstruction, createAssociatedTokenAccountInstruction } = await import('@solana/spl-token');
+
     const creator = new PublicKey(creatorWallet);
     const mint = new PublicKey(tokenMint);
     const escrow = new PublicKey(escrowWallet);
@@ -141,22 +421,31 @@ export const airdropService = {
     return { transaction: serialized, blockhash, lastValidBlockHeight };
   },
 
+  /**
+   * @deprecated Use program-based distribution - this uses raw keypair
+   */
   async executeDistributionBatch(
     campaignId: string,
     recipientWallets: string[],
     tokenMint: string,
     amountPerRecipient: number,
-    escrowKeypair: Keypair
+    escrowKeypair: { publicKey: PublicKey; secretKey: Uint8Array }
   ): Promise<{ successful: string[]; failed: Array<{ wallet: string; error: string }> }> {
+    logger.warn('Using deprecated executeDistributionBatch - should migrate to program-based flow');
+
+    const { Transaction, Keypair } = await import('@solana/web3.js');
+    const { createTransferInstruction, createAssociatedTokenAccountInstruction } = await import('@solana/spl-token');
+
     const mint = new PublicKey(tokenMint);
-    const escrowAta = getAssociatedTokenAddressSync(mint, escrowKeypair.publicKey, true);
+    const keypair = Keypair.fromSecretKey(escrowKeypair.secretKey);
+    const escrowAta = getAssociatedTokenAddressSync(mint, keypair.publicKey, true);
 
     const successful: string[] = [];
     const failed: Array<{ wallet: string; error: string }> = [];
 
     const { blockhash, lastValidBlockHeight } = await getRecentBlockhash();
 
-    const tx = new Transaction({ blockhash, lastValidBlockHeight, feePayer: escrowKeypair.publicKey });
+    const tx = new Transaction({ blockhash, lastValidBlockHeight, feePayer: keypair.publicKey });
 
     const validRecipients: PublicKey[] = [];
 
@@ -171,7 +460,7 @@ export const airdropService = {
         } catch {
           tx.add(
             createAssociatedTokenAccountInstruction(
-              escrowKeypair.publicKey,
+              keypair.publicKey,
               recipientAta,
               recipient,
               mint,
@@ -185,7 +474,7 @@ export const airdropService = {
           createTransferInstruction(
             escrowAta,
             recipientAta,
-            escrowKeypair.publicKey,
+            keypair.publicKey,
             BigInt(amountPerRecipient)
           )
         );
@@ -199,7 +488,7 @@ export const airdropService = {
 
     if (validRecipients.length > 0) {
       try {
-        tx.sign(escrowKeypair);
+        tx.sign(keypair);
         const signature = await connection.sendRawTransaction(tx.serialize());
         await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
 
@@ -230,13 +519,5 @@ export const airdropService = {
     }
 
     return { successful, failed };
-  },
-
-  getBatchSize(): number {
-    return BATCH_SIZE;
-  },
-
-  estimateFees(recipientCount: number): number {
-    return recipientCount * ESTIMATED_FEE_PER_TRANSFER;
   },
 };

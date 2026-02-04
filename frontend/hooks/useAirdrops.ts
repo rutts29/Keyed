@@ -106,13 +106,22 @@ export function useCreateCampaign() {
   });
 }
 
+// Response type for prepare endpoint (new on-chain flow)
 type PrepareResponse = {
   recipientCount: number;
   totalTokensNeeded: number;
   estimatedFeeSOL: number;
-  fundTransaction: string;
+  createCampaignTx: string; // Transaction to create on-chain campaign
+  campaignPda: string;
+  escrowAta: string;
+  creatorBalance: number;
+  hasSufficientBalance: boolean;
 };
 
+/**
+ * Prepare campaign - resolves audience and returns createCampaignTx
+ * Step 1 of on-chain flow: Call this, then sign the transaction
+ */
 export function usePrepareCampaign() {
   const queryClient = useQueryClient();
 
@@ -132,16 +141,131 @@ export function usePrepareCampaign() {
   });
 }
 
+/**
+ * Confirm on-chain campaign creation after user signs createCampaignTx
+ * Step 2 of on-chain flow
+ */
+export function useConfirmCreate() {
+  const queryClient = useQueryClient();
+  const { primaryWallet } = useSafeDynamicContext();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      createCampaignTx,
+    }: {
+      id: string;
+      createCampaignTx: string;
+    }) => {
+      if (!primaryWallet) throw new Error("Connect your wallet");
+
+      // Sign and submit the create campaign transaction
+      const txSignature = await signAndSubmitTransaction(
+        createCampaignTx,
+        primaryWallet
+      );
+
+      // Confirm with backend
+      const { data } = await api.post<
+        ApiResponse<{ created: true; campaignPda: string }>
+      >(`/airdrops/${id}/confirm-create`, { txSignature });
+      if (!data.data) throw new Error("Failed to confirm campaign creation");
+      return data.data;
+    },
+    onSuccess: (_data, { id }) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.airdropCampaign(id),
+      });
+    },
+  });
+}
+
+// Response type for fund-tx endpoint
+type FundTxResponse = {
+  transaction: string;
+  totalAmount: number;
+  escrowAta: string;
+};
+
+/**
+ * Get fund transaction for a campaign
+ * Step 3 of on-chain flow
+ */
+export function useBuildFundTx() {
+  return useMutation({
+    mutationFn: async (campaignId: string) => {
+      const { data } = await api.get<ApiResponse<FundTxResponse>>(
+        `/airdrops/${campaignId}/fund-tx`
+      );
+      if (!data.data) throw new Error("Failed to build fund transaction");
+      return data.data;
+    },
+  });
+}
+
+/**
+ * Confirm funding after user signs fund transaction
+ * Step 4 of on-chain flow
+ */
+export function useConfirmFund() {
+  const queryClient = useQueryClient();
+  const { primaryWallet } = useSafeDynamicContext();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      fundTransaction,
+    }: {
+      id: string;
+      fundTransaction: string;
+    }) => {
+      if (!primaryWallet) throw new Error("Connect your wallet");
+
+      // Sign and submit the fund transaction
+      const txSignature = await signAndSubmitTransaction(
+        fundTransaction,
+        primaryWallet
+      );
+
+      // Confirm with backend
+      const { data } = await api.post<ApiResponse<{ funded: true }>>(
+        `/airdrops/${id}/confirm-fund`,
+        { txSignature }
+      );
+      if (!data.data) throw new Error("Failed to confirm funding");
+      return data.data;
+    },
+    onSuccess: (_data, { id }) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.airdropCampaign(id),
+      });
+    },
+  });
+}
+
+/**
+ * @deprecated Use useConfirmFund instead for new on-chain flow
+ * Legacy fund campaign hook (for backward compatibility)
+ */
 export function useFundCampaign() {
   const queryClient = useQueryClient();
   const { primaryWallet } = useSafeDynamicContext();
 
   return useMutation({
-    mutationFn: async ({ id, fundTransaction }: { id: string; fundTransaction: string }) => {
+    mutationFn: async ({
+      id,
+      fundTransaction,
+    }: {
+      id: string;
+      fundTransaction: string;
+    }) => {
       if (!primaryWallet) throw new Error("Connect your wallet");
 
       // Sign and submit the fund transaction, get on-chain signature
-      const txSignature = await signAndSubmitTransaction(fundTransaction, primaryWallet);
+      const txSignature = await signAndSubmitTransaction(
+        fundTransaction,
+        primaryWallet
+      );
 
       // Notify backend with the actual on-chain signature
       const { data } = await api.post<ApiResponse<{ funded: true }>>(
@@ -178,6 +302,72 @@ export function useStartCampaign() {
   });
 }
 
+// Response type for refund-tx endpoint
+type RefundTxResponse = {
+  transaction: string;
+  refundAmount: number;
+};
+
+/**
+ * Get refund transaction for cancellation
+ * Step 1 of cancel flow
+ */
+export function useBuildRefundTx() {
+  return useMutation({
+    mutationFn: async (campaignId: string) => {
+      const { data } = await api.get<ApiResponse<RefundTxResponse>>(
+        `/airdrops/${campaignId}/refund-tx`
+      );
+      if (!data.data) throw new Error("Failed to build refund transaction");
+      return data.data;
+    },
+  });
+}
+
+/**
+ * Confirm cancellation after user signs refund transaction
+ * Step 2 of cancel flow
+ */
+export function useConfirmCancel() {
+  const queryClient = useQueryClient();
+  const { primaryWallet } = useSafeDynamicContext();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      refundTransaction,
+    }: {
+      id: string;
+      refundTransaction: string;
+    }) => {
+      if (!primaryWallet) throw new Error("Connect your wallet");
+
+      // Sign and submit the refund transaction
+      const txSignature = await signAndSubmitTransaction(
+        refundTransaction,
+        primaryWallet
+      );
+
+      // Confirm with backend
+      const { data } = await api.post<ApiResponse<{ cancelled: true }>>(
+        `/airdrops/${id}/confirm-cancel`,
+        { txSignature }
+      );
+      if (!data.data) throw new Error("Failed to confirm cancellation");
+      return data.data;
+    },
+    onSuccess: (_data, { id }) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.airdropCampaign(id),
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.airdrops() });
+    },
+  });
+}
+
+/**
+ * Cancel campaign (for draft/created campaigns that don't need on-chain refund)
+ */
 export function useCancelCampaign(id: string) {
   const queryClient = useQueryClient();
 
@@ -210,6 +400,35 @@ export function useDeleteCampaign(id: string) {
       return data.data;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.airdrops() });
+    },
+  });
+}
+
+export function useUpdateCampaign(id: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: {
+      name?: string;
+      description?: string;
+      type?: AirdropType;
+      tokenMint?: string;
+      amountPerRecipient?: number;
+      metadataUri?: string;
+      collectionMint?: string;
+      audienceType?: AirdropAudienceType;
+      audienceFilter?: Record<string, unknown>;
+    }) => {
+      const { data } = await api.put<ApiResponse<AirdropCampaign>>(
+        `/airdrops/${id}`,
+        input
+      );
+      if (!data.data) throw new Error("Failed to update campaign");
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.airdropCampaign(id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.airdrops() });
     },
   });

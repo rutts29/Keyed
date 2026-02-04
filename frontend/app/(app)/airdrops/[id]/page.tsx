@@ -3,7 +3,18 @@
 import { use, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, Play, Rocket, Trash2, XCircle } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Check,
+  Edit,
+  Loader2,
+  Play,
+  Rocket,
+  Trash2,
+  Wallet,
+  XCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { AirdropProgress } from "@/components/AirdropProgress";
@@ -12,10 +23,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
+  useBuildFundTx,
+  useBuildRefundTx,
   useCampaign,
   useCancelCampaign,
+  useConfirmCancel,
+  useConfirmCreate,
+  useConfirmFund,
   useDeleteCampaign,
-  useFundCampaign,
   usePrepareCampaign,
   useStartCampaign,
 } from "@/hooks/useAirdrops";
@@ -27,88 +42,194 @@ type CampaignPageProps = {
   params: Promise<{ id: string }>;
 };
 
+// Flow state for multi-step on-chain flow
+type FlowState = {
+  step:
+    | "idle"
+    | "preparing"
+    | "ready_to_create"
+    | "creating"
+    | "building_fund"
+    | "ready_to_fund"
+    | "funding"
+    | "starting"
+    | "building_refund"
+    | "ready_to_refund"
+    | "refunding";
+  prepareData?: {
+    recipientCount: number;
+    totalTokensNeeded: number;
+    estimatedFeeSOL: number;
+    createCampaignTx: string;
+    campaignPda: string;
+    escrowAta: string;
+    creatorBalance: number;
+    hasSufficientBalance: boolean;
+  };
+  fundData?: {
+    transaction: string;
+    totalAmount: number;
+    escrowAta: string;
+  };
+  refundData?: {
+    transaction: string;
+    refundAmount: number;
+  };
+};
+
 export default function CampaignDetailPage({ params }: CampaignPageProps) {
   const { id } = use(params);
   const router = useRouter();
   const wallet = useAuthStore((state) => state.wallet);
-  const { data: campaign, isLoading, error } = useCampaign(id);
-  const { mutateAsync: startCampaign, isPending: isStarting } =
-    useStartCampaign();
-  const { mutateAsync: cancelCampaign, isPending: isCancelling } =
-    useCancelCampaign(id);
-  const { mutateAsync: deleteCampaign, isPending: isDeleting } =
-    useDeleteCampaign(id);
-  const { mutateAsync: prepareCampaign, isPending: isPreparing } =
-    usePrepareCampaign();
-  const { mutateAsync: fundCampaign, isPending: isFunding } =
-    useFundCampaign();
+  const { data: campaign, isLoading, error, refetch } = useCampaign(id);
 
-  const [prepareResult, setPrepareResult] = useState<{
-    recipientCount: number;
-    totalTokensNeeded: number;
-    estimatedFeeSOL: number;
-    fundTransaction: string;
-  } | null>(null);
+  // Mutations
+  const { mutateAsync: prepareCampaign } = usePrepareCampaign();
+  const { mutateAsync: confirmCreate } = useConfirmCreate();
+  const { mutateAsync: buildFundTx } = useBuildFundTx();
+  const { mutateAsync: confirmFund } = useConfirmFund();
+  const { mutateAsync: startCampaign } = useStartCampaign();
+  const { mutateAsync: cancelCampaign } = useCancelCampaign(id);
+  const { mutateAsync: deleteCampaign } = useDeleteCampaign(id);
+  const { mutateAsync: buildRefundTx } = useBuildRefundTx();
+  const { mutateAsync: confirmCancel } = useConfirmCancel();
+
+  // Flow state for multi-step operations
+  const [flow, setFlow] = useState<FlowState>({ step: "idle" });
 
   const isCreator = campaign?.creatorWallet === wallet;
+  const isLoaderActive = flow.step !== "idle";
 
+  // Step 1: Prepare campaign (resolve audience, build createCampaignTx)
+  const handlePrepare = async () => {
+    try {
+      setFlow({ step: "preparing" });
+      const result = await prepareCampaign(id);
+      setFlow({ step: "ready_to_create", prepareData: result });
+      toast.success(`Found ${result.recipientCount} recipients`);
+    } catch (error) {
+      setFlow({ step: "idle" });
+      toast.error(error instanceof Error ? error.message : "Failed to prepare");
+    }
+  };
+
+  // Step 2: Sign and submit createCampaignTx
+  const handleCreate = async () => {
+    if (!flow.prepareData) return;
+    try {
+      setFlow((f) => ({ ...f, step: "creating" }));
+      await confirmCreate({
+        id,
+        createCampaignTx: flow.prepareData.createCampaignTx,
+      });
+      toast.success("Campaign created on-chain");
+      await refetch();
+      // Move to fund step
+      setFlow((f) => ({ ...f, step: "building_fund" }));
+      const fundData = await buildFundTx(id);
+      setFlow((f) => ({ ...f, step: "ready_to_fund", fundData }));
+    } catch (error) {
+      setFlow({ step: "idle" });
+      toast.error(
+        error instanceof Error ? error.message : "Failed to create campaign"
+      );
+    }
+  };
+
+  // Step 3: Get fund transaction (for created campaigns)
+  const handleGetFundTx = async () => {
+    try {
+      setFlow({ step: "building_fund" });
+      const fundData = await buildFundTx(id);
+      setFlow({ step: "ready_to_fund", fundData });
+    } catch (error) {
+      setFlow({ step: "idle" });
+      toast.error(
+        error instanceof Error ? error.message : "Failed to build fund transaction"
+      );
+    }
+  };
+
+  // Step 4: Sign and submit fund transaction
+  const handleFund = async () => {
+    if (!flow.fundData) return;
+    try {
+      setFlow((f) => ({ ...f, step: "funding" }));
+      await confirmFund({ id, fundTransaction: flow.fundData.transaction });
+      toast.success("Campaign funded");
+      await refetch();
+      setFlow({ step: "idle" });
+    } catch (error) {
+      setFlow({ step: "idle" });
+      toast.error(error instanceof Error ? error.message : "Failed to fund");
+    }
+  };
+
+  // Step 5: Start distribution
   const handleStart = async () => {
     try {
+      setFlow({ step: "starting" });
       await startCampaign(id);
       toast.success("Airdrop started");
+      await refetch();
+      setFlow({ step: "idle" });
     } catch (error) {
+      setFlow({ step: "idle" });
+      toast.error(error instanceof Error ? error.message : "Failed to start");
+    }
+  };
+
+  // Cancel flow: Get refund transaction
+  const handleGetRefundTx = async () => {
+    try {
+      setFlow({ step: "building_refund" });
+      const refundData = await buildRefundTx(id);
+      setFlow({ step: "ready_to_refund", refundData });
+    } catch (error) {
+      setFlow({ step: "idle" });
       toast.error(
-        error instanceof Error ? error.message : "Failed to start"
+        error instanceof Error ? error.message : "Failed to build refund transaction"
       );
     }
   };
 
-  const handleCancel = async () => {
+  // Cancel flow: Sign refund and confirm cancel
+  const handleRefundAndCancel = async () => {
+    if (!flow.refundData) return;
     try {
+      setFlow((f) => ({ ...f, step: "refunding" }));
+      await confirmCancel({ id, refundTransaction: flow.refundData.transaction });
+      toast.success("Campaign cancelled, tokens refunded");
+      await refetch();
+      setFlow({ step: "idle" });
+    } catch (error) {
+      setFlow({ step: "idle" });
+      toast.error(error instanceof Error ? error.message : "Failed to cancel");
+    }
+  };
+
+  // Simple cancel for draft campaigns (no on-chain state)
+  const handleSimpleCancel = async () => {
+    try {
+      setFlow({ step: "refunding" });
       await cancelCampaign();
       toast.success("Campaign cancelled");
+      await refetch();
+      setFlow({ step: "idle" });
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to cancel"
-      );
+      setFlow({ step: "idle" });
+      toast.error(error instanceof Error ? error.message : "Failed to cancel");
     }
   };
 
+  // Delete draft campaign
   const handleDelete = async () => {
     try {
       await deleteCampaign();
       toast.success("Campaign deleted");
       router.push("/airdrops");
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to delete"
-      );
-    }
-  };
-
-  const handlePrepare = async () => {
-    try {
-      const result = await prepareCampaign(id);
-      setPrepareResult(result);
-      toast.success(`Found ${result.recipientCount} recipients`);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to prepare"
-      );
-    }
-  };
-
-  const handleFundAndStart = async () => {
-    if (!prepareResult) return;
-    try {
-      await fundCampaign({ id, fundTransaction: prepareResult.fundTransaction });
-      toast.success("Campaign funded");
-      await startCampaign(id);
-      toast.success("Airdrop started!");
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to fund"
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to delete");
     }
   };
 
@@ -133,7 +254,7 @@ export default function CampaignDetailPage({ params }: CampaignPageProps) {
     );
   }
 
-  const status = statusConfig[campaign.status];
+  const status = statusConfig[campaign.status] || statusConfig.draft;
   const pending =
     campaign.totalRecipients -
     campaign.successfulTransfers -
@@ -198,9 +319,7 @@ export default function CampaignDetailPage({ params }: CampaignPageProps) {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Recipients</span>
-              <span className="text-foreground">
-                {campaign.totalRecipients}
-              </span>
+              <span className="text-foreground">{campaign.totalRecipients}</span>
             </div>
             {campaign.tokenMint && (
               <div className="flex justify-between">
@@ -243,23 +362,98 @@ export default function CampaignDetailPage({ params }: CampaignPageProps) {
       </Card>
 
       {/* Prepare result for draft campaigns */}
-      {campaign.status === "draft" && prepareResult && (
+      {campaign.status === "draft" && flow.prepareData && (
         <Card className="border-border/70 bg-card/70">
           <CardContent className="space-y-3 p-4">
-            <p className="text-sm font-semibold text-foreground">Ready to send</p>
+            <p className="text-sm font-semibold text-foreground">
+              Ready to create on-chain
+            </p>
             <Separator className="bg-border/70" />
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Recipients</span>
-                <span className="text-foreground">{prepareResult.recipientCount}</span>
+                <span className="text-foreground">
+                  {flow.prepareData.recipientCount}
+                </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Total tokens</span>
-                <span className="text-foreground">{prepareResult.totalTokensNeeded}</span>
+                <span className="text-muted-foreground">Total tokens needed</span>
+                <span className="text-foreground">
+                  {flow.prepareData.totalTokensNeeded}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Your balance</span>
+                <span
+                  className={
+                    flow.prepareData.hasSufficientBalance
+                      ? "text-foreground"
+                      : "text-destructive"
+                  }
+                >
+                  {flow.prepareData.creatorBalance}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Est. fee</span>
-                <span className="text-foreground">{prepareResult.estimatedFeeSOL.toFixed(4)} SOL</span>
+                <span className="text-foreground">
+                  {flow.prepareData.estimatedFeeSOL.toFixed(4)} SOL
+                </span>
+              </div>
+            </div>
+            {!flow.prepareData.hasSufficientBalance && (
+              <div className="flex items-center gap-2 rounded-md bg-destructive/10 p-2 text-xs text-destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <span>
+                  Insufficient balance. You need{" "}
+                  {flow.prepareData.totalTokensNeeded -
+                    flow.prepareData.creatorBalance}{" "}
+                  more tokens.
+                </span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Fund transaction ready */}
+      {flow.step === "ready_to_fund" && flow.fundData && (
+        <Card className="border-border/70 bg-card/70">
+          <CardContent className="space-y-3 p-4">
+            <p className="text-sm font-semibold text-foreground">
+              Ready to fund escrow
+            </p>
+            <Separator className="bg-border/70" />
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Amount to transfer</span>
+                <span className="text-foreground">{flow.fundData.totalAmount}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Escrow</span>
+                <span className="text-foreground font-mono text-xs">
+                  {formatWallet(flow.fundData.escrowAta, 6)}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Refund transaction ready */}
+      {flow.step === "ready_to_refund" && flow.refundData && (
+        <Card className="border-border/70 bg-card/70">
+          <CardContent className="space-y-3 p-4">
+            <p className="text-sm font-semibold text-foreground">
+              Confirm refund and cancel
+            </p>
+            <Separator className="bg-border/70" />
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Refund amount</span>
+                <span className="text-foreground">
+                  {flow.refundData.refundAmount}
+                </span>
               </div>
             </div>
           </CardContent>
@@ -269,75 +463,172 @@ export default function CampaignDetailPage({ params }: CampaignPageProps) {
       {/* Actions */}
       {isCreator && (
         <div className="flex gap-2">
-          {campaign.status === "funded" && (
-            <Button
-              className="flex-1 gap-2"
-              onClick={handleStart}
-              disabled={isStarting}
-            >
-              {isStarting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Play className="h-4 w-4" />
-              )}
-              Start Airdrop
+          {/* Draft: Edit button */}
+          {campaign.status === "draft" && (
+            <Button variant="outline" className="gap-2" asChild>
+              <Link href={`/airdrops/${id}/edit`}>
+                <Edit className="h-4 w-4" />
+                Edit
+              </Link>
             </Button>
           )}
-          {campaign.status === "funded" && (
-            <Button
-              variant="destructive"
-              className="gap-2"
-              onClick={handleCancel}
-              disabled={isCancelling}
-            >
-              {isCancelling ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <XCircle className="h-4 w-4" />
-              )}
-              Cancel
-            </Button>
-          )}
-          {campaign.status === "draft" && !prepareResult && (
-            <Button
-              className="flex-1 gap-2"
-              onClick={handlePrepare}
-              disabled={isPreparing}
-            >
-              {isPreparing ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Rocket className="h-4 w-4" />
-              )}
+
+          {/* Draft: Prepare button */}
+          {campaign.status === "draft" && flow.step === "idle" && (
+            <Button className="flex-1 gap-2" onClick={handlePrepare}>
+              <Rocket className="h-4 w-4" />
               Prepare
             </Button>
           )}
-          {campaign.status === "draft" && prepareResult && (
-            <Button
-              className="flex-1 gap-2"
-              onClick={handleFundAndStart}
-              disabled={isFunding || isStarting}
-            >
-              {isFunding || isStarting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Rocket className="h-4 w-4" />
-              )}
-              Fund & Start
+
+          {/* Draft: Preparing... */}
+          {campaign.status === "draft" && flow.step === "preparing" && (
+            <Button className="flex-1 gap-2" disabled>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Preparing...
             </Button>
           )}
-          {campaign.status === "draft" && (
+
+          {/* Draft: Create on-chain button */}
+          {campaign.status === "draft" && flow.step === "ready_to_create" && (
+            <Button
+              className="flex-1 gap-2"
+              onClick={handleCreate}
+              disabled={!flow.prepareData?.hasSufficientBalance}
+            >
+              <Wallet className="h-4 w-4" />
+              Create Campaign (Sign)
+            </Button>
+          )}
+
+          {/* Creating... */}
+          {flow.step === "creating" && (
+            <Button className="flex-1 gap-2" disabled>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Creating...
+            </Button>
+          )}
+
+          {/* Created: Fund button */}
+          {campaign.status === "created" && flow.step === "idle" && (
+            <Button className="flex-1 gap-2" onClick={handleGetFundTx}>
+              <Wallet className="h-4 w-4" />
+              Fund Campaign
+            </Button>
+          )}
+
+          {/* Building fund tx... */}
+          {flow.step === "building_fund" && (
+            <Button className="flex-1 gap-2" disabled>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading...
+            </Button>
+          )}
+
+          {/* Ready to fund button */}
+          {flow.step === "ready_to_fund" && (
+            <Button className="flex-1 gap-2" onClick={handleFund}>
+              <Check className="h-4 w-4" />
+              Confirm Fund (Sign)
+            </Button>
+          )}
+
+          {/* Funding... */}
+          {flow.step === "funding" && (
+            <Button className="flex-1 gap-2" disabled>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Funding...
+            </Button>
+          )}
+
+          {/* Funded: Start button */}
+          {campaign.status === "funded" && flow.step === "idle" && (
+            <Button className="flex-1 gap-2" onClick={handleStart}>
+              <Play className="h-4 w-4" />
+              Start Airdrop
+            </Button>
+          )}
+
+          {/* Starting... */}
+          {flow.step === "starting" && (
+            <Button className="flex-1 gap-2" disabled>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Starting...
+            </Button>
+          )}
+
+          {/* Funded: Cancel with refund */}
+          {campaign.status === "funded" && flow.step === "idle" && (
+            <Button
+              variant="destructive"
+              className="gap-2"
+              onClick={handleGetRefundTx}
+            >
+              <XCircle className="h-4 w-4" />
+              Cancel
+            </Button>
+          )}
+
+          {/* Created: Simple cancel (no funds yet) */}
+          {campaign.status === "created" && flow.step === "idle" && (
+            <Button
+              variant="destructive"
+              className="gap-2"
+              onClick={handleSimpleCancel}
+            >
+              <XCircle className="h-4 w-4" />
+              Cancel
+            </Button>
+          )}
+
+          {/* Building refund... */}
+          {flow.step === "building_refund" && (
+            <Button variant="destructive" className="gap-2" disabled>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading...
+            </Button>
+          )}
+
+          {/* Ready to refund */}
+          {flow.step === "ready_to_refund" && (
+            <Button
+              variant="destructive"
+              className="gap-2"
+              onClick={handleRefundAndCancel}
+            >
+              <Check className="h-4 w-4" />
+              Confirm Refund (Sign)
+            </Button>
+          )}
+
+          {/* Refunding... */}
+          {flow.step === "refunding" && (
+            <Button variant="destructive" className="gap-2" disabled>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Cancelling...
+            </Button>
+          )}
+
+          {/* Draft: Delete button (only when idle, not during flow) */}
+          {campaign.status === "draft" && flow.step === "idle" && (
             <Button
               variant="destructive"
               className="gap-2"
               onClick={handleDelete}
-              disabled={isDeleting}
             >
-              {isDeleting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Trash2 className="h-4 w-4" />
-              )}
+              <Trash2 className="h-4 w-4" />
+              Delete
+            </Button>
+          )}
+
+          {/* Cancelled: Delete button */}
+          {campaign.status === "cancelled" && (
+            <Button
+              variant="destructive"
+              className="gap-2"
+              onClick={handleDelete}
+            >
+              <Trash2 className="h-4 w-4" />
               Delete
             </Button>
           )}

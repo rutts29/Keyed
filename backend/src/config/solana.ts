@@ -43,16 +43,23 @@ function loadIdl(filename: string): Idl | null {
 }
 
 // Program IDs from environment or IDL files
-export const programIds = {
+export const programIds: {
+  social: PublicKey | null;
+  payment: PublicKey | null;
+  tokenGate: PublicKey | null;
+  airdrop: PublicKey | null;
+} = {
   social: env.SOCIAL_PROGRAM_ID ? new PublicKey(env.SOCIAL_PROGRAM_ID) : null,
   payment: env.PAYMENT_PROGRAM_ID ? new PublicKey(env.PAYMENT_PROGRAM_ID) : null,
   tokenGate: env.TOKEN_GATE_PROGRAM_ID ? new PublicKey(env.TOKEN_GATE_PROGRAM_ID) : null,
+  airdrop: env.AIRDROP_PROGRAM_ID ? new PublicKey(env.AIRDROP_PROGRAM_ID) : null,
 };
 
 // Load IDLs
 const socialIdl = loadIdl('solshare_social.json');
 const paymentIdl = loadIdl('solshare_payment.json');
 const tokenGateIdl = loadIdl('solshare_token_gate.json');
+const airdropIdl = loadIdl('solshare_airdrop.json');
 
 // Initialize program IDs from IDLs if not set in env
 if (!programIds.social && socialIdl?.address) {
@@ -64,10 +71,13 @@ if (!programIds.payment && paymentIdl?.address) {
 if (!programIds.tokenGate && tokenGateIdl?.address) {
   programIds.tokenGate = new PublicKey(tokenGateIdl.address);
 }
+if (!programIds.airdrop && airdropIdl?.address) {
+  programIds.airdrop = new PublicKey(airdropIdl.address);
+}
 
 // Create program instances (generic Program type)
 export const programs = {
-  social: programIds.social && socialIdl 
+  social: programIds.social && socialIdl
     ? new Program(socialIdl, readOnlyProvider)
     : null,
   payment: programIds.payment && paymentIdl
@@ -75,6 +85,9 @@ export const programs = {
     : null,
   tokenGate: programIds.tokenGate && tokenGateIdl
     ? new Program(tokenGateIdl, readOnlyProvider)
+    : null,
+  airdrop: programIds.airdrop && airdropIdl
+    ? new Program(airdropIdl, readOnlyProvider)
     : null,
 };
 
@@ -165,6 +178,14 @@ export const pdaDerivation = {
       programIds.tokenGate!
     );
   },
+
+  // Airdrop program PDAs
+  airdropCampaign(creator: PublicKey, campaignId: Buffer): [PublicKey, number] {
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from('campaign'), creator.toBuffer(), campaignId],
+      programIds.airdrop!
+    );
+  },
 };
 
 export async function getRecentBlockhash() {
@@ -231,8 +252,28 @@ export interface AccessVerificationData {
   user: PublicKey;
   post: PublicKey;
   verified: boolean;
+  tokenVerified: boolean;
+  nftVerified: boolean;
   verifiedAt: bigint;
   expiresAt: bigint | null;
+  bump: number;
+}
+
+// Airdrop program types
+export type CampaignStatus = 'draft' | 'funded' | 'processing' | 'completed' | 'cancelled';
+
+export interface CampaignStateData {
+  creator: PublicKey;
+  campaignId: number[];
+  tokenMint: PublicKey;
+  escrowAta: PublicKey;
+  amountPerRecipient: bigint;
+  totalAmount: bigint;
+  distributedAmount: bigint;
+  totalRecipients: number;
+  distributedCount: number;
+  status: { draft: {} } | { funded: {} } | { processing: {} } | { completed: {} } | { cancelled: {} };
+  crankAuthority: PublicKey;
   bump: number;
 }
 
@@ -280,4 +321,8 @@ export async function fetchAccessControl(postPda: PublicKey): Promise<AccessCont
 export async function fetchAccessVerification(user: PublicKey, post: PublicKey): Promise<AccessVerificationData | null> {
   const [verificationPda] = pdaDerivation.accessVerification(user, post);
   return fetchAccount<AccessVerificationData>(programs.tokenGate, 'accessVerification', verificationPda);
+}
+
+export async function fetchCampaignState(campaignPda: PublicKey): Promise<CampaignStateData | null> {
+  return fetchAccount<CampaignStateData>(programs.airdrop, 'campaignState', campaignPda);
 }
