@@ -5,7 +5,8 @@ import {
   TOKEN_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
-import { BN } from '@coral-xyz/anchor';
+import pkg from '@coral-xyz/anchor';
+const { BN } = pkg;
 import { supabase } from '../config/supabase.js';
 import {
   connection,
