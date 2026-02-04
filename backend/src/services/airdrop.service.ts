@@ -4,6 +4,7 @@ import {
   getAccount,
   TOKEN_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
+  createAssociatedTokenAccountIdempotentInstruction,
 } from '@solana/spl-token';
 import pkg from '@coral-xyz/anchor';
 const { BN } = pkg;
@@ -238,15 +239,34 @@ export const airdropService = {
 
     const escrowAta = getAssociatedTokenAddressSync(mint, campaign, true);
 
-    // Build remaining accounts for recipient ATAs
-    const remainingAccounts = recipientWallets.map(wallet => ({
-      pubkey: getAssociatedTokenAddressSync(mint, new PublicKey(wallet)),
-      isWritable: true,
-      isSigner: false,
-    }));
-
     const { blockhash, lastValidBlockHeight } = await getRecentBlockhash();
+    const tx = new Transaction({ blockhash, lastValidBlockHeight, feePayer: crankAuthority });
 
+    // Create ATAs for recipients who don't have them
+    // Using idempotent instruction which succeeds even if account exists
+    const remainingAccounts: { pubkey: PublicKey; isWritable: boolean; isSigner: boolean }[] = [];
+    for (const wallet of recipientWallets) {
+      const owner = new PublicKey(wallet);
+      const recipientAta = getAssociatedTokenAddressSync(mint, owner);
+
+      // Add idempotent create ATA instruction (succeeds if already exists)
+      tx.add(
+        createAssociatedTokenAccountIdempotentInstruction(
+          crankAuthority, // payer
+          recipientAta,   // associatedToken
+          owner,          // owner
+          mint            // mint
+        )
+      );
+
+      remainingAccounts.push({
+        pubkey: recipientAta,
+        isWritable: true,
+        isSigner: false,
+      });
+    }
+
+    // Add the distribute batch instruction
     const ix = await programs.airdrop.methods
       .distributeBatch(recipientWallets.length)
       .accounts({
@@ -258,7 +278,6 @@ export const airdropService = {
       .remainingAccounts(remainingAccounts)
       .instruction();
 
-    const tx = new Transaction({ blockhash, lastValidBlockHeight, feePayer: crankAuthority });
     tx.add(ix);
 
     const serialized = tx.serialize({ requireAllSignatures: false }).toString('base64');

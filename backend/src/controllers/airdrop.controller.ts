@@ -1,5 +1,6 @@
 import { Response } from 'express';
-import { PublicKey } from '@solana/web3.js';
+import { PublicKey, Keypair } from '@solana/web3.js';
+import bs58 from 'bs58';
 import { AuthenticatedRequest } from '../types/index.js';
 import { supabase } from '../config/supabase.js';
 import { airdropService } from '../services/airdrop.service.js';
@@ -14,8 +15,6 @@ function getCrankAuthority(): string {
     throw new AppError(500, 'CONFIG_ERROR', 'Airdrop crank authority not configured');
   }
   // Decode base58 private key and derive public key
-  const bs58 = require('bs58');
-  const { Keypair } = require('@solana/web3.js');
   const secretKey = bs58.decode(env.AIRDROP_CRANK_PRIVATE_KEY);
   const keypair = Keypair.fromSecretKey(secretKey);
   return keypair.publicKey.toBase58();
@@ -82,7 +81,7 @@ export const airdropController = {
         audience_type: audienceType,
         audience_filter: audienceFilter || null,
         status: 'draft',
-        campaign_id_bytes: campaignIdBytes.toString('hex'),
+        campaign_id_bytes: '\\x' + campaignIdBytes.toString('hex'),
       })
       .select()
       .single();
@@ -327,8 +326,10 @@ export const airdropController = {
       hasSufficientBalance = creatorBalance >= totalTokensNeeded;
     }
 
-    // Get campaign ID bytes from DB
-    const campaignIdBytes = Buffer.from(campaign.campaign_id_bytes, 'hex');
+    // Get campaign ID bytes from DB (Supabase returns bytea as '\x...' string)
+    const rawBytes = campaign.campaign_id_bytes as string;
+    const hexString = rawBytes.startsWith('\\x') ? rawBytes.slice(2) : rawBytes;
+    const campaignIdBytes = Buffer.from(hexString, 'hex');
 
     // Get crank authority
     const crankAuthority = getCrankAuthority();
