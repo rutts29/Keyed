@@ -60,6 +60,9 @@ htmlcov/
 solshare/target/
 solshare/.anchor/
 test-ledger/
+*-keypair.json
+*.keypair.json
+crank*.json
 
 # ============================================
 # Reports (E2E audit reports - not tracked)
